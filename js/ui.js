@@ -170,10 +170,23 @@ function pdfSignatureBlock() {
 }
 
 function openPdfWindow(html) {
-  var w = window.open('', '_blank');
-  w.document.write(html);
-  w.document.close();
-  setTimeout(function() { w.print(); }, 300);
+  // Mobile-friendly: use blob URL to avoid blocking
+  var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var w = window.open(url, '_blank');
+  if (!w) {
+    // Fallback if popup blocked: create download link
+    var a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.setAttribute('download', 'rapport-haccp.html');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    alert('Le rapport a été téléchargé. Ouvrez-le pour imprimer.');
+  } else {
+    setTimeout(function() { try { w.print(); } catch(e) {} }, 500);
+  }
 }
 
 // ── RAPPORT TEMPÉRATURES ──
@@ -455,7 +468,28 @@ async function generateFullPDF() {
   }
   html += '</div>';
 
-  // ── 5. SIGNALEMENTS ──
+  // ── 4b. COMMANDES RÉCEPTIONNÉES ──
+  try {
+    var recvResult = await sb.from('orders').select('*').eq('site_id', S.currentSiteId).eq('status', 'received').order('received_at', {ascending: false}).limit(20);
+    var receivedOrders = recvResult.data || [];
+    html += '<div class="section"><h3>4b. ✅ Commandes réceptionnées (' + receivedOrders.length + ')</h3>';
+    if (receivedOrders.length > 0) {
+      html += '<table><thead><tr><th>Produit</th><th>Qté</th><th>Fournisseur</th><th>Réceptionné le</th><th>Notes</th></tr></thead><tbody>';
+      receivedOrders.forEach(function(o) {
+        html += '<tr><td>' + esc(o.product_name) + '</td><td>' + o.quantity + ' ' + esc(o.unit || '') + '</td>';
+        html += '<td>' + esc(o.supplier_name || '—') + '</td>';
+        html += '<td>' + fmtD(o.received_at) + '</td>';
+        html += '<td>' + esc(o.receive_notes || '—') + '</td></tr>';
+      });
+      html += '</tbody></table>';
+    } else {
+      html += '<p style="font-size:12px;color:var(--gray)">Aucune réception récente enregistrée.</p>';
+    }
+    html += '</div>';
+  } catch(e) {
+    html += '<div class="section"><h3>4b. ✅ Commandes réceptionnées</h3><p style="font-size:12px;color:var(--gray)">Données non disponibles.</p></div>';
+  }
+
   var incidents = S.data.incident_reports || [];
   html += '<div class="section"><h3>5. 🚨 Signalements en cours</h3>';
   if (incidents.length > 0) {

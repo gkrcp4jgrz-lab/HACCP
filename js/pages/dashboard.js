@@ -338,11 +338,12 @@ async function loadMultiSiteStats() {
       var pr = await sb.from('site_products').select('id', {count:'exact', head:true}).eq('site_id', sid).eq('active', true);
       var d = await sb.from('dlcs').select('id, dlc_date, status').eq('site_id', sid).not('status', 'in', '("consumed","discarded")');
       var o = await sb.from('orders').select('id', {count:'exact', head:true}).eq('site_id', sid).eq('status', 'to_order');
-      var c = await sb.from('consignes').select('id', {count:'exact', head:true}).eq('site_id', sid).eq('priority', 'urgent');
+      var c = await sb.from('consignes').select('*').eq('site_id', sid).eq('priority', 'urgent');
 
       var dlcData = d.data || [];
       var dlcWarnings = dlcData.filter(function(x) { var days = daysUntil(x.dlc_date); return days <= 2 && days >= 0; }).length;
       var dlcExpired = dlcData.filter(function(x) { return daysUntil(x.dlc_date) < 0; }).length;
+      var urgentList = c.data || [];
 
       stats.push({
         site: site,
@@ -351,7 +352,8 @@ async function loadMultiSiteStats() {
         dlcWarnings: dlcWarnings,
         dlcExpired: dlcExpired,
         ordersOpen: o.count || 0,
-        urgentConsignes: c.count || 0
+        urgentConsignes: urgentList.length,
+        urgentConsignesList: urgentList
       });
     } catch(e) {
       console.error('Stats error for site', site.name, e);
@@ -386,9 +388,9 @@ async function loadAndRenderMultiDashboard() {
   var stats = await loadMultiSiteStats();
   var h = '';
 
-  // Calcul des totaux
   var totalTemp = 0, totalExpected = 0, totalDlcWarn = 0, totalDlcExp = 0, totalOrders = 0, totalUrgent = 0;
   var sitesOk = 0;
+  var allUrgentConsignes = [];
 
   stats.forEach(function(s) {
     totalTemp += s.tempCount;
@@ -398,25 +400,38 @@ async function loadAndRenderMultiDashboard() {
     totalOrders += s.ordersOpen;
     totalUrgent += s.urgentConsignes;
     if (s.totalExpected > 0 && s.tempCount >= s.totalExpected && s.dlcExpired === 0) sitesOk++;
+    if (s.urgentConsignesList) {
+      s.urgentConsignesList.forEach(function(c) { c._siteName = s.site.name; allUrgentConsignes.push(c); });
+    }
   });
 
   var globalPct = totalExpected > 0 ? Math.round(totalTemp / totalExpected * 100) : 0;
 
-  // Bannière globale
-  h += '<div class="global-stats-banner">';
+  // Stats simplifiées : 2 cartes seulement
+  h += '<div class="global-stats-banner" style="grid-template-columns:1fr 1fr">';
   h += '<div class="global-stat"><div class="gs-value">' + S.sites.length + '</div><div class="gs-label">Sites actifs</div></div>';
   h += '<div class="global-stat' + (globalPct >= 100 ? ' gs-success' : '') + '"><div class="gs-value">' + globalPct + '%</div><div class="gs-label">Relevés complétés</div></div>';
-  h += '<div class="global-stat' + (totalDlcExp > 0 ? ' gs-danger' : ' gs-success') + '"><div class="gs-value">' + totalDlcExp + '</div><div class="gs-label">DLC expirées</div></div>';
-  h += '<div class="global-stat' + (totalDlcWarn > 0 ? ' gs-warning' : ' gs-success') + '"><div class="gs-value">' + totalDlcWarn + '</div><div class="gs-label">DLC à surveiller</div></div>';
-  h += '<div class="global-stat"><div class="gs-value">' + totalOrders + '</div><div class="gs-label">Commandes en attente</div></div>';
-  h += '<div class="global-stat' + (totalUrgent > 0 ? ' gs-danger' : ' gs-success') + '"><div class="gs-value">' + totalUrgent + '</div><div class="gs-label">Alertes urgentes</div></div>';
   h += '</div>';
 
-  // Barre de progression globale
-  h += '<div class="card" style="margin-bottom:20px"><div class="card-body"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><strong>Progression globale des relevés</strong><span style="font-weight:700;color:' + (globalPct >= 100 ? 'var(--success)' : 'var(--primary)') + '">' + totalTemp + '/' + totalExpected + ' (' + globalPct + '%)</span></div><div class="progress"><div class="progress-bar" style="width:' + Math.min(100, globalPct) + '%;background:' + (globalPct >= 100 ? 'var(--success)' : globalPct >= 50 ? 'var(--primary)' : 'var(--warning)') + '"></div></div></div></div>';
+  // Barre de progression
+  h += '<div class="card" style="margin-bottom:16px"><div class="card-body" style="padding:14px 18px"><div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-weight:600;font-size:13px;color:#475569">Progression globale</span><span style="font-weight:700;font-size:13px;color:' + (globalPct >= 100 ? 'var(--success)' : 'var(--primary)') + '">' + totalTemp + '/' + totalExpected + '</span></div><div class="progress"><div class="progress-bar" style="width:' + Math.min(100, globalPct) + '%;background:' + (globalPct >= 100 ? 'var(--success)' : globalPct >= 50 ? 'var(--primary)' : 'var(--warning)') + '"></div></div></div></div>';
 
-  // Carte par site
-  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:16px;font-weight:700;color:#1a1a2e;margin:0">Détail par site</h3><span style="font-size:12px;color:var(--gray)">' + sitesOk + '/' + S.sites.length + ' sites conformes</span></div>';
+  // Consignes urgentes + DLC expirées en rectangle
+  if (totalUrgent > 0 || totalDlcExp > 0) {
+    h += '<div class="card" style="border-left:4px solid var(--danger);margin-bottom:16px">';
+    h += '<div class="card-header" style="color:var(--danger);background:var(--danger-bg)">🚨 Alertes à traiter <span class="badge badge-red" style="margin-left:auto">' + (totalUrgent + totalDlcExp) + '</span></div>';
+    h += '<div class="card-body" style="padding:0">';
+    allUrgentConsignes.forEach(function(c) {
+      h += '<div class="list-item"><div class="list-icon" style="background:var(--danger-bg);color:var(--danger)">💬</div><div class="list-content"><div class="list-title" style="color:var(--danger)">' + esc(c.message.substring(0, 80)) + (c.message.length > 80 ? '...' : '') + '</div><div class="list-sub">📍 ' + esc(c._siteName || '') + ' — ' + esc(c.created_by_name || '') + '</div></div></div>';
+    });
+    if (totalDlcExp > 0) {
+      h += '<div class="list-item"><div class="list-icon" style="background:var(--danger-bg);color:var(--danger)">📅</div><div class="list-content"><div class="list-title" style="color:var(--danger)">' + totalDlcExp + ' DLC expirée(s)</div><div class="list-sub">Vérifiez chaque site</div></div></div>';
+    }
+    h += '</div></div>';
+  }
+
+  // Détail par site
+  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h3 style="font-size:15px;font-weight:700;color:#0f172a;margin:0">Détail par site</h3><span style="font-size:12px;color:var(--gray)">' + sitesOk + '/' + S.sites.length + ' conformes</span></div>';
 
   stats.forEach(function(s) {
     var site = s.site;
@@ -427,23 +442,18 @@ async function loadAndRenderMultiDashboard() {
 
     h += '<div class="site-overview-card" style="border-left-color:' + borderColor + '" onclick="switchSite(\'' + site.id + '\');navigate(\'dashboard\');">';
     h += '<div class="site-card-header"><div class="site-card-title">' + typeEmoji + ' ' + esc(site.name) + '</div><div class="site-card-badges">';
-    if (isOk) h += '<span class="badge badge-green">✓ Conforme</span>';
-    if (s.dlcExpired > 0) h += '<span class="badge badge-red">⚠ ' + s.dlcExpired + ' DLC expirée' + (s.dlcExpired > 1 ? 's' : '') + '</span>';
-    if (s.urgentConsignes > 0) h += '<span class="badge badge-red">🚨 ' + s.urgentConsignes + ' urgente' + (s.urgentConsignes > 1 ? 's' : '') + '</span>';
-    if (pct < 100 && pct > 0) h += '<span class="badge badge-yellow">' + pct + '% relevés</span>';
-    if (pct === 0 && s.totalExpected > 0) h += '<span class="badge badge-yellow">Aucun relevé</span>';
+    if (isOk) h += '<span class="badge badge-green">✓ OK</span>';
+    if (s.dlcExpired > 0) h += '<span class="badge badge-red">' + s.dlcExpired + ' DLC</span>';
+    if (s.urgentConsignes > 0) h += '<span class="badge badge-red">' + s.urgentConsignes + ' urg.</span>';
+    if (pct < 100) h += '<span class="badge badge-yellow">' + pct + '%</span>';
     h += '</div></div>';
-
     h += '<div class="mini-stats">';
     h += '<div class="mini-stat' + (pct >= 100 ? ' ok' : pct > 0 ? ' warn' : '') + '"><div class="mini-stat-value">' + s.tempCount + '/' + s.totalExpected + '</div><div class="mini-stat-label">🌡️ Relevés</div></div>';
-    h += '<div class="mini-stat' + (s.dlcExpired > 0 ? ' bad' : s.dlcWarnings > 0 ? ' warn' : ' ok') + '"><div class="mini-stat-value">' + (s.dlcExpired + s.dlcWarnings) + '</div><div class="mini-stat-label">📅 DLC alertes</div></div>';
-    h += '<div class="mini-stat"><div class="mini-stat-value">' + s.ordersOpen + '</div><div class="mini-stat-label">🛒 Commandes</div></div>';
-    h += '<div class="mini-stat' + (s.urgentConsignes > 0 ? ' bad' : ' ok') + '"><div class="mini-stat-value">' + s.urgentConsignes + '</div><div class="mini-stat-label">💬 Urgentes</div></div>';
+    h += '<div class="mini-stat' + (s.dlcExpired > 0 ? ' bad' : ' ok') + '"><div class="mini-stat-value">' + (s.dlcExpired + s.dlcWarnings) + '</div><div class="mini-stat-label">📅 DLC</div></div>';
+    h += '<div class="mini-stat"><div class="mini-stat-value">' + s.ordersOpen + '</div><div class="mini-stat-label">🛒 Cmd</div></div>';
+    h += '<div class="mini-stat' + (s.urgentConsignes > 0 ? ' bad' : ' ok') + '"><div class="mini-stat-value">' + s.urgentConsignes + '</div><div class="mini-stat-label">💬 Urg.</div></div>';
     h += '</div>';
-
-    // Mini progress bar
-    h += '<div style="margin-top:10px"><div class="progress" style="height:6px"><div class="progress-bar" style="width:' + Math.min(100, pct) + '%;background:' + (pct >= 100 ? 'var(--success)' : 'var(--primary)') + '"></div></div></div>';
-
+    h += '<div style="margin-top:8px"><div class="progress" style="height:5px"><div class="progress-bar" style="width:' + Math.min(100, pct) + '%;background:' + (pct >= 100 ? 'var(--success)' : 'var(--primary)') + '"></div></div></div>';
     h += '</div>';
   });
 
