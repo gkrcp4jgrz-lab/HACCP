@@ -1,0 +1,488 @@
+// =====================================================================
+// PHOTO HANDLING
+// =====================================================================
+
+function handlePhotoFor(inputId, context) {
+  var input = document.getElementById(inputId);
+  if (!input || !input.files || !input.files[0]) return;
+  var file = input.files[0];
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var maxW = 1200;
+      var scale = img.width > maxW ? maxW / img.width : 1;
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      var dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      if (context === 'dlc') { S.photoDlcData = dataUrl; }
+      else { S.photoLotData = dataUrl; }
+      render();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearPhotoDlc() { S.photoDlcData = null; render(); }
+function clearPhotoLot() { S.photoLotData = null; render(); }
+
+// =====================================================================
+// SIGNATURE
+// =====================================================================
+
+var sigCanvas, sigCtx, sigDrawing = false;
+
+function initSignature() {
+  sigCanvas = document.getElementById('sigCanvas');
+  if (!sigCanvas) return;
+  sigCtx = sigCanvas.getContext('2d');
+  var rect = sigCanvas.getBoundingClientRect();
+  sigCanvas.width = rect.width;
+  sigCanvas.height = rect.height;
+  sigCtx.strokeStyle = '#1a1a2e';
+  sigCtx.lineWidth = 2;
+  sigCtx.lineCap = 'round';
+  sigCtx.lineJoin = 'round';
+  sigDrawing = false;
+
+  function getPos(e) {
+    var r = sigCanvas.getBoundingClientRect();
+    var t = e.touches ? e.touches[0] : e;
+    return { x: t.clientX - r.left, y: t.clientY - r.top };
+  }
+
+  sigCanvas.onmousedown = sigCanvas.ontouchstart = function(e) {
+    e.preventDefault(); sigDrawing = true;
+    var p = getPos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x, p.y);
+  };
+  sigCanvas.onmousemove = sigCanvas.ontouchmove = function(e) {
+    if (!sigDrawing) return; e.preventDefault();
+    var p = getPos(e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke();
+  };
+  sigCanvas.onmouseup = sigCanvas.ontouchend = function() { sigDrawing = false; };
+}
+
+function clearSignature() {
+  if (sigCanvas && sigCtx) sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+  S.sigData = null;
+}
+
+function saveSignature() {
+  if (!sigCanvas) return;
+  S.sigData = sigCanvas.toDataURL('image/png');
+  closeModal(); render();
+}
+
+// =====================================================================
+// MODALS
+// =====================================================================
+
+function openModal(html) {
+  $('modalContent').innerHTML = html;
+  $('modalOverlay').classList.add('show');
+  setTimeout(function() { initSignature(); }, 100);
+}
+
+function closeModal() {
+  $('modalOverlay').classList.remove('show');
+}
+
+// =====================================================================
+// SIDEBAR & NAVIGATION
+// =====================================================================
+
+function toggleSidebar() {
+  S.sidebarOpen = !S.sidebarOpen;
+  var sidebar = document.querySelector('.sidebar');
+  var bd = $('sidebarBackdrop');
+  if (sidebar) sidebar.classList.toggle('open', S.sidebarOpen);
+  if (bd) bd.classList.toggle('show', S.sidebarOpen);
+}
+
+function navigate(page) {
+  S.page = page;
+  S.filter = 'all';
+  S.sidebarOpen = false;
+  var sidebar = document.querySelector('.sidebar');
+  var bd = $('sidebarBackdrop');
+  if (sidebar) sidebar.classList.remove('open');
+  if (bd) bd.classList.remove('show');
+  render();
+  window.scrollTo(0, 0);
+}
+
+// =====================================================================
+// PDF GENERATION — SYSTÈME COMPLET
+// =====================================================================
+
+// ── STYLES COMMUNS ──
+
+function pdfStyles() {
+  return 'body{font-family:Arial,sans-serif;padding:30px;font-size:13px;color:#1a1a2e}' +
+    'h1{color:#2563eb;font-size:20px;margin-bottom:4px}' +
+    'h2{font-size:14px;color:#666;margin-bottom:20px}' +
+    'h3{font-size:15px;color:#2563eb;margin:24px 0 10px;border-bottom:1px solid #e5e7eb;padding-bottom:6px}' +
+    'table{width:100%;border-collapse:collapse;margin:12px 0 20px}' +
+    'th{background:#2563eb;color:#fff;padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.3px}' +
+    'td{padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:12px}' +
+    'tr:nth-child(even) td{background:#f8fafc}' +
+    '.ok{color:#059669;font-weight:600}.nok{color:#dc2626;font-weight:600}' +
+    '.header{border-bottom:2px solid #2563eb;padding-bottom:12px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-start}' +
+    '.header-left{flex:1}.header-right{text-align:right;font-size:11px;color:#999}' +
+    '.footer{margin-top:30px;padding-top:16px;border-top:2px solid #2563eb;font-size:10px;color:#999;display:flex;justify-content:space-between}' +
+    '.stat-box{display:inline-block;border:1px solid #e5e7eb;border-radius:6px;padding:10px 16px;margin:0 8px 8px 0;text-align:center}' +
+    '.stat-box .val{font-size:22px;font-weight:800;color:#2563eb}.stat-box .lbl{font-size:10px;color:#666;margin-top:2px}' +
+    '.stat-box.danger .val{color:#dc2626}.stat-box.warn .val{color:#d97706}.stat-box.success .val{color:#059669}' +
+    '.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600}' +
+    '.badge-red{background:#fee2e2;color:#dc2626}.badge-green{background:#d1fae5;color:#059669}.badge-yellow{background:#fef3c7;color:#d97706}.badge-gray{background:#f3f4f6;color:#6b7280}' +
+    '.section{page-break-inside:avoid}' +
+    '.sig-block{margin-top:24px;display:flex;gap:40px}' +
+    '.sig-item{flex:1;border-top:1px solid #999;padding-top:6px;font-size:11px;color:#666}' +
+    '@media print{body{padding:15px}h1{font-size:18px}.footer{position:fixed;bottom:0;left:0;right:0;padding:10px 30px}}';
+}
+
+function pdfHeader(title, subtitle) {
+  var site = currentSite();
+  return '<div class="header"><div class="header-left"><h1>🛡️ ' + esc(title) + '</h1><h2>' + esc(subtitle) + '</h2></div>' +
+    '<div class="header-right">' + (site ? esc(site.name) + '<br>' : '') +
+    (site && site.address ? esc(site.address) + '<br>' : '') +
+    (site && site.city ? esc(site.city) + '<br>' : '') +
+    (site && site.agrement ? 'N° agrément : ' + esc(site.agrement) + '<br>' : '') +
+    (site && site.responsable ? 'Responsable : ' + esc(site.responsable) : '') +
+    '</div></div>';
+}
+
+function pdfFooter() {
+  return '<div class="footer"><span>Généré par HACCP Pro le ' + fmtDT(new Date()) + '</span><span>Document à conserver 2 ans minimum — Règlement CE 852/2004</span></div>';
+}
+
+function pdfSignatureBlock() {
+  var sigImg = S.sigData ? '<img src="' + S.sigData + '" style="max-width:180px;max-height:60px;margin-top:6px">' : '<div style="height:50px"></div>';
+  return '<div class="sig-block">' +
+    '<div class="sig-item">Signature de l\'opérateur :<br>' + sigImg + '</div>' +
+    '<div class="sig-item">Date : ' + fmtD(today()) + '</div>' +
+    '<div class="sig-item">Nom : ' + esc(userName()) + '</div>' +
+    '</div>';
+}
+
+function openPdfWindow(html) {
+  var w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(function() { w.print(); }, 300);
+}
+
+// ── RAPPORT TEMPÉRATURES ──
+
+function generateTempPDF() {
+  var dateStr = $('rptTempDate') ? $('rptTempDate').value : today();
+  var site = currentSite();
+  var siteName = site ? site.name : 'Site';
+
+  // Filtrer les températures par date
+  var temps = S.data.temperatures.filter(function(t) {
+    return t.recorded_at && t.recorded_at.startsWith(dateStr);
+  });
+
+  var conform = temps.filter(function(t) { return t.is_conform; }).length;
+  var nonConform = temps.length - conform;
+  var eqCount = S.siteConfig.equipment.length;
+  var prCount = S.siteConfig.products.length;
+  var totalExpected = eqCount + prCount;
+
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Températures — ' + siteName + '</title><style>' + pdfStyles() + '</style></head><body>';
+  html += pdfHeader('Rapport Températures', siteName + ' — ' + fmtD(dateStr));
+
+  // Stats
+  html += '<div style="margin-bottom:16px">';
+  html += '<div class="stat-box"><div class="val">' + temps.length + '/' + totalExpected + '</div><div class="lbl">Relevés effectués</div></div>';
+  html += '<div class="stat-box success"><div class="val">' + conform + '</div><div class="lbl">Conformes</div></div>';
+  if (nonConform > 0) html += '<div class="stat-box danger"><div class="val">' + nonConform + '</div><div class="lbl">Non conformes</div></div>';
+  html += '</div>';
+
+  // Tableau
+  html += '<table><thead><tr><th>Heure</th><th>Point de contrôle</th><th>Type</th><th>Température</th><th>Conformité</th><th>Action corrective</th><th>Opérateur</th></tr></thead><tbody>';
+  if (temps.length > 0) {
+    temps.forEach(function(t) {
+      var refName = '', refType = '';
+      if (t.record_type === 'equipment') {
+        var eq = S.siteConfig.equipment.find(function(e) { return e.id === t.equipment_id; });
+        refName = eq ? eq.name : '—'; refType = 'Équipement';
+      } else {
+        var pr = S.siteConfig.products.find(function(p) { return p.id === t.product_id; });
+        refName = pr ? pr.name : '—'; refType = 'Produit';
+      }
+      html += '<tr><td>' + fmtDT(t.recorded_at) + '</td><td>' + esc(refName) + '</td><td>' + refType + '</td>';
+      html += '<td style="font-weight:700">' + t.value + '°C</td>';
+      html += '<td class="' + (t.is_conform ? 'ok' : 'nok') + '">' + (t.is_conform ? '✓ Conforme' : '✗ Non conforme') + '</td>';
+      html += '<td>' + esc(t.corrective_action || '—') + '</td><td>' + esc(t.recorded_by_name || '—') + '</td></tr>';
+    });
+  } else {
+    html += '<tr><td colspan="7" style="text-align:center;padding:20px;color:#999">Aucun relevé enregistré pour cette date</td></tr>';
+  }
+  html += '</tbody></table>';
+  html += pdfSignatureBlock();
+  html += pdfFooter();
+  html += '</body></html>';
+  openPdfWindow(html);
+}
+
+// Compatibilité ancien nom
+function generateDailyPDF() { generateTempPDF(); }
+
+// ── RAPPORT DLC & TRAÇABILITÉ ──
+
+function generateDlcPDF() {
+  var scope = $('rptDlcScope') ? $('rptDlcScope').value : 'all';
+  var site = currentSite();
+  var siteName = site ? site.name : 'Site';
+
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>DLC & Traçabilité — ' + siteName + '</title><style>' + pdfStyles() + '</style></head><body>';
+  html += pdfHeader('Rapport DLC & Traçabilité', siteName + ' — ' + fmtD(today()));
+
+  // ── DLC ──
+  if (scope === 'all' || scope === 'dlc') {
+    var dlcs = S.data.dlcs.filter(function(d) { return d.status !== 'consumed' && d.status !== 'discarded'; });
+    var expired = dlcs.filter(function(d) { return daysUntil(d.dlc_date) < 0; });
+    var warning = dlcs.filter(function(d) { var dd = daysUntil(d.dlc_date); return dd >= 0 && dd <= 2; });
+    var ok = dlcs.filter(function(d) { return daysUntil(d.dlc_date) > 2; });
+
+    html += '<h3>📅 Contrôle des DLC</h3>';
+    html += '<div style="margin-bottom:12px">';
+    html += '<div class="stat-box danger"><div class="val">' + expired.length + '</div><div class="lbl">Expirées</div></div>';
+    html += '<div class="stat-box warn"><div class="val">' + warning.length + '</div><div class="lbl">À surveiller (≤2j)</div></div>';
+    html += '<div class="stat-box success"><div class="val">' + ok.length + '</div><div class="lbl">Conformes</div></div>';
+    html += '</div>';
+
+    html += '<table><thead><tr><th>Produit</th><th>DLC</th><th>Jours restants</th><th>Lot</th><th>Statut</th><th>Enregistré par</th></tr></thead><tbody>';
+    dlcs.sort(function(a, b) { return new Date(a.dlc_date) - new Date(b.dlc_date); });
+    dlcs.forEach(function(d) {
+      var days = daysUntil(d.dlc_date);
+      var cls = days < 0 ? 'nok' : days <= 2 ? 'nok' : 'ok';
+      var label = days < 0 ? '✗ Expirée (' + Math.abs(days) + 'j)' : days === 0 ? '⚠ Aujourd\'hui' : days <= 2 ? '⚠ ' + days + ' jour(s)' : '✓ ' + days + ' jours';
+      html += '<tr><td>' + esc(d.product_name) + '</td><td>' + fmtD(d.dlc_date) + '</td>';
+      html += '<td class="' + cls + '">' + label + '</td>';
+      html += '<td>' + esc(d.lot_number || '—') + '</td>';
+      html += '<td>' + esc(d.status || 'actif') + '</td>';
+      html += '<td>' + esc(d.recorded_by_name || '—') + '</td></tr>';
+    });
+    if (dlcs.length === 0) html += '<tr><td colspan="6" style="text-align:center;color:#999;padding:16px">Aucune DLC enregistrée</td></tr>';
+    html += '</tbody></table>';
+  }
+
+  // ── LOTS / TRAÇABILITÉ ──
+  if (scope === 'all' || scope === 'lots') {
+    html += '<h3>📦 Registre de Traçabilité</h3>';
+    var lots = S.data.lots;
+    html += '<table><thead><tr><th>Produit</th><th>N° Lot</th><th>Fournisseur</th><th>DLC</th><th>Date d\'enregistrement</th><th>Enregistré par</th></tr></thead><tbody>';
+    lots.forEach(function(l) {
+      html += '<tr><td>' + esc(l.product_name) + '</td><td style="font-weight:600">' + esc(l.lot_number) + '</td>';
+      html += '<td>' + esc(l.supplier_name || '—') + '</td>';
+      html += '<td>' + (l.dlc_date ? fmtD(l.dlc_date) : '—') + '</td>';
+      html += '<td>' + fmtDT(l.recorded_at) + '</td>';
+      html += '<td>' + esc(l.recorded_by_name || '—') + '</td></tr>';
+    });
+    if (lots.length === 0) html += '<tr><td colspan="6" style="text-align:center;color:#999;padding:16px">Aucun lot enregistré</td></tr>';
+    html += '</tbody></table>';
+  }
+
+  html += pdfSignatureBlock();
+  html += pdfFooter();
+  html += '</body></html>';
+  openPdfWindow(html);
+}
+
+// ── RAPPORT SIGNALEMENTS / INCIDENTS ──
+
+async function generateIncidentPDF() {
+  var days = parseInt($('rptIncidentPeriod') ? $('rptIncidentPeriod').value : '30');
+  var site = currentSite();
+  var siteName = site ? site.name : 'Site';
+  var sinceDate = new Date();
+  sinceDate.setDate(sinceDate.getDate() - days);
+
+  try {
+    var r = await sb.from('incident_reports').select('*')
+      .eq('site_id', S.currentSiteId)
+      .gte('created_at', sinceDate.toISOString())
+      .order('created_at', { ascending: false });
+
+    var reports = r.data || [];
+    var open = reports.filter(function(r) { return r.status === 'open'; });
+    var inProgress = reports.filter(function(r) { return r.status === 'in_progress'; });
+    var resolved = reports.filter(function(r) { return r.status === 'resolved'; });
+
+    var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Signalements — ' + siteName + '</title><style>' + pdfStyles() + '</style></head><body>';
+    html += pdfHeader('Rapport Signalements', siteName + ' — ' + days + ' derniers jours');
+
+    // Stats
+    html += '<div style="margin-bottom:16px">';
+    html += '<div class="stat-box"><div class="val">' + reports.length + '</div><div class="lbl">Total signalements</div></div>';
+    html += '<div class="stat-box danger"><div class="val">' + open.length + '</div><div class="lbl">Ouverts</div></div>';
+    html += '<div class="stat-box warn"><div class="val">' + inProgress.length + '</div><div class="lbl">En cours</div></div>';
+    html += '<div class="stat-box success"><div class="val">' + resolved.length + '</div><div class="lbl">Résolus</div></div>';
+    html += '</div>';
+
+    // Tableau
+    var catLabels = { equipment: '🔧 Équipement', hygiene: '🧹 Hygiène', temperature: '🌡️ Température', product: '📦 Produit', other: '📋 Autre' };
+    var statusLabels = { open: '🔴 Ouvert', in_progress: '🟡 En cours', resolved: '🟢 Résolu' };
+
+    html += '<table><thead><tr><th>Date</th><th>Titre</th><th>Catégorie</th><th>Priorité</th><th>Statut</th><th>Signalé par</th><th>Résolu par</th></tr></thead><tbody>';
+    reports.forEach(function(rep) {
+      html += '<tr><td>' + fmtD(rep.created_at) + '</td>';
+      html += '<td>' + esc(rep.title) + '</td>';
+      html += '<td>' + (catLabels[rep.category] || rep.category) + '</td>';
+      html += '<td><span class="badge ' + (rep.priority === 'urgent' ? 'badge-red' : 'badge-yellow') + '">' + (rep.priority === 'urgent' ? 'Urgent' : 'Normal') + '</span></td>';
+      html += '<td>' + (statusLabels[rep.status] || rep.status) + '</td>';
+      html += '<td>' + esc(rep.reported_by_name || '—') + '</td>';
+      html += '<td>' + esc(rep.resolved_by_name || '—') + '</td></tr>';
+    });
+    if (reports.length === 0) html += '<tr><td colspan="7" style="text-align:center;color:#999;padding:16px">Aucun signalement sur cette période</td></tr>';
+    html += '</tbody></table>';
+
+    html += pdfSignatureBlock();
+    html += pdfFooter();
+    html += '</body></html>';
+    openPdfWindow(html);
+  } catch(e) {
+    alert('Erreur lors de la génération : ' + (e.message || e));
+  }
+}
+
+// ── SYNTHÈSE HACCP COMPLÈTE ──
+
+async function generateFullPDF() {
+  var dateStr = $('rptFullDate') ? $('rptFullDate').value : today();
+  var site = currentSite();
+  var siteName = site ? site.name : 'Site';
+
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Synthèse HACCP — ' + siteName + '</title><style>' + pdfStyles() + '</style></head><body>';
+  html += pdfHeader('Synthèse HACCP Complète', siteName + ' — ' + fmtD(dateStr));
+
+  // ── 1. TEMPÉRATURES ──
+  var temps = S.data.temperatures.filter(function(t) { return t.recorded_at && t.recorded_at.startsWith(dateStr); });
+  var conform = temps.filter(function(t) { return t.is_conform; }).length;
+  var totalExpected = S.siteConfig.equipment.length + S.siteConfig.products.length;
+
+  html += '<div class="section"><h3>1. 🌡️ Températures du jour</h3>';
+  html += '<div style="margin-bottom:10px">';
+  html += '<div class="stat-box"><div class="val">' + temps.length + '/' + totalExpected + '</div><div class="lbl">Relevés</div></div>';
+  html += '<div class="stat-box success"><div class="val">' + conform + '</div><div class="lbl">Conformes</div></div>';
+  html += '<div class="stat-box danger"><div class="val">' + (temps.length - conform) + '</div><div class="lbl">Non conformes</div></div>';
+  html += '</div>';
+
+  html += '<table><thead><tr><th>Heure</th><th>Point de contrôle</th><th>Valeur</th><th>Conformité</th><th>Action</th><th>Opérateur</th></tr></thead><tbody>';
+  temps.forEach(function(t) {
+    var refName = '';
+    if (t.record_type === 'equipment') {
+      var eq = S.siteConfig.equipment.find(function(e) { return e.id === t.equipment_id; });
+      refName = eq ? eq.name : '—';
+    } else {
+      var pr = S.siteConfig.products.find(function(p) { return p.id === t.product_id; });
+      refName = pr ? pr.name : '—';
+    }
+    html += '<tr><td>' + fmtDT(t.recorded_at) + '</td><td>' + esc(refName) + '</td>';
+    html += '<td style="font-weight:700">' + t.value + '°C</td>';
+    html += '<td class="' + (t.is_conform ? 'ok' : 'nok') + '">' + (t.is_conform ? '✓' : '✗') + '</td>';
+    html += '<td>' + esc(t.corrective_action || '—') + '</td>';
+    html += '<td>' + esc(t.recorded_by_name || '—') + '</td></tr>';
+  });
+  if (temps.length === 0) html += '<tr><td colspan="6" style="text-align:center;color:#999;padding:12px">Aucun relevé</td></tr>';
+  html += '</tbody></table></div>';
+
+  // ── 2. DLC ──
+  var dlcs = S.data.dlcs.filter(function(d) { return d.status !== 'consumed' && d.status !== 'discarded'; });
+  var expired = dlcs.filter(function(d) { return daysUntil(d.dlc_date) < 0; });
+  var warning = dlcs.filter(function(d) { var dd = daysUntil(d.dlc_date); return dd >= 0 && dd <= 2; });
+
+  html += '<div class="section"><h3>2. 📅 État des DLC</h3>';
+  html += '<div style="margin-bottom:10px">';
+  html += '<div class="stat-box danger"><div class="val">' + expired.length + '</div><div class="lbl">Expirées</div></div>';
+  html += '<div class="stat-box warn"><div class="val">' + warning.length + '</div><div class="lbl">≤ 2 jours</div></div>';
+  html += '<div class="stat-box success"><div class="val">' + (dlcs.length - expired.length - warning.length) + '</div><div class="lbl">Conformes</div></div>';
+  html += '</div>';
+
+  if (expired.length > 0 || warning.length > 0) {
+    html += '<table><thead><tr><th>Produit</th><th>DLC</th><th>Lot</th><th>Statut</th></tr></thead><tbody>';
+    expired.concat(warning).sort(function(a, b) { return new Date(a.dlc_date) - new Date(b.dlc_date); }).forEach(function(d) {
+      var days = daysUntil(d.dlc_date);
+      html += '<tr><td>' + esc(d.product_name) + '</td><td>' + fmtD(d.dlc_date) + '</td><td>' + esc(d.lot_number || '—') + '</td>';
+      html += '<td class="' + (days < 0 ? 'nok' : 'nok') + '">' + (days < 0 ? '✗ Expirée' : '⚠ ' + days + 'j') + '</td></tr>';
+    });
+    html += '</tbody></table>';
+  } else {
+    html += '<p style="color:#059669;font-weight:600">✓ Toutes les DLC sont conformes.</p>';
+  }
+  html += '</div>';
+
+  // ── 3. TRAÇABILITÉ ──
+  html += '<div class="section"><h3>3. 📦 Derniers lots enregistrés</h3>';
+  var recentLots = S.data.lots.slice(0, 10);
+  html += '<table><thead><tr><th>Produit</th><th>N° Lot</th><th>Fournisseur</th><th>DLC</th><th>Date</th></tr></thead><tbody>';
+  recentLots.forEach(function(l) {
+    html += '<tr><td>' + esc(l.product_name) + '</td><td style="font-weight:600">' + esc(l.lot_number) + '</td>';
+    html += '<td>' + esc(l.supplier_name || '—') + '</td>';
+    html += '<td>' + (l.dlc_date ? fmtD(l.dlc_date) : '—') + '</td>';
+    html += '<td>' + fmtDT(l.recorded_at) + '</td></tr>';
+  });
+  if (recentLots.length === 0) html += '<tr><td colspan="5" style="text-align:center;color:#999;padding:12px">Aucun lot</td></tr>';
+  html += '</tbody></table></div>';
+
+  // ── 4. COMMANDES ──
+  var toOrder = S.data.orders.filter(function(o) { return o.status === 'to_order'; });
+  var ordered = S.data.orders.filter(function(o) { return o.status === 'ordered'; });
+
+  html += '<div class="section"><h3>4. 🛒 Commandes en cours</h3>';
+  html += '<div style="margin-bottom:10px">';
+  html += '<div class="stat-box"><div class="val">' + toOrder.length + '</div><div class="lbl">À commander</div></div>';
+  html += '<div class="stat-box warn"><div class="val">' + ordered.length + '</div><div class="lbl">En attente livraison</div></div>';
+  html += '</div>';
+
+  if (toOrder.length + ordered.length > 0) {
+    html += '<table><thead><tr><th>Produit</th><th>Qté</th><th>Fournisseur</th><th>Statut</th></tr></thead><tbody>';
+    toOrder.concat(ordered).forEach(function(o) {
+      html += '<tr><td>' + esc(o.product_name) + '</td><td>' + o.quantity + ' ' + esc(o.unit || '') + '</td>';
+      html += '<td>' + esc(o.supplier_name || '—') + '</td>';
+      html += '<td><span class="badge ' + (o.status === 'to_order' ? 'badge-yellow' : 'badge-gray') + '">' + (o.status === 'to_order' ? 'À commander' : 'Commandé') + '</span></td></tr>';
+    });
+    html += '</tbody></table>';
+  } else {
+    html += '<p style="color:#059669;font-weight:600">✓ Aucune commande en attente.</p>';
+  }
+  html += '</div>';
+
+  // ── 5. SIGNALEMENTS ──
+  var incidents = S.data.incident_reports || [];
+  html += '<div class="section"><h3>5. 🚨 Signalements en cours</h3>';
+  if (incidents.length > 0) {
+    html += '<table><thead><tr><th>Date</th><th>Titre</th><th>Catégorie</th><th>Priorité</th><th>Statut</th><th>Signalé par</th></tr></thead><tbody>';
+    incidents.forEach(function(rep) {
+      html += '<tr><td>' + fmtD(rep.created_at) + '</td><td>' + esc(rep.title) + '</td>';
+      html += '<td>' + esc(rep.category) + '</td>';
+      html += '<td><span class="badge ' + (rep.priority === 'urgent' ? 'badge-red' : 'badge-yellow') + '">' + esc(rep.priority) + '</span></td>';
+      html += '<td>' + esc(rep.status) + '</td>';
+      html += '<td>' + esc(rep.reported_by_name || '—') + '</td></tr>';
+    });
+    html += '</tbody></table>';
+  } else {
+    html += '<p style="color:#059669;font-weight:600">✓ Aucun signalement en cours.</p>';
+  }
+  html += '</div>';
+
+  // ── CONCLUSION ──
+  var allOk = (temps.length - conform === 0) && expired.length === 0 && incidents.filter(function(i) { return i.priority === 'urgent'; }).length === 0;
+  html += '<div style="margin-top:24px;padding:16px;border-radius:8px;background:' + (allOk ? '#d1fae5' : '#fee2e2') + ';text-align:center">';
+  html += '<strong style="font-size:15px;color:' + (allOk ? '#059669' : '#dc2626') + '">';
+  html += allOk ? '✅ Conformité globale : SITE CONFORME' : '⚠️ Points d\'attention identifiés — Actions correctives requises';
+  html += '</strong></div>';
+
+  html += pdfSignatureBlock();
+  html += pdfFooter();
+  html += '</body></html>';
+  openPdfWindow(html);
+}
+
