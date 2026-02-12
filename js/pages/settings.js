@@ -116,7 +116,7 @@ function renderSettingsNotifications() {
   var emailEnabled = localStorage.getItem('haccp_email_enabled') === 'true';
   var emailTo = localStorage.getItem('haccp_email_to') || '';
   var emailEvents = JSON.parse(localStorage.getItem('haccp_email_events') || '["temp_validation","dlc_expired","incident"]');
-  var claudeKey = localStorage.getItem('haccp_claude_key') || '';
+  var claudeKey = sessionStorage.getItem('haccp_claude_key') || '';
 
   // Email notifications
   h += '<div class="card"><div class="card-header">📧 Notifications par email</div><div class="card-body">';
@@ -170,7 +170,17 @@ window.saveNotifSettings = function() {
 
 window.saveClaudeKey = function() {
   var key = document.getElementById('claudeApiKey').value.trim();
-  localStorage.setItem('haccp_claude_key', key);
+  sessionStorage.setItem('haccp_claude_key', key);
+localStorage.removeItem('haccp_claude_key'); // nettoie l'ancienne valeur si elle existe
   S.claudeApiKey = key;
   render();
 };
+var clearBtn = document.getElementById('btn-clear-claude-key');
+if (clearBtn) {
+  clearBtn.addEventListener('click', function () {
+    sessionStorage.removeItem('haccp_claude_key');
+    localStorage.removeItem('haccp_claude_key');
+    alert('Clé Claude supprimée de ce navigateur.');
+    location.reload();
+  });
+}

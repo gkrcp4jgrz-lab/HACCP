@@ -31,8 +31,21 @@ function handlePhotoFor(inputId, context) {
 
 async function runPhotoOCR(dataUrl, context) {
   // Vérifier si une clé API Claude est configurée
-  var apiKey = S.claudeApiKey || localStorage.getItem('haccp_claude_key') || '';
-  if (!apiKey) {
+  var apiKey = S.claudeApiKey || sessionStorage.getItem('haccp_claude_key') || '';
+  
+
+// Remove Claude API key from this browser (session + legacy localStorage)
+function clearClaudeKey() {
+  try { sessionStorage.removeItem('haccp_claude_key'); } catch (e) {}
+  try { localStorage.removeItem('haccp_claude_key'); } catch (e) {}
+  S.claudeApiKey = '';
+  apiKey = '';
+  // If settings input exists, clear it too
+  var el = document.getElementById('claudeApiKey');
+  if (el) el.value = '';
+  alert('Clé Claude supprimée de ce navigateur.');
+}
+if (!apiKey) {
     showOcrStatus(context, 'info', '💡 Configurez votre clé API Claude dans les réglages pour activer la détection automatique.');
     return;
   }

@@ -72,7 +72,7 @@ async function initApp() {
   S.loading = true;
   render();
   // Charger les clés sauvegardées
-  S.claudeApiKey = localStorage.getItem('haccp_claude_key') || '';
+  S.claudeApiKey = sessionStorage.getItem('haccp_claude_key') || '';
   await loadSites();
   if (S.currentSiteId) {
     await loadSiteConfig();
