@@ -1,5 +1,5 @@
 .vercel
-supabase/ .temp/
+supabase/.temp/
 .env
 .env. local
 node_modules/
