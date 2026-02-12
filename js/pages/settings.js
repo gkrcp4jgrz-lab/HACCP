@@ -140,6 +140,7 @@ function renderSettingsNotifications() {
   h += '<div class="form-group"><label class="form-label">Clé API Claude</label><input type="password" class="form-input" id="claudeApiKey" value="' + esc(claudeKey) + '" placeholder="sk-ant-..." onchange="saveClaudeKey()"></div>';
   if (claudeKey) {
     h += '<div style="padding:8px 12px;background:var(--ok-bg);border-radius:var(--radius);font-size:12px;color:var(--ok);margin-bottom:8px">✅ Clé API configurée — La détection automatique est active</div>';
+    h += '<button type="button" class="btn btn-ghost btn-sm" onclick="clearClaudeKey()">🗑️ Supprimer la clé de cette session</button>';
   }
   h += '<p style="font-size:11px;color:var(--muted)">Obtenez une clé sur <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a>. Coût : ~0.01€ par photo analysée.</p>';
   h += '</div></div>';
@@ -175,12 +176,3 @@ localStorage.removeItem('haccp_claude_key'); // nettoie l'ancienne valeur si ell
   S.claudeApiKey = key;
   render();
 };
-var clearBtn = document.getElementById('btn-clear-claude-key');
-if (clearBtn) {
-  clearBtn.addEventListener('click', function () {
-    sessionStorage.removeItem('haccp_claude_key');
-    localStorage.removeItem('haccp_claude_key');
-    alert('Clé Claude supprimée de ce navigateur.');
-    location.reload();
-  });
-}
