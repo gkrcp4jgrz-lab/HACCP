@@ -1,5 +1,5 @@
 // =====================================================================
-// PHOTO HANDLING
+// PHOTO HANDLING + CLAUDE VISION OCR
 // =====================================================================
 
 function handlePhotoFor(inputId, context) {
@@ -21,10 +21,130 @@ function handlePhotoFor(inputId, context) {
       if (context === 'dlc') { S.photoDlcData = dataUrl; }
       else { S.photoLotData = dataUrl; }
       render();
+      // Lancer l'OCR automatique
+      runPhotoOCR(dataUrl, context);
     };
     img.src = e.target.result;
   };
   reader.readAsDataURL(file);
+}
+
+async function runPhotoOCR(dataUrl, context) {
+  // Vérifier si une clé API Claude est configurée
+  var apiKey = S.claudeApiKey || localStorage.getItem('haccp_claude_key') || '';
+  if (!apiKey) {
+    showOcrStatus(context, 'info', '💡 Configurez votre clé API Claude dans les réglages pour activer la détection automatique.');
+    return;
+  }
+
+  showOcrStatus(context, 'loading', '🔍 Analyse de l\'étiquette en cours...');
+
+  try {
+    var base64 = dataUrl.split(',')[1];
+    var prompt = context === 'dlc'
+      ? 'Analyse cette photo d\'étiquette alimentaire. Extrais UNIQUEMENT en JSON:\n{"product_name": "...", "dlc_date": "YYYY-MM-DD", "lot_number": "...", "confidence": "high/medium/low"}\nSi un champ n\'est pas visible, mets null. dlc_date = date limite de consommation (DLC) ou DDM. Cherche les formats: JJ/MM/AAAA, DD.MM.YYYY, etc.'
+      : 'Analyse cette photo d\'étiquette alimentaire. Extrais UNIQUEMENT en JSON:\n{"product_name": "...", "lot_number": "...", "origin": "...", "supplier": "...", "confidence": "high/medium/low"}\nSi un champ n\'est pas visible, mets null.';
+
+    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 300,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
+            { type: 'text', text: prompt }
+          ]
+        }]
+      })
+    });
+
+    if (!resp.ok) {
+      var errData = await resp.json().catch(function() { return {}; });
+      throw new Error(errData.error ? errData.error.message : 'Erreur API ' + resp.status);
+    }
+
+    var data = await resp.json();
+    var text = data.content && data.content[0] ? data.content[0].text : '';
+    
+    // Extraire le JSON de la réponse
+    var jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Pas de données détectées');
+    
+    var result = JSON.parse(jsonMatch[0]);
+    applyOcrResult(result, context);
+  } catch(err) {
+    showOcrStatus(context, 'error', '⚠️ ' + (err.message || 'Erreur de détection'));
+  }
+}
+
+function applyOcrResult(result, context) {
+  var filled = [];
+
+  if (context === 'dlc') {
+    if (result.product_name) {
+      var el = document.getElementById('dlcProd');
+      if (el && !el.value) { el.value = result.product_name; filled.push('produit'); }
+    }
+    if (result.dlc_date) {
+      var el2 = document.getElementById('dlcDate');
+      if (el2) { el2.value = result.dlc_date; filled.push('date DLC'); }
+    }
+    if (result.lot_number) {
+      var el3 = document.getElementById('dlcLot');
+      if (el3 && !el3.value) { el3.value = result.lot_number; filled.push('n° lot'); }
+    }
+  } else {
+    if (result.product_name) {
+      var el4 = document.getElementById('lotProd');
+      if (el4 && !el4.value) { el4.value = result.product_name; filled.push('produit'); }
+    }
+    if (result.lot_number) {
+      var el5 = document.getElementById('lotNum');
+      if (el5 && !el5.value) { el5.value = result.lot_number; filled.push('n° lot'); }
+    }
+    if (result.origin) {
+      var el6 = document.getElementById('lotOrigin');
+      if (el6 && !el6.value) { el6.value = result.origin; filled.push('origine'); }
+    }
+    if (result.supplier) {
+      var el7 = document.getElementById('lotSupplier');
+      if (el7) {
+        // Tenter de matcher un fournisseur existant
+        var opts = el7.options;
+        for (var i = 0; i < opts.length; i++) {
+          if (opts[i].text.toLowerCase().indexOf(result.supplier.toLowerCase()) >= 0) {
+            el7.value = opts[i].value; filled.push('fournisseur'); break;
+          }
+        }
+      }
+    }
+  }
+
+  var confidence = result.confidence || 'medium';
+  var confLabel = confidence === 'high' ? '🟢 Élevée' : confidence === 'medium' ? '🟡 Moyenne' : '🔴 Faible';
+  
+  if (filled.length > 0) {
+    showOcrStatus(context, 'success', '✅ Détecté : ' + filled.join(', ') + ' (confiance : ' + confLabel + ')');
+  } else {
+    showOcrStatus(context, 'info', '📷 Photo capturée mais aucune info détectée automatiquement.');
+  }
+}
+
+function showOcrStatus(context, type, message) {
+  var id = context === 'dlc' ? 'ocrStatusDlc' : 'ocrStatusLot';
+  var el = document.getElementById(id);
+  if (!el) return;
+  var bg = type === 'success' ? 'var(--ok-bg)' : type === 'error' ? 'var(--err-bg)' : type === 'loading' ? 'var(--accent-light)' : 'var(--warn-bg)';
+  var color = type === 'success' ? 'var(--ok)' : type === 'error' ? 'var(--err)' : type === 'loading' ? 'var(--accent-dark)' : 'var(--warn)';
+  el.innerHTML = '<div style="padding:8px 12px;border-radius:var(--radius);background:' + bg + ';color:' + color + ';font-size:12px;font-weight:500">' + (type === 'loading' ? '<span class="loading" style="margin-right:6px"></span>' : '') + message + '</div>';
 }
 
 function clearPhotoDlc() { S.photoDlcData = null; render(); }
@@ -518,5 +638,67 @@ async function generateFullPDF() {
   html += pdfFooter();
   html += '</body></html>';
   openPdfWindow(html);
+  S.reportGenerated = today();
+  setTimeout(function() { render(); }, 200);
 }
 
+
+// =====================================================================
+// EMAIL NOTIFICATIONS (via Supabase Edge Function)
+// =====================================================================
+
+async function triggerEmailNotification(eventType, data) {
+  try {
+    var enabled = localStorage.getItem('haccp_email_enabled') === 'true';
+    if (!enabled) return;
+
+    var events = JSON.parse(localStorage.getItem('haccp_email_events') || '[]');
+    if (events.indexOf(eventType) < 0) return;
+
+    var emailTo = localStorage.getItem('haccp_email_to') || '';
+    if (!emailTo) return;
+
+    var subject = '';
+    var body = '';
+
+    switch(eventType) {
+      case 'temp_validation':
+        subject = '✅ HACCP — Service ' + data.service + ' validé — ' + data.site;
+        body = 'Le service ' + data.service + ' a été validé par ' + data.user + ' le ' + data.date + '.\n\n';
+        body += 'Relevés enregistrés : ' + data.temperatures + '\n';
+        body += data.nonConform > 0 ? '⚠️ Non-conformités : ' + data.nonConform + '\n' : '✅ Tous les relevés conformes\n';
+        break;
+      case 'temp_nonconform':
+        subject = '⚠️ HACCP — Température non conforme — ' + data.site;
+        body = 'Une température non conforme a été enregistrée par ' + data.user + '.\n\n';
+        body += 'Équipement : ' + data.equipment + '\n';
+        body += 'Valeur : ' + data.value + '°C (limites : ' + data.min + '/' + data.max + '°C)\n';
+        if (data.action) body += 'Action corrective : ' + data.action + '\n';
+        break;
+      case 'dlc_expired':
+        subject = '🔴 HACCP — DLC expirée — ' + data.site;
+        body = 'DLC expirée détectée.\n\nProduit : ' + data.product + '\nDate DLC : ' + data.dlcDate + '\n';
+        break;
+      case 'incident':
+        subject = '🚨 HACCP — Nouveau signalement — ' + data.site;
+        body = 'Signalement : ' + data.title + '\n\n' + data.description + '\n\nPar : ' + data.user + '\nPriorité : ' + data.priority + '\n';
+        break;
+      default: return;
+    }
+
+    // Appeler la Edge Function Supabase
+    var funcUrl = sb.supabaseUrl.replace('.supabase.co', '.functions.supabase.co') + '/send-email';
+    await fetch(funcUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + (await sb.auth.getSession()).data.session.access_token
+      },
+      body: JSON.stringify({ to: emailTo, subject: subject, body: body })
+    });
+  } catch(e) {
+    console.warn('Email notification failed:', e);
+  }
+}
+
+window.triggerEmailNotification = triggerEmailNotification;

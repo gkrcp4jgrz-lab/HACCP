@@ -1,18 +1,14 @@
 function renderDLC() {
   var h = '';
   
-  // Onglets DLC / Traçabilité
-  if (!S.dlcTab) S.dlcTab = 'dlc';
-  h += '<div class="tabs" style="margin-bottom:16px">';
-  h += '<button class="tab' + (S.dlcTab==='dlc'?' active':'') + '" onclick="S.dlcTab=\'dlc\';render()">📅 Contrôle DLC</button>';
-  h += '<button class="tab' + (S.dlcTab==='lots'?' active':'') + '" onclick="S.dlcTab=\'lots\';render()">📦 Traçabilité lots</button>';
-  h += '</div>';
-
-  if (S.dlcTab === 'dlc') {
-    h += renderDlcTab();
-  } else {
-    h += renderLotsTab();
-  }
+  // DLC section
+  h += renderDlcTab();
+  
+  // Separator
+  h += '<div style="margin:20px 0;border-top:1px solid var(--border)"></div>';
+  
+  // Lots/Traçabilité section
+  h += renderLotsTab();
 
   return h;
 }
@@ -31,8 +27,9 @@ function renderDlcTab() {
   if (S.photoDlcData) {
     h += '<div style="text-align:center;padding:12px;border:2px solid var(--success);border-radius:var(--radius);background:var(--success-bg)"><img src="' + S.photoDlcData + '" class="photo-preview"><br><button type="button" class="btn btn-ghost btn-sm" onclick="clearPhotoDlc()">✕ Supprimer la photo</button></div>';
   } else {
-    h += '<label class="photo-box" for="photoDlcInput"><div class="photo-icon">📷</div><div class="photo-text">Prendre une photo de l\'étiquette</div><div class="photo-hint">La date DLC sera détectée si possible</div></label><input type="file" id="photoDlcInput" accept="image/*" capture="environment" onchange="handlePhotoFor(\'photoDlcInput\',\'dlc\')" style="display:none">';
+    h += '<label class="photo-box" for="photoDlcInput"><div class="photo-icon">📷</div><div class="photo-text">Prendre une photo de l\'étiquette</div><div class="photo-hint">La date DLC sera détectée automatiquement</div></label><input type="file" id="photoDlcInput" accept="image/*" capture="environment" onchange="handlePhotoFor(\'photoDlcInput\',\'dlc\')" style="display:none">';
   }
+  h += '<div id="ocrStatusDlc"></div>';
   h += '</div>';
 
   h += '<div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="dlcNotes" rows="2" placeholder="Observations..."></textarea></div>';
@@ -94,8 +91,9 @@ function renderLotsTab() {
   if (S.photoLotData) {
     h += '<div style="text-align:center;padding:12px;border:2px solid var(--success);border-radius:var(--radius);background:var(--success-bg)"><img src="' + S.photoLotData + '" class="photo-preview"><br><button type="button" class="btn btn-ghost btn-sm" onclick="clearPhotoLot()">✕ Supprimer la photo</button></div>';
   } else {
-    h += '<label class="photo-box" for="photoLotInput"><div class="photo-icon">📷</div><div class="photo-text">Prendre une photo de l\'étiquette</div><div class="photo-hint">Le N° de lot sera détecté si possible</div></label><input type="file" id="photoLotInput" accept="image/*" capture="environment" onchange="handlePhotoFor(\'photoLotInput\',\'lot\')" style="display:none">';
+    h += '<label class="photo-box" for="photoLotInput"><div class="photo-icon">📷</div><div class="photo-text">Prendre une photo de l\'étiquette</div><div class="photo-hint">Le N° de lot sera détecté automatiquement</div></label><input type="file" id="photoLotInput" accept="image/*" capture="environment" onchange="handlePhotoFor(\'photoLotInput\',\'lot\')" style="display:none">';
   }
+  h += '<div id="ocrStatusLot"></div>';
   h += '</div>';
 
   h += '<div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="lotNotes" rows="2" placeholder="Observations..."></textarea></div>';

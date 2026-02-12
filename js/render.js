@@ -29,9 +29,9 @@ function render() {
 
 function renderAuth() {
   return '<div class="auth-wrapper"><div class="auth-card">' +
-    '<div class="auth-logo"><span style="font-size:48px">🛡️</span><h1>HACCP Pro</h1><p>Gestion de la sécurité alimentaire</p></div>' +
+    '<div class="auth-logo"><h1>HACCP Pro</h1><p>Gestion de la sécurité alimentaire</p></div>' +
     '<div id="authForm">' + renderLoginForm() + '</div>' +
-    '<p style="text-align:center;font-size:12px;color:var(--gray);margin-top:16px">Contactez votre administrateur pour obtenir vos identifiants.</p>' +
+    '<p style="text-align:center;font-size:11px;color:var(--muted);margin-top:20px">Contactez votre administrateur pour obtenir vos identifiants.</p>' +
     '</div></div>';
 }
 

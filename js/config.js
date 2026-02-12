@@ -14,7 +14,11 @@ function $(id) { return document.getElementById(id); }
 function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 function fmtD(d) { if (!d) return '—'; try { return new Date(d).toLocaleDateString('fr-FR'); } catch(e) { return d; } }
 function fmtDT(d) { if (!d) return '—'; try { return new Date(d).toLocaleString('fr-FR'); } catch(e) { return d; } }
-function today() { return new Date().toISOString().split('T')[0]; }
+function today() {
+  // Timezone-aware: use local date, not UTC
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
 function daysUntil(d) { return Math.ceil((new Date(d) - new Date(today())) / 86400000); }
 
 // ── APPLICATION STATE ──

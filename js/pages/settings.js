@@ -5,8 +5,8 @@ function renderSettings() {
 
   var h = '';
   h += '<div class="tabs">';
-  ['equipment','products','suppliers','modules'].forEach(function(t) {
-    var labels = {equipment:'❄️ Équipements',products:'🍽️ Produits',suppliers:'🏭 Fournisseurs',modules:'📦 Modules'};
+  ['equipment','products','suppliers','modules','notifications'].forEach(function(t) {
+    var labels = {equipment:'❄️ Équipements',products:'🍽️ Produits',suppliers:'🏭 Fournisseurs',modules:'📦 Modules',notifications:'🔔 Notifications'};
     h += '<button class="tab' + (S.settingsTab===t?' active':'') + '" onclick="S.settingsTab=\'' + t + '\';render()">' + labels[t] + '</button>';
   });
   h += '</div>';
@@ -15,6 +15,7 @@ function renderSettings() {
   else if (S.settingsTab === 'products') h += renderSettingsProducts();
   else if (S.settingsTab === 'suppliers') h += renderSettingsSuppliers();
   else if (S.settingsTab === 'modules') h += renderSettingsModules();
+  else if (S.settingsTab === 'notifications') h += renderSettingsNotifications();
 
   return h;
 }
@@ -108,3 +109,68 @@ function renderSettingsModules() {
 
   return h;
 }
+
+function renderSettingsNotifications() {
+  var h = '';
+  // Load saved settings
+  var emailEnabled = localStorage.getItem('haccp_email_enabled') === 'true';
+  var emailTo = localStorage.getItem('haccp_email_to') || '';
+  var emailEvents = JSON.parse(localStorage.getItem('haccp_email_events') || '["temp_validation","dlc_expired","incident"]');
+  var claudeKey = localStorage.getItem('haccp_claude_key') || '';
+
+  // Email notifications
+  h += '<div class="card"><div class="card-header">📧 Notifications par email</div><div class="card-body">';
+  h += '<div class="form-group"><label class="form-label" style="display:flex;align-items:center;gap:10px;cursor:pointer"><label class="toggle"><input type="checkbox" id="emailEnabled" ' + (emailEnabled ? 'checked' : '') + ' onchange="saveNotifSettings()"><span class="toggle-slider"></span></label> Activer les notifications email</label></div>';
+  h += '<div id="emailConfig" style="' + (emailEnabled ? '' : 'opacity:.5;pointer-events:none') + '">';
+  h += '<div class="form-group"><label class="form-label">Destinataire(s)</label><input type="text" class="form-input" id="emailTo" value="' + esc(emailTo) + '" placeholder="gerant@hotel.com, autre@hotel.com" onchange="saveNotifSettings()"></div>';
+  h += '<div class="form-group"><label class="form-label">Événements déclencheurs</label>';
+  h += '<div style="display:flex;flex-direction:column;gap:8px">';
+  h += '<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" class="emailEvt" value="temp_validation" ' + (emailEvents.indexOf('temp_validation') >= 0 ? 'checked' : '') + ' onchange="saveNotifSettings()"> Validation d\'un service températures</label>';
+  h += '<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" class="emailEvt" value="temp_nonconform" ' + (emailEvents.indexOf('temp_nonconform') >= 0 ? 'checked' : '') + ' onchange="saveNotifSettings()"> Température non conforme détectée</label>';
+  h += '<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" class="emailEvt" value="dlc_expired" ' + (emailEvents.indexOf('dlc_expired') >= 0 ? 'checked' : '') + ' onchange="saveNotifSettings()"> DLC expirée</label>';
+  h += '<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" class="emailEvt" value="incident" ' + (emailEvents.indexOf('incident') >= 0 ? 'checked' : '') + ' onchange="saveNotifSettings()"> Nouveau signalement</label>';
+  h += '</div></div>';
+  h += '</div>';
+  h += '<div id="emailSaveStatus"></div>';
+  h += '</div></div>';
+
+  // Claude Vision API Key
+  h += '<div class="card"><div class="card-header">📷 Reconnaissance d\'étiquettes (OCR)</div><div class="card-body">';
+  h += '<p style="font-size:12px;color:var(--muted);margin-bottom:12px">La reconnaissance automatique des étiquettes (DLC, lot, produit) utilise Claude Vision. Une clé API Anthropic est nécessaire.</p>';
+  h += '<div class="form-group"><label class="form-label">Clé API Claude</label><input type="password" class="form-input" id="claudeApiKey" value="' + esc(claudeKey) + '" placeholder="sk-ant-..." onchange="saveClaudeKey()"></div>';
+  if (claudeKey) {
+    h += '<div style="padding:8px 12px;background:var(--ok-bg);border-radius:var(--radius);font-size:12px;color:var(--ok);margin-bottom:8px">✅ Clé API configurée — La détection automatique est active</div>';
+  }
+  h += '<p style="font-size:11px;color:var(--muted)">Obtenez une clé sur <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a>. Coût : ~0.01€ par photo analysée.</p>';
+  h += '</div></div>';
+
+  return h;
+}
+
+window.saveNotifSettings = function() {
+  var enabled = document.getElementById('emailEnabled').checked;
+  var emailTo = document.getElementById('emailTo').value.trim();
+  var events = [];
+  document.querySelectorAll('.emailEvt:checked').forEach(function(cb) { events.push(cb.value); });
+  
+  localStorage.setItem('haccp_email_enabled', enabled);
+  localStorage.setItem('haccp_email_to', emailTo);
+  localStorage.setItem('haccp_email_events', JSON.stringify(events));
+
+  // Toggle opacity
+  var cfg = document.getElementById('emailConfig');
+  if (cfg) cfg.style = enabled ? '' : 'opacity:.5;pointer-events:none';
+
+  var status = document.getElementById('emailSaveStatus');
+  if (status) {
+    status.innerHTML = '<div style="padding:6px 10px;background:var(--ok-bg);border-radius:var(--radius);font-size:12px;color:var(--ok);margin-top:8px">✅ Paramètres sauvegardés</div>';
+    setTimeout(function() { if (status) status.innerHTML = ''; }, 2000);
+  }
+};
+
+window.saveClaudeKey = function() {
+  var key = document.getElementById('claudeApiKey').value.trim();
+  localStorage.setItem('haccp_claude_key', key);
+  S.claudeApiKey = key;
+  render();
+};

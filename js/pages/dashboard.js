@@ -46,7 +46,7 @@ function renderDashboard() {
       h += '<div class="list-item" style="border-bottom:1px solid var(--gray-border);padding:10px 0">';
       h += '<div class="list-content"><div class="list-title" style="color:var(--danger);font-weight:600">' + esc(c.message) + '</div>';
       h += '<div class="list-sub">Par ' + esc(c.created_by_name) + ' · ' + fmtDT(c.created_at) + '</div></div>';
-      h += '<div class="list-actions"><button class="btn btn-success btn-sm" onclick="markConsigneRead(\'' + c.id + '\')">✓ Traité</button></div>';
+      h += '<div class="list-actions"><button class="btn btn-success btn-sm" onclick="event.stopPropagation();markConsigneRead(\'' + c.id + '\')">✓ Traité</button></div>';
       h += '</div>';
     });
     h += '</div></div>';
@@ -304,12 +304,17 @@ function renderDashboardTimeline(tempCount, totalExpected, dlcExpired, dlcWarnin
   }
 
   // 6. Rapport du jour
-  h += '<div class="tl-item"><div class="tl-dot pending"></div>';
+  var reportGenerated = S.reportGenerated === today();
+  h += '<div class="tl-item"><div class="tl-dot ' + (reportGenerated ? 'done' : 'pending') + '"></div>';
   h += '<div class="tl-card" onclick="navigate(\'reports\')">';
   h += '<div class="tl-card-header"><div class="tl-card-title">📄 Rapport du jour</div>';
-  h += '<span class="badge badge-gray">À générer</span>';
+  if (reportGenerated) {
+    h += '<span class="badge badge-green">✓ Généré</span>';
+  } else {
+    h += '<span class="badge badge-gray">À générer</span>';
+  }
   h += '</div>';
-  h += '<div class="tl-card-sub">Générez votre rapport HACCP journalier</div>';
+  h += '<div class="tl-card-sub">' + (reportGenerated ? 'Rapport HACCP généré' : 'Générez votre rapport HACCP journalier') + '</div>';
   h += '</div></div>';
 
   h += '</div>'; // fin timeline

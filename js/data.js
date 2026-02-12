@@ -39,8 +39,9 @@ async function loadSiteData() {
   if (!S.currentSiteId) return;
   var sid = S.currentSiteId;
   var todayStr = today();
+  var localMidnightISO = new Date(todayStr + 'T00:00:00').toISOString();
   try {
-    var t = await sb.from('temperatures').select('*').eq('site_id', sid).gte('recorded_at', todayStr + 'T00:00:00').order('recorded_at', {ascending:false});
+    var t = await sb.from('temperatures').select('*').eq('site_id', sid).gte('recorded_at', localMidnightISO).order('recorded_at', {ascending:false});
     S.data.temperatures = t.data || [];
 
     var d = await sb.from('dlcs').select('*').eq('site_id', sid).order('dlc_date');
@@ -70,6 +71,8 @@ async function switchSite(siteId) {
 async function initApp() {
   S.loading = true;
   render();
+  // Charger les clés sauvegardées
+  S.claudeApiKey = localStorage.getItem('haccp_claude_key') || '';
   await loadSites();
   if (S.currentSiteId) {
     await loadSiteConfig();
@@ -102,6 +105,19 @@ async function addTemperature(type, refId, value, corrAction, corrNote) {
   };
   var r = await sb.from('temperatures').insert(rec);
   if (r.error) { alert('Erreur: ' + r.error.message); return; }
+
+  // Email si non conforme
+  if (!conform) {
+    triggerEmailNotification('temp_nonconform', {
+      site: currentSite() ? currentSite().name : '',
+      user: userName(),
+      equipment: equip ? equip.name : (prod ? prod.name : ''),
+      value: value,
+      min: minT, max: maxT,
+      action: corrAction || ''
+    });
+  }
+
   await loadSiteData(); render();
 }
 

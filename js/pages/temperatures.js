@@ -37,7 +37,12 @@ function renderTemperatures() {
 
   // Validation button
   if (serviceProgress >= totalPerService && totalPerService > 0) {
-    h += '<div style="margin-top:12px;text-align:center"><button class="btn btn-success btn-lg" onclick="validateService(' + currentService + ',' + nonConform.length + ')">✅ Valider le service ' + currentService + '</button></div>';
+    var alreadyValidated = S.validatedServices && S.validatedServices.indexOf(currentService) >= 0;
+    if (alreadyValidated) {
+      h += '<div style="margin-top:12px;text-align:center;padding:10px;background:var(--success-bg);border-radius:var(--radius);color:var(--success);font-weight:600">✅ Service ' + currentService + ' validé</div>';
+    } else {
+      h += '<div style="margin-top:12px;text-align:center"><button class="btn btn-success btn-lg" onclick="validateService(' + currentService + ',' + nonConform.length + ')">✅ Valider le service ' + currentService + '</button></div>';
+    }
   }
 
   h += '</div></div>';
@@ -100,7 +105,14 @@ function renderTemperatures() {
   return h;
 }
 
-window.validateService = function(serviceNum, nonConformCount) {
+window.validateService = async function(serviceNum, nonConformCount) {
+  // Empêcher double validation
+  if (!S.validatedServices) S.validatedServices = [];
+  if (S.validatedServices.indexOf(serviceNum) >= 0) {
+    alert('✅ Ce service a déjà été validé.');
+    return;
+  }
+
   if (nonConformCount > 0) {
     if (!confirm('⚠️ ATTENTION : ' + nonConformCount + ' relevé(s) non conforme(s) détecté(s) !\n\nÊtes-vous sûr de vouloir valider le service ' + serviceNum + ' malgré ces anomalies ?\n\nUne action corrective devrait être documentée.')) {
       return;
@@ -111,5 +123,24 @@ window.validateService = function(serviceNum, nonConformCount) {
     openSignatureModal();
     return;
   }
-  alert('✅ Service ' + serviceNum + ' validé avec succès !\n\nRelevés : ' + S.data.temperatures.length + '\nSignature : ✓\n' + (nonConformCount > 0 ? '⚠️ ' + nonConformCount + ' non-conformité(s) signalée(s)' : '✅ Tous les relevés conformes'));
+
+  if (!confirm('Confirmer la validation du service ' + serviceNum + ' ?\n\nRelevés : ' + S.data.temperatures.length + '\nSignature : ✓')) {
+    return;
+  }
+
+  // Marquer le service comme validé
+  S.validatedServices.push(serviceNum);
+
+  // Envoi email si configuré
+  triggerEmailNotification('temp_validation', {
+    service: serviceNum,
+    temperatures: S.data.temperatures.length,
+    nonConform: nonConformCount,
+    site: currentSite() ? currentSite().name : '',
+    user: userName(),
+    date: today()
+  });
+
+  alert('✅ Service ' + serviceNum + ' validé avec succès !' + (nonConformCount > 0 ? '\n⚠️ ' + nonConformCount + ' non-conformité(s) signalée(s)' : '\n✅ Tous les relevés conformes'));
+  render();
 };
