@@ -29,23 +29,21 @@ function handlePhotoFor(inputId, context) {
   reader.readAsDataURL(file);
 }
 
-async function runPhotoOCR(dataUrl, context) {
-  // Vérifier si une clé API Claude est configurée
-  var apiKey = S.claudeApiKey || sessionStorage.getItem('haccp_claude_key') || '';
-  
-
 // Remove Claude API key from this browser (session + legacy localStorage)
 function clearClaudeKey() {
   try { sessionStorage.removeItem('haccp_claude_key'); } catch (e) {}
   try { localStorage.removeItem('haccp_claude_key'); } catch (e) {}
   S.claudeApiKey = '';
-  apiKey = '';
-  // If settings input exists, clear it too
   var el = document.getElementById('claudeApiKey');
   if (el) el.value = '';
   alert('Clé Claude supprimée de ce navigateur.');
 }
-if (!apiKey) {
+
+async function runPhotoOCR(dataUrl, context) {
+  // Vérifier si une clé API Claude est configurée
+  var apiKey = S.claudeApiKey || sessionStorage.getItem('haccp_claude_key') || '';
+
+  if (!apiKey) {
     showOcrStatus(context, 'info', '💡 Configurez votre clé API Claude dans les réglages pour activer la détection automatique.');
     return;
   }
@@ -98,6 +96,24 @@ if (!apiKey) {
   }
 }
 
+function normalizeOcrDate(value) {
+  if (!value) return '';
+  var v = String(value).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+  var m = v.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})$/);
+  if (!m) return '';
+  var day = String(parseInt(m[1], 10)).padStart(2, '0');
+  var month = String(parseInt(m[2], 10)).padStart(2, '0');
+  var year = String(m[3]);
+  if (year.length === 2) year = '20' + year;
+  return year + '-' + month + '-' + day;
+}
+
+function normalizeLotNumber(value) {
+  if (!value) return '';
+  return String(value).trim().toUpperCase();
+}
+
 function applyOcrResult(result, context) {
   var filled = [];
 
@@ -108,11 +124,12 @@ function applyOcrResult(result, context) {
     }
     if (result.dlc_date) {
       var el2 = document.getElementById('dlcDate');
-      if (el2) { el2.value = result.dlc_date; filled.push('date DLC'); }
+      var normalizedDate = normalizeOcrDate(result.dlc_date);
+      if (el2 && normalizedDate) { el2.value = normalizedDate; filled.push('date DLC'); }
     }
     if (result.lot_number) {
       var el3 = document.getElementById('dlcLot');
-      if (el3 && !el3.value) { el3.value = result.lot_number; filled.push('n° lot'); }
+      if (el3 && !el3.value) { el3.value = normalizeLotNumber(result.lot_number); filled.push('n° lot'); }
     }
   } else {
     if (result.product_name) {
@@ -121,14 +138,10 @@ function applyOcrResult(result, context) {
     }
     if (result.lot_number) {
       var el5 = document.getElementById('lotNum');
-      if (el5 && !el5.value) { el5.value = result.lot_number; filled.push('n° lot'); }
-    }
-    if (result.origin) {
-      var el6 = document.getElementById('lotOrigin');
-      if (el6 && !el6.value) { el6.value = result.origin; filled.push('origine'); }
+      if (el5 && !el5.value) { el5.value = normalizeLotNumber(result.lot_number); filled.push('n° lot'); }
     }
     if (result.supplier) {
-      var el7 = document.getElementById('lotSupplier');
+      var el7 = document.getElementById('lotSupp');
       if (el7) {
         // Tenter de matcher un fournisseur existant
         var opts = el7.options;
