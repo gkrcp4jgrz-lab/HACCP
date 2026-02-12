@@ -135,11 +135,13 @@ async function addDlc(productName, dlcDate, lotNumber, notes) {
 
 async function deleteDlc(id) {
   if (!confirm('Supprimer ce contrôle DLC ?')) return;
-  await sb.from('dlcs').delete().eq('id', id); await loadSiteData(); render();
+  var r = await sbExec(sb.from('dlcs').delete().eq('id', id), 'Suppression DLC');
+if (!r) return; await loadSiteData(); render();
 }
 
 async function updateDlcStatus(id, status) {
-  await sb.from('dlcs').update({ status: status }).eq('id', id); await loadSiteData(); render();
+  var r = await sbExec(sb.from('dlcs').update({ status: status }).eq('id', id), 'Mise à jour DLC');
+if (!r) return; await loadSiteData(); render();
 }
 
 // -- Lots --
@@ -157,7 +159,8 @@ async function addLot(productName, lotNumber, supplierName, dlcDate, notes) {
 
 async function deleteLot(id) {
   if (!confirm('Supprimer ce lot ?')) return;
-  await sb.from('lots').delete().eq('id', id); await loadSiteData(); render();
+  var r = await sbExec(sb.from('lots').delete().eq('id', id), 'Suppression lot');
+if (!r) return; await loadSiteData(); render();
 }
 
 // -- Orders --
@@ -176,12 +179,14 @@ async function addOrder(productName, qty, unit, supplierName, notes) {
 async function updateOrderStatus(id, status) {
   var upd = { status: status };
   if (status === 'received') upd.received_at = new Date().toISOString();
-  await sb.from('orders').update(upd).eq('id', id); await loadSiteData(); render();
+  var r = await sbExec(sb.from('orders').update(upd).eq('id', id), 'Mise à jour commande');
+if (!r) return; await loadSiteData(); render();
 }
 
 async function deleteOrder(id) {
   if (!confirm('Supprimer cette commande ?')) return;
-  await sb.from('orders').delete().eq('id', id); await loadSiteData(); render();
+  var r = await sbExec(sb.from('orders').delete().eq('id', id), 'Suppression commande');
+if (!r) return; await loadSiteData(); render();
 }
 
 // -- Consignes --
@@ -196,5 +201,27 @@ async function addConsigne(message, priority) {
 }
 
 async function deleteConsigne(id) {
-  await sb.from('consignes').delete().eq('id', id); await loadSiteData(); render();
+  var r = await sbExec(sb.from('consignes').delete().eq('id', id), 'Suppression consigne');
+if (!r) return; await loadSiteData(); render();
 }
+// ── SUPABASE HELPERS (safe) ──
+function notifyError(title, err) {
+  console.error(title, err);
+  var msg = (err && err.message) ? err.message : String(err || '');
+  alert((title || 'Erreur') + (msg ? (' : ' + msg) : ''));
+}
+
+// sbExec: exécute une requête supabase et gère l'erreur proprement
+async function sbExec(promise, title) {
+  var r;
+  try {
+    r = await promise;
+  } catch (e) {
+    notifyError(title || 'Erreur réseau', e);
+    return null;
+  }
+  if (r && r.error) {
+    notifyError(title || 'Erreur Supabase', r.error);
+    return null;
+  }
+  return r;
