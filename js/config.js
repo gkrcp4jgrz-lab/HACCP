@@ -172,6 +172,40 @@ function exportCSV(filename, headers, rows) {
   showToast('Export CSV téléchargé', 'success');
 }
 
+// ── LOGIN ID GENERATION ──
+
+function getLoginIdInitials(fullName) {
+  var parts = (fullName || '').trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  } else if (parts.length === 1 && parts[0]) {
+    return (parts[0][0] + (parts[0][1] || 'X')).toUpperCase();
+  }
+  return 'XX';
+}
+
+async function generateUniqueLoginId(fullName) {
+  var initials = getLoginIdInitials(fullName);
+  // Fetch all existing login_ids
+  var r = await sb.from('profiles').select('login_id');
+  var existing = (r.data || []).map(function(p) { return (p.login_id || '').toUpperCase(); });
+
+  // Find next available number for these initials
+  var maxNum = 0;
+  existing.forEach(function(lid) {
+    if (lid.substring(0, 2) === initials) {
+      var num = parseInt(lid.substring(2), 10);
+      if (!isNaN(num) && num > maxNum) maxNum = num;
+    }
+  });
+
+  return initials + String(maxNum + 1).padStart(4, '0');
+}
+
+function loginIdToEmail(loginId) {
+  return (loginId || '').toLowerCase().replace(/[^a-z0-9]/g, '') + '@haccp.internal';
+}
+
 // ── PRODUCT & SUPPLIER SUGGESTIONS ──
 
 function getProductSuggestions() {

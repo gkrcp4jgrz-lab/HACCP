@@ -1,5 +1,5 @@
 // =====================================================================
-// AUTH — with rate limiting, session timeout, password reset
+// AUTH — Identifier-based login (no email needed)
 // =====================================================================
 
 async function checkAuth() {
@@ -30,35 +30,48 @@ async function loadProfile() {
   } catch(e) { console.error('Load profile error:', e); }
 }
 
-async function doLogin(email, pass) {
+// Login by identifier: lookup login_id -> get internal email -> authenticate
+async function doLoginById(loginId, pass) {
   // Rate limit check
   var rl = checkLoginRateLimit();
   if (!rl.allowed) throw new Error(rl.message);
 
+  // Lookup the email via secure RPC function (works for anon)
+  var email = null;
+  try {
+    var lookup = await sb.rpc('lookup_login_id', { p_login_id: loginId.toUpperCase() });
+    if (lookup.data && lookup.data.length > 0) {
+      email = lookup.data[0].email;
+    }
+  } catch(e) {
+    console.warn('lookup_login_id RPC not available, trying email fallback');
+  }
+
+  // Fallback: if input contains @, try as direct email (migration period)
+  if (!email && loginId.indexOf('@') > -1) {
+    email = loginId;
+  }
+
+  if (!email) {
+    recordLoginAttempt(false);
+    throw new Error('Identifiant inconnu');
+  }
   var r = await sb.auth.signInWithPassword({ email: email, password: pass });
   if (r.error) {
     recordLoginAttempt(false);
-    throw r.error;
+    throw new Error('Mot de passe incorrect');
   }
+
   recordLoginAttempt(true);
   S.user = r.data.user;
   await loadProfile();
   resetSessionTimer();
+
   if (S.profile && S.profile.must_change_password) {
     renderChangePassword();
     return;
   }
   await initApp();
-}
-
-async function doRegister(email, pass, name) {
-  var r = await sb.auth.signUp({
-    email: email,
-    password: pass,
-    options: { data: { full_name: name } }
-  });
-  if (r.error) throw r.error;
-  showToast('Inscription reussie ! Verifiez votre email.', 'success', 5000);
 }
 
 async function doLogout() {
@@ -71,14 +84,6 @@ async function doLogout() {
   render();
 }
 
-async function doPasswordReset(email) {
-  var r = await sb.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin + window.location.pathname
-  });
-  if (r.error) throw r.error;
-  showToast('Email de reinitialisation envoye !', 'success', 5000);
-}
-
 async function changePassword(newPass) {
   var v = validatePassword(newPass);
   if (!v.valid) throw new Error(v.message);
@@ -89,12 +94,15 @@ async function changePassword(newPass) {
   await initApp();
 }
 
-async function createUser(email, tempPass, fullName, role) {
+// Create user with auto-generated login_id and internal email
+async function createUser(loginId, tempPass, fullName, role) {
   var currentSession = await sb.auth.getSession();
   var savedToken = currentSession.data.session;
 
+  var internalEmail = loginIdToEmail(loginId);
+
   var r = await sb.auth.signUp({
-    email: email,
+    email: internalEmail,
     password: tempPass,
     options: { data: { full_name: fullName } }
   });
@@ -102,20 +110,37 @@ async function createUser(email, tempPass, fullName, role) {
   var newUser = r.data.user;
   if (!newUser) throw new Error('Utilisateur non cree');
 
+  // Restore admin session
   if (savedToken) {
     await sb.auth.setSession({ access_token: savedToken.access_token, refresh_token: savedToken.refresh_token });
   }
 
+  // Wait for the trigger to create the profile
   await new Promise(function(resolve) { setTimeout(resolve, 1500); });
+
+  // Set login_id and email on the profile
+  await sb.from('profiles').update({
+    login_id: loginId.toUpperCase(),
+    email: internalEmail,
+    must_change_password: true
+  }).eq('id', newUser.id);
 
   if (role && role !== 'employee') {
     var r2 = await sb.rpc('admin_set_user_role', { p_target_user_id: newUser.id, p_new_role: role });
     if (r2.error) throw r2.error;
   }
 
-  await sb.from('profiles').update({ must_change_password: true }).eq('id', newUser.id);
-
   return newUser;
+}
+
+// Update login_id for an existing user (super_admin/manager only)
+async function updateLoginId(userId, newLoginId) {
+  var upper = newLoginId.toUpperCase();
+  // Check uniqueness
+  var existing = await sb.from('profiles').select('id').eq('login_id', upper).neq('id', userId).maybeSingle();
+  if (existing.data) throw new Error('Cet identifiant est deja utilise');
+
+  await sb.from('profiles').update({ login_id: upper }).eq('id', userId);
 }
 
 // Listen for auth state changes (session refresh, etc.)

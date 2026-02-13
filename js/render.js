@@ -37,29 +37,10 @@ function renderAuth() {
 
 function renderLoginForm() {
   return '<form onsubmit="handleLogin(event)">' +
-    '<div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="loginEmail" required placeholder="votre@email.com" autocomplete="email"></div>' +
+    '<div class="form-group"><label class="form-label">Identifiant</label><input type="text" class="form-input" id="loginId" required placeholder="Ex : JR0001" autocomplete="username" style="text-transform:uppercase;letter-spacing:1px;font-weight:600"></div>' +
     '<div class="form-group"><label class="form-label">Mot de passe</label><input type="password" class="form-input" id="loginPass" required placeholder="••••••••" autocomplete="current-password"></div>' +
     '<div id="loginError" class="form-error" style="display:none"></div>' +
-    '<button type="submit" class="btn btn-primary btn-block btn-lg" id="loginBtn" style="margin-top:8px">Se connecter</button>' +
-    '<div style="text-align:center;margin-top:12px"><a href="#" onclick="event.preventDefault();showForgotPassword()" style="font-size:12px;color:var(--accent);font-weight:500">Mot de passe oublie ?</a></div></form>';
-}
-
-function renderForgotPasswordForm() {
-  return '<form onsubmit="handleForgotPassword(event)">' +
-    '<div style="text-align:center;margin-bottom:16px"><span style="font-size:28px">🔐</span><h3 style="font-size:16px;margin-top:8px">Reinitialiser le mot de passe</h3><p style="font-size:12px;color:var(--muted);margin-top:4px">Un lien de reinitialisation sera envoye a votre email.</p></div>' +
-    '<div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="resetEmail" required placeholder="votre@email.com" autocomplete="email"></div>' +
-    '<div id="resetError" class="form-error" style="display:none"></div>' +
-    '<button type="submit" class="btn btn-primary btn-block btn-lg" id="resetBtn">Envoyer le lien</button>' +
-    '<div style="text-align:center;margin-top:12px"><a href="#" onclick="event.preventDefault();showLoginFromReset()" style="font-size:12px;color:var(--accent);font-weight:500">Retour a la connexion</a></div></form>';
-}
-
-function renderRegisterForm() {
-  return '<form onsubmit="handleRegister(event)">' +
-    '<div class="form-group"><label class="form-label">Nom complet</label><input type="text" class="form-input" id="regName" required placeholder="Jean Dupont"></div>' +
-    '<div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="regEmail" required placeholder="votre@email.com"></div>' +
-    '<div class="form-group"><label class="form-label">Mot de passe</label><input type="password" class="form-input" id="regPass" required minlength="6" placeholder="6 caractères minimum"></div>' +
-    '<div id="regError" class="form-error" style="display:none"></div>' +
-    '<button type="submit" class="btn btn-primary btn-block btn-lg" id="regBtn" style="margin-top:8px">Créer un compte</button></form>';
+    '<button type="submit" class="btn btn-primary btn-block btn-lg" id="loginBtn" style="margin-top:8px">Se connecter</button></form>';
 }
 
 function renderChangePassword() {
