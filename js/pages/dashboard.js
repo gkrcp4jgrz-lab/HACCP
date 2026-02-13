@@ -22,33 +22,135 @@ function renderDashboard() {
 
   var h = '';
 
-  // Header avec nom du site
-  h += '<div style="margin-bottom:16px"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:24px">' + ({hotel:'🏨',restaurant:'🍽️',cuisine_centrale:'🏭',autre:'🏢'}[site.type]||'🏢') + '</span><div><h2 style="margin:0;font-size:18px;font-weight:700;color:#1a1a2e">' + esc(site.name) + '</h2><span style="font-size:12px;color:var(--gray)">' + (site.address||'') + (site.city ? ', ' + site.city : '') + '</span></div></div></div>';
+  // ── 1. GREETING BANNER ──
+  var now = new Date();
+  var hour = now.getHours();
+  var greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
+  var firstName = userName().split(' ')[0];
 
-  // Stats cards
-  h += '<div class="stats-grid">';
-  h += '<div class="stat-card' + (tempCount >= totalExpected ? ' success' : '') + '"><div class="stat-value">' + tempCount + '/' + totalExpected + '</div><div class="stat-label">🌡️ Relevés aujourd\'hui</div></div>';
-  h += '<div class="stat-card' + (dlcWarnings.length > 0 ? ' warning' : ' success') + '"><div class="stat-value">' + dlcWarnings.length + '</div><div class="stat-label">📅 DLC à surveiller</div></div>';
-  h += '<div class="stat-card' + (dlcExpired.length > 0 ? ' danger' : ' success') + '"><div class="stat-value">' + dlcExpired.length + '</div><div class="stat-label">❌ DLC expirées</div></div>';
-  h += '<div class="stat-card' + (ordersToOrder.length > 0 ? ' warning' : ' success') + '"><div class="stat-value">' + ordersToOrder.length + '</div><div class="stat-label">🛒 À commander</div></div>';
+  h += '<div class="greeting-banner">';
+  h += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">';
+  h += '<div class="greeting-text"><h2>' + greeting + ', ' + esc(firstName) + '</h2>';
+  h += '<p>' + fmtD(today()) + ' · ' + esc(site.name) + '</p></div>';
+  if (S.sites.length > 1) {
+    h += '<div><select onchange="switchSite(this.value)" style="padding:8px 32px 8px 14px;border:1.5px solid rgba(255,255,255,.15);border-radius:8px;font-size:13px;font-weight:600;background:rgba(255,255,255,.1);color:#F1F5F9;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' fill=\'%2394a3b8\' viewBox=\'0 0 16 16\'%3E%3Cpath d=\'M8 11L3 6h10z\'/%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 10px center">';
+    S.sites.forEach(function(s) {
+      h += '<option value="' + s.id + '"' + (s.id === S.currentSiteId ? ' selected' : '') + ' style="background:#1E293B;color:#F1F5F9">' + esc(s.name) + '</option>';
+    });
+    h += '</select></div>';
+  }
+  h += '</div></div>';
+
+  // ── 2. QUICK ACTIONS ──
+  h += '<div class="quick-actions">';
+  if (moduleEnabled('temperatures')) h += '<div class="quick-action" onclick="navigate(\'temperatures\')"><div class="qa-icon">🌡️</div><div class="qa-label">Températures</div></div>';
+  if (moduleEnabled('dlc') || moduleEnabled('lots')) h += '<div class="quick-action" onclick="navigate(\'dlc\')"><div class="qa-icon">📥</div><div class="qa-label">Réception</div></div>';
+  if (moduleEnabled('orders')) h += '<div class="quick-action" onclick="navigate(\'orders\')"><div class="qa-icon">🛒</div><div class="qa-label">Commandes</div></div>';
+  h += '<div class="quick-action" onclick="navigate(\'reports\')"><div class="qa-icon">📄</div><div class="qa-label">Rapports</div></div>';
   h += '</div>';
 
-  // Barre de progression relevés
+  // ── 3. STATS GRID ──
+  h += '<div class="stats-grid">';
+
+  var tempPct = totalExpected > 0 ? Math.round(tempCount / totalExpected * 100) : 0;
+  h += '<div class="stat-card' + (tempCount >= totalExpected ? ' success' : '') + '" onclick="navigate(\'temperatures\')" style="cursor:pointer">';
+  h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><span style="font-size:28px">🌡️</span>';
+  if (totalExpected > 0) {
+    h += '<div style="width:42px;height:42px;border-radius:50%;border:3px solid ' + (tempPct >= 100 ? 'var(--success)' : 'var(--primary)') + ';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:' + (tempPct >= 100 ? 'var(--success)' : 'var(--primary)') + '">' + tempPct + '%</div>';
+  }
+  h += '</div>';
+  h += '<div class="stat-value">' + tempCount + '/' + totalExpected + '</div><div class="stat-label">Relevés aujourd\'hui</div></div>';
+
+  h += '<div class="stat-card' + (dlcWarnings.length > 0 ? ' warning' : ' success') + '" onclick="navigate(\'dlc\')" style="cursor:pointer">';
+  h += '<div style="margin-bottom:8px"><span style="font-size:28px">📅</span></div>';
+  h += '<div class="stat-value">' + dlcWarnings.length + '</div><div class="stat-label">DLC à surveiller</div></div>';
+
+  h += '<div class="stat-card' + (dlcExpired.length > 0 ? ' danger' : ' success') + '" onclick="navigate(\'dlc\')" style="cursor:pointer">';
+  h += '<div style="margin-bottom:8px"><span style="font-size:28px">❌</span></div>';
+  h += '<div class="stat-value">' + dlcExpired.length + '</div><div class="stat-label">DLC expirées</div></div>';
+
+  h += '<div class="stat-card' + (ordersToOrder.length > 0 ? ' warning' : ' success') + '" onclick="navigate(\'orders\')" style="cursor:pointer">';
+  h += '<div style="margin-bottom:8px"><span style="font-size:28px">🛒</span></div>';
+  h += '<div class="stat-value">' + ordersToOrder.length + '</div><div class="stat-label">À commander</div></div>';
+  h += '</div>';
+
+  // ── 4. PROGRESS BAR ──
   if (totalExpected > 0) {
     var pct = Math.min(100, Math.round(tempCount / totalExpected * 100));
-    h += '<div class="card"><div class="card-body"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><strong>Progression relevés du jour</strong><span style="font-weight:700;color:' + (pct >= 100 ? 'var(--success)' : 'var(--primary)') + '">' + pct + '%</span></div><div class="progress"><div class="progress-bar" style="width:' + pct + '%;background:' + (pct >= 100 ? 'var(--success)' : 'var(--primary)') + '"></div></div></div></div>';
+    h += '<div class="card"><div class="card-body">';
+    h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
+    h += '<div><strong style="font-size:15px;font-weight:800">Progression relevés du jour</strong></div>';
+    h += '<div style="display:flex;align-items:center;gap:8px"><span style="font-weight:800;font-size:18px;color:' + (pct >= 100 ? 'var(--success)' : 'var(--primary)') + '">' + pct + '%</span>';
+    if (pct >= 100) h += '<span style="font-size:18px">✅</span>';
+    h += '</div></div>';
+    h += '<div class="progress" style="height:10px;border-radius:5px"><div class="progress-bar" style="width:' + pct + '%;background:' + (pct >= 100 ? 'var(--success)' : 'var(--primary)') + ';border-radius:5px"></div></div>';
+    h += '</div></div>';
   }
 
-  // ── CONSIGNES URGENTES ──
-  if (urgentConsignes.length > 0) {
-    h += '<div class="card" style="border-left:4px solid var(--danger)"><div class="card-header" style="color:var(--danger)">🚨 Consignes urgentes <span class="badge badge-red" style="margin-left:auto">' + urgentConsignes.length + '</span></div><div class="card-body">';
+  // ── 5. ALERTS (Urgent consignes + DLC expired combined) ──
+  var totalAlerts = urgentConsignes.length + dlcExpired.length;
+  if (totalAlerts > 0) {
+    h += '<div class="card" style="border-left:4px solid var(--danger)"><div class="card-header" style="color:var(--danger);background:var(--danger-bg)">🚨 Alertes <span class="badge badge-red" style="margin-left:auto;font-size:12px;padding:4px 12px">' + totalAlerts + '</span></div><div class="card-body" style="padding:0">';
+
     urgentConsignes.forEach(function(c) {
-      h += '<div class="list-item" style="border-bottom:1px solid var(--gray-border);padding:10px 0">';
-      h += '<div class="list-content"><div class="list-title" style="color:var(--danger);font-weight:600">' + esc(c.message) + '</div>';
+      h += '<div class="list-item">';
+      h += '<div class="list-content"><div class="list-title" style="color:var(--danger);font-weight:700;font-size:14px">💬 ' + esc(c.message) + '</div>';
       h += '<div class="list-sub">Par ' + esc(c.created_by_name) + ' · ' + fmtDT(c.created_at) + '</div></div>';
-      h += '<div class="list-actions"><button class="btn btn-success btn-sm" onclick="event.stopPropagation();markConsigneRead(\'' + c.id + '\')">✓ Traité</button></div>';
+      h += '<div class="list-actions"><button class="btn btn-success" onclick="event.stopPropagation();markConsigneRead(\'' + c.id + '\')">✓ Traité</button></div>';
       h += '</div>';
     });
+
+    dlcExpired.forEach(function(d) {
+      h += '<div class="list-item">';
+      h += '<div class="list-content"><div class="list-title" style="color:var(--danger);font-size:14px">📅 ' + esc(d.product_name) + ' <span class="badge badge-red">Expiré (J' + daysUntil(d.dlc_date) + ')</span></div>';
+      h += '<div class="list-sub">DLC : ' + fmtD(d.dlc_date) + (d.lot_number ? ' · Lot : ' + esc(d.lot_number) : '') + '</div></div>';
+      h += '<div class="list-actions">';
+      h += '<button class="btn btn-danger" onclick="updateDlcStatus(\'' + d.id + '\',\'discarded\')">🗑️ Jeter</button>';
+      h += '<button class="btn btn-success" onclick="updateDlcStatus(\'' + d.id + '\',\'consumed\')">✓ Utilisé</button>';
+      h += '</div></div>';
+    });
+
+    h += '</div></div>';
+  }
+
+  // DLC warnings (non-expired)
+  if (dlcWarnings.length > 0) {
+    h += '<div class="card" style="border-left:4px solid var(--warning)"><div class="card-header" style="background:var(--warning-bg)">⚠️ DLC à surveiller <span class="badge badge-yellow" style="margin-left:auto;font-size:12px;padding:4px 12px">' + dlcWarnings.length + '</span></div><div class="card-body" style="padding:0">';
+    dlcWarnings.forEach(function(d) {
+      var days = daysUntil(d.dlc_date);
+      h += '<div class="list-item">';
+      h += '<div class="list-content"><div class="list-title" style="color:var(--warning);font-size:14px">' + esc(d.product_name) + ' <span class="badge badge-yellow">J-' + days + '</span></div>';
+      h += '<div class="list-sub">DLC : ' + fmtD(d.dlc_date) + (d.lot_number ? ' · Lot : ' + esc(d.lot_number) : '') + '</div></div>';
+      h += '<div class="list-actions"><button class="btn btn-success" onclick="updateDlcStatus(\'' + d.id + '\',\'consumed\')">✓ Utilisé</button></div>';
+      h += '</div>';
+    });
+    h += '</div></div>';
+  }
+
+  // ── 6. SHOPPING LIST ──
+  if (ordersToOrder.length > 0) {
+    var bySupplier = {};
+    ordersToOrder.forEach(function(o) {
+      var key = o.supplier_name || '— Sans fournisseur —';
+      if (!bySupplier[key]) bySupplier[key] = [];
+      bySupplier[key].push(o);
+    });
+
+    h += '<div class="card" style="border-left:4px solid var(--warning)"><div class="card-header" style="background:var(--warning-bg)">🛒 Liste des courses <span class="badge badge-yellow" style="margin-left:auto;font-size:12px;padding:4px 12px">' + ordersToOrder.length + ' article' + (ordersToOrder.length > 1 ? 's' : '') + '</span></div><div class="card-body">';
+
+    Object.keys(bySupplier).forEach(function(supplier) {
+      h += '<div style="margin-bottom:18px">';
+      h += '<h4 style="font-size:15px;font-weight:800;color:var(--ink);margin:0 0 10px;padding-bottom:8px;border-bottom:2px solid var(--primary-light);display:flex;align-items:center;gap:8px"><span style="font-size:20px">🏭</span> ' + esc(supplier) + '</h4>';
+      bySupplier[supplier].forEach(function(o) {
+        h += '<div class="list-item" style="padding:8px 0">';
+        h += '<div class="list-content"><div class="list-title">' + esc(o.product_name) + '</div>';
+        h += '<div class="list-sub">' + (o.quantity || 1) + ' ' + (o.unit || 'unité') + (o.notes ? ' · ' + esc(o.notes) : '') + '</div></div>';
+        h += '<div class="list-actions"><button class="btn btn-success" onclick="dashMarkOrdered(\'' + o.id + '\')">✓ Commandé</button></div>';
+        h += '</div>';
+      });
+      h += '</div>';
+    });
+
     h += '</div></div>';
   }
 
@@ -57,102 +159,39 @@ function renderDashboard() {
     h += '<div class="card"><div class="card-header">💬 Dernières consignes</div><div class="card-body">';
     normalConsignes.forEach(function(c) {
       var prioStyle = c.priority === 'high' ? 'color:var(--warning)' : '';
-      h += '<div class="list-item" style="border-bottom:1px solid var(--gray-border);padding:8px 0">';
+      h += '<div class="list-item" style="border-bottom:1px solid var(--gray-border);padding:10px 0">';
       h += '<div class="list-content"><div class="list-title" style="' + prioStyle + '">' + esc(c.message) + '</div>';
       h += '<div class="list-sub">' + esc(c.created_by_name) + ' · ' + fmtDT(c.created_at) + '</div></div></div>';
     });
-    h += '<div style="text-align:center;padding-top:8px"><button class="btn btn-ghost btn-sm" onclick="navigate(\'consignes\')">Voir toutes les consignes →</button></div>';
-    h += '</div></div>';
-  }
-
-  // ── DLC ALERTES ──
-  if (dlcExpired.length > 0 || dlcWarnings.length > 0) {
-    h += '<div class="card" style="border-left:4px solid ' + (dlcExpired.length > 0 ? 'var(--danger)' : 'var(--warning)') + '"><div class="card-header">📅 Alertes DLC <span class="badge ' + (dlcExpired.length > 0 ? 'badge-red' : 'badge-yellow') + '" style="margin-left:auto">' + (dlcExpired.length + dlcWarnings.length) + '</span></div><div class="card-body">';
-    
-    dlcExpired.forEach(function(d) {
-      h += '<div class="list-item" style="border-bottom:1px solid var(--gray-border);padding:8px 0">';
-      h += '<div class="list-content"><div class="list-title" style="color:var(--danger)">' + esc(d.product_name) + ' <span class="badge badge-red">Expiré (J' + daysUntil(d.dlc_date) + ')</span></div>';
-      h += '<div class="list-sub">DLC : ' + fmtD(d.dlc_date) + (d.lot_number ? ' · Lot : ' + esc(d.lot_number) : '') + '</div></div>';
-      h += '<div class="list-actions">';
-      h += '<button class="btn btn-danger btn-sm" onclick="updateDlcStatus(\'' + d.id + '\',\'discarded\')">Jeter</button>';
-      h += '<button class="btn btn-success btn-sm" onclick="updateDlcStatus(\'' + d.id + '\',\'consumed\')">Utilisé</button>';
-      h += '</div></div>';
-    });
-    
-    dlcWarnings.forEach(function(d) {
-      var days = daysUntil(d.dlc_date);
-      h += '<div class="list-item" style="border-bottom:1px solid var(--gray-border);padding:8px 0">';
-      h += '<div class="list-content"><div class="list-title" style="color:var(--warning)">' + esc(d.product_name) + ' <span class="badge badge-yellow">J-' + days + '</span></div>';
-      h += '<div class="list-sub">DLC : ' + fmtD(d.dlc_date) + (d.lot_number ? ' · Lot : ' + esc(d.lot_number) : '') + '</div></div>';
-      h += '<div class="list-actions"><button class="btn btn-success btn-sm" onclick="updateDlcStatus(\'' + d.id + '\',\'consumed\')">Utilisé</button></div>';
-      h += '</div>';
-    });
-    
-    h += '</div></div>';
-  }
-
-  // ── COMMANDES EN ATTENTE (liste des courses) ──
-  if (ordersToOrder.length > 0) {
-    // Grouper par fournisseur
-    var bySupplier = {};
-    ordersToOrder.forEach(function(o) {
-      var key = o.supplier_name || '— Sans fournisseur —';
-      if (!bySupplier[key]) bySupplier[key] = [];
-      bySupplier[key].push(o);
-    });
-
-    h += '<div class="card" style="border-left:4px solid var(--warning)"><div class="card-header">🛒 Liste des courses <span class="badge badge-yellow" style="margin-left:auto">' + ordersToOrder.length + ' article' + (ordersToOrder.length > 1 ? 's' : '') + '</span></div><div class="card-body">';
-    
-    Object.keys(bySupplier).forEach(function(supplier) {
-      h += '<div style="margin-bottom:16px">';
-      h += '<h4 style="font-size:14px;font-weight:700;color:#1a1a2e;margin:0 0 8px;padding-bottom:6px;border-bottom:2px solid var(--primary-light)">🏭 ' + esc(supplier) + '</h4>';
-      bySupplier[supplier].forEach(function(o) {
-        h += '<div class="list-item" style="padding:6px 0">';
-        h += '<div class="list-content"><div class="list-title">' + esc(o.product_name) + '</div>';
-        h += '<div class="list-sub">' + (o.quantity || 1) + ' ' + (o.unit || 'unité') + (o.notes ? ' · ' + esc(o.notes) : '') + '</div></div>';
-        h += '<div class="list-actions"><button class="btn btn-success btn-sm" onclick="dashMarkOrdered(\'' + o.id + '\')">✓ Commandé</button></div>';
-        h += '</div>';
-      });
-      h += '</div>';
-    });
-    
+    h += '<div style="text-align:center;padding-top:12px"><button class="btn btn-ghost" onclick="navigate(\'consignes\')">Voir toutes les consignes →</button></div>';
     h += '</div></div>';
   }
 
   // ── COMMANDES EN COURS DE LIVRAISON ──
   if (ordersOrdered.length > 0) {
-    h += '<div class="card"><div class="card-header">📦 En attente de livraison <span class="badge badge-blue" style="margin-left:auto">' + ordersOrdered.length + '</span></div><div class="card-body">';
+    h += '<div class="card"><div class="card-header">📦 En attente de livraison <span class="badge badge-blue" style="margin-left:auto;font-size:12px;padding:4px 12px">' + ordersOrdered.length + '</span></div><div class="card-body">';
     ordersOrdered.forEach(function(o) {
-      h += '<div class="list-item" style="padding:6px 0">';
+      h += '<div class="list-item" style="padding:8px 0">';
       h += '<div class="list-content"><div class="list-title">' + esc(o.product_name) + '</div>';
       h += '<div class="list-sub">' + (o.supplier_name ? '🏭 ' + esc(o.supplier_name) + ' · ' : '') + (o.quantity || 1) + ' ' + (o.unit || 'unité') + ' · Commandé le ' + fmtD(o.ordered_at) + '</div></div>';
-      h += '<div class="list-actions"><button class="btn btn-primary btn-sm" onclick="dashMarkReceived(\'' + o.id + '\')">✓ Reçu</button></div>';
+      h += '<div class="list-actions"><button class="btn btn-primary" onclick="dashMarkReceived(\'' + o.id + '\')">✓ Reçu</button></div>';
       h += '</div>';
     });
     h += '</div></div>';
   }
 
-  // ── TIMELINE : MA JOURNÉE ──
+  // ── 7. TIMELINE : MA JOURNÉE ──
   h += renderDashboardTimeline(tempCount, totalExpected, dlcExpired, dlcWarnings, ordersToOrder, ordersOrdered, urgentConsignes);
 
   return h;
 }
 
-// PAGE: MULTI-SITE DASHBOARD (Super Admin / Multi-site Managers)
-
 // ── TIMELINE MA JOURNÉE ──
 
 function renderDashboardTimeline(tempCount, totalExpected, dlcExpired, dlcWarnings, ordersToOrder, ordersOrdered, urgentConsignes) {
   var h = '';
-  var now = new Date();
-  var hour = now.getHours();
 
-  // Greeting dynamique
-  var greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
-  h += '<div style="margin:20px 0 16px"><div style="display:flex;align-items:center;justify-content:space-between">';
-  h += '<div><h3 style="margin:0;font-size:17px;font-weight:700;color:#1a1a2e">' + greeting + ', ' + esc(userName().split(' ')[0]) + ' 👋</h3>';
-  h += '<p style="margin:2px 0 0;font-size:13px;color:var(--gray)">Voici votre journée du ' + fmtD(today()) + '</p></div>';
-  h += '</div></div>';
+  h += '<div style="margin:24px 0 18px"><h3 style="margin:0;font-size:17px;font-weight:800;color:var(--ink)">📋 Ma Journée</h3></div>';
 
   h += '<div class="timeline">';
 
@@ -172,23 +211,22 @@ function renderDashboardTimeline(tempCount, totalExpected, dlcExpired, dlcWarnin
     }
     h += '</div>';
     if (!tempDone && totalExpected > 0) {
-      h += '<div style="margin-top:6px"><div class="progress" style="height:6px"><div class="progress-bar" style="width:' + tempPct + '%;background:' + (tempPct > 50 ? 'var(--primary)' : 'var(--warning)') + '"></div></div>';
-      h += '<div class="tl-card-sub" style="margin-top:4px">' + (totalExpected - tempCount) + ' relevé(s) restant(s)</div></div>';
+      h += '<div style="margin-top:8px"><div class="progress" style="height:8px"><div class="progress-bar" style="width:' + tempPct + '%;background:' + (tempPct > 50 ? 'var(--primary)' : 'var(--warning)') + '"></div></div>';
+      h += '<div class="tl-card-sub" style="margin-top:6px">' + (totalExpected - tempCount) + ' relevé(s) restant(s)</div></div>';
     } else if (tempDone) {
       h += '<div class="tl-card-sub">Tous les relevés sont complétés</div>';
     } else {
       h += '<div class="tl-card-sub">Aucun équipement/produit configuré</div>';
     }
 
-    // Non-conformités
     var nonConform = S.data.temperatures.filter(function(t) { return !t.is_conform; });
     if (nonConform.length > 0) {
-      h += '<div style="margin-top:6px;padding:6px 10px;background:var(--danger-bg);border-radius:6px;font-size:12px;color:var(--danger);font-weight:600">⚠️ ' + nonConform.length + ' non-conformité(s) détectée(s)</div>';
+      h += '<div style="margin-top:8px;padding:8px 12px;background:var(--danger-bg);border-radius:8px;font-size:13px;color:var(--danger);font-weight:700">⚠️ ' + nonConform.length + ' non-conformité(s) détectée(s)</div>';
     }
     h += '</div></div>';
   }
 
-  // 2. DLC alertes
+  // 2. DLC
   if (moduleEnabled('dlc') || moduleEnabled('lots')) {
     var totalDlcAlerts = dlcExpired.length + dlcWarnings.length;
     var dlcDotClass = dlcExpired.length > 0 ? 'danger' : dlcWarnings.length > 0 ? 'warn' : 'done';
@@ -204,18 +242,18 @@ function renderDashboardTimeline(tempCount, totalExpected, dlcExpired, dlcWarnin
     h += '</div>';
 
     if (dlcExpired.length > 0) {
-      h += '<div style="margin-top:4px">';
+      h += '<div style="margin-top:6px">';
       dlcExpired.slice(0, 3).forEach(function(d) {
-        h += '<div style="font-size:12px;padding:3px 0;color:var(--danger)">❌ <strong>' + esc(d.product_name) + '</strong> — expirée depuis ' + Math.abs(daysUntil(d.dlc_date)) + 'j</div>';
+        h += '<div style="font-size:13px;padding:4px 0;color:var(--danger);font-weight:600">❌ <strong>' + esc(d.product_name) + '</strong> — expirée depuis ' + Math.abs(daysUntil(d.dlc_date)) + 'j</div>';
       });
       if (dlcExpired.length > 3) h += '<div class="tl-card-sub">+ ' + (dlcExpired.length - 3) + ' autre(s)...</div>';
       h += '</div>';
     }
     if (dlcWarnings.length > 0) {
-      h += '<div style="margin-top:4px">';
+      h += '<div style="margin-top:6px">';
       dlcWarnings.slice(0, 3).forEach(function(d) {
         var days = daysUntil(d.dlc_date);
-        h += '<div style="font-size:12px;padding:3px 0;color:var(--warning)">⚠️ <strong>' + esc(d.product_name) + '</strong> — ' + (days === 0 ? 'expire aujourd\'hui' : days + 'j restant(s)') + '</div>';
+        h += '<div style="font-size:13px;padding:4px 0;color:var(--warning);font-weight:600">⚠️ <strong>' + esc(d.product_name) + '</strong> — ' + (days === 0 ? 'expire aujourd\'hui' : days + 'j restant(s)') + '</div>';
       });
       if (dlcWarnings.length > 3) h += '<div class="tl-card-sub">+ ' + (dlcWarnings.length - 3) + ' autre(s)...</div>';
       h += '</div>';
@@ -245,7 +283,7 @@ function renderDashboardTimeline(tempCount, totalExpected, dlcExpired, dlcWarnin
 
     if (urgentConsignes.length > 0) {
       urgentConsignes.slice(0, 2).forEach(function(c) {
-        h += '<div style="font-size:12px;padding:4px 0;color:var(--danger)">🚨 ' + esc(c.message.substring(0, 80)) + (c.message.length > 80 ? '...' : '') + '</div>';
+        h += '<div style="font-size:13px;padding:5px 0;color:var(--danger);font-weight:600">🚨 ' + esc(c.message.substring(0, 80)) + (c.message.length > 80 ? '...' : '') + '</div>';
       });
     } else if (allConsignes.length > 0) {
       h += '<div class="tl-card-sub">' + allConsignes.length + ' consigne(s) active(s)</div>';
@@ -271,17 +309,16 @@ function renderDashboardTimeline(tempCount, totalExpected, dlcExpired, dlcWarnin
     h += '</div>';
 
     if (ordersToOrder.length > 0) {
-      // Grouper par fournisseur
       var bySupp = {};
-      ordersToOrder.forEach(function(o) { var s = o.supplier_name || 'Sans fournisseur'; bySupp[s] = (bySupp[s]||0) + 1; });
-      h += '<div style="margin-top:4px">';
+      ordersToOrder.forEach(function(o) { var s = o.supplier_name || 'Sans fournisseur'; bySupp[s] = (bySupp[s] || 0) + 1; });
+      h += '<div style="margin-top:6px">';
       Object.keys(bySupp).slice(0, 3).forEach(function(s) {
-        h += '<div style="font-size:12px;padding:2px 0;color:var(--warning)">📞 ' + esc(s) + ' — ' + bySupp[s] + ' produit(s)</div>';
+        h += '<div style="font-size:13px;padding:3px 0;color:var(--warning);font-weight:600">📞 ' + esc(s) + ' — ' + bySupp[s] + ' produit(s)</div>';
       });
       h += '</div>';
     }
     if (ordersOrdered.length > 0) {
-      h += '<div style="font-size:12px;color:var(--gray);margin-top:2px">📦 ' + ordersOrdered.length + ' livraison(s) attendue(s)</div>';
+      h += '<div style="font-size:13px;color:var(--gray);margin-top:3px;font-weight:500">📦 ' + ordersOrdered.length + ' livraison(s) attendue(s)</div>';
     }
     if (totalOrders === 0) {
       h += '<div class="tl-card-sub">Aucune commande en cours</div>';
@@ -298,7 +335,7 @@ function renderDashboardTimeline(tempCount, totalExpected, dlcExpired, dlcWarnin
     h += '<span class="badge badge-red">' + incidents.length + ' ouvert(s)</span>';
     h += '</div>';
     incidents.slice(0, 2).forEach(function(r) {
-      h += '<div style="font-size:12px;padding:3px 0;color:var(--danger)">' + esc(r.title) + '</div>';
+      h += '<div style="font-size:13px;padding:4px 0;color:var(--danger);font-weight:600">' + esc(r.title) + '</div>';
     });
     h += '</div></div>';
   }
@@ -322,12 +359,15 @@ function renderDashboardTimeline(tempCount, totalExpected, dlcExpired, dlcWarnin
   return h;
 }
 
+// =====================================================================
+// MULTI-SITE DASHBOARD
+// =====================================================================
+
 var _multiSiteCache = null;
 var _multiSiteCacheTime = 0;
 
 async function loadMultiSiteStats() {
   var now = Date.now();
-  // Cache 30 secondes pour éviter les requêtes multiples
   if (_multiSiteCache && (now - _multiSiteCacheTime) < 30000) return _multiSiteCache;
 
   var todayStr = today();
@@ -338,11 +378,11 @@ async function loadMultiSiteStats() {
     var sid = site.id;
 
     try {
-      var t = await sb.from('temperatures').select('id', {count:'exact', head:true}).eq('site_id', sid).gte('recorded_at', todayStr + 'T00:00:00');
-      var eq = await sb.from('site_equipment').select('id', {count:'exact', head:true}).eq('site_id', sid).eq('active', true);
-      var pr = await sb.from('site_products').select('id', {count:'exact', head:true}).eq('site_id', sid).eq('active', true);
+      var t = await sb.from('temperatures').select('id', { count: 'exact', head: true }).eq('site_id', sid).gte('recorded_at', todayStr + 'T00:00:00');
+      var eq = await sb.from('site_equipment').select('id', { count: 'exact', head: true }).eq('site_id', sid).eq('active', true);
+      var pr = await sb.from('site_products').select('id', { count: 'exact', head: true }).eq('site_id', sid).eq('active', true);
       var d = await sb.from('dlcs').select('id, dlc_date, status').eq('site_id', sid).not('status', 'in', '("consumed","discarded")');
-      var o = await sb.from('orders').select('id', {count:'exact', head:true}).eq('site_id', sid).eq('status', 'to_order');
+      var o = await sb.from('orders').select('id', { count: 'exact', head: true }).eq('site_id', sid).eq('status', 'to_order');
       var c = await sb.from('consignes').select('*').eq('site_id', sid).eq('priority', 'urgent');
 
       var dlcData = d.data || [];
@@ -360,7 +400,7 @@ async function loadMultiSiteStats() {
         urgentConsignes: urgentList.length,
         urgentConsignesList: urgentList
       });
-    } catch(e) {
+    } catch (e) {
       console.error('Stats error for site', site.name, e);
       stats.push({ site: site, tempCount: 0, totalExpected: 0, dlcWarnings: 0, dlcExpired: 0, ordersOpen: 0, urgentConsignes: 0 });
     }
@@ -374,13 +414,29 @@ async function loadMultiSiteStats() {
 function renderMultiSiteDashboard() {
   var h = '';
 
-  // Titre
-  h += '<div style="margin-bottom:20px"><h2 style="font-size:22px;font-weight:800;color:#1a1a2e;margin:0">🛡️ Vue globale — ' + S.sites.length + ' site' + (S.sites.length > 1 ? 's' : '') + '</h2><p style="color:var(--gray);font-size:13px;margin:4px 0 0">Dernière actualisation : ' + new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'}) + ' — <a href="#" onclick="event.preventDefault();_multiSiteCache=null;loadAndRenderMultiDashboard();" style="color:var(--primary)">↻ Actualiser</a></p></div>';
+  // Greeting banner
+  var now = new Date();
+  var hour = now.getHours();
+  var greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
+  var firstName = userName().split(' ')[0];
 
-  // Container pour les stats chargées en async
-  h += '<div id="multiDashContainer"><div style="text-align:center;padding:60px"><div class="loading"></div><div style="margin-top:12px;color:var(--gray);font-size:14px">Chargement des données de tous les sites...</div></div></div>';
+  h += '<div class="greeting-banner">';
+  h += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">';
+  h += '<div class="greeting-text"><h2>' + greeting + ', ' + esc(firstName) + '</h2>';
+  h += '<p>Vue globale — ' + S.sites.length + ' site' + (S.sites.length > 1 ? 's' : '') + ' · ' + fmtD(today()) + '</p></div>';
+  h += '<button style="padding:8px 16px;border:1.5px solid rgba(255,255,255,.15);border-radius:8px;font-size:13px;font-weight:600;background:rgba(255,255,255,.1);color:#F1F5F9;cursor:pointer" onclick="_multiSiteCache=null;loadAndRenderMultiDashboard();">↻ Actualiser</button>';
+  h += '</div></div>';
 
-  // Lancer le chargement async
+  // Container with skeleton loading
+  h += '<div id="multiDashContainer">';
+  h += '<div class="skeleton skeleton-card"></div>';
+  h += '<div class="skeleton skeleton-card"></div>';
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">';
+  h += '<div class="skeleton skeleton-card"></div>';
+  h += '<div class="skeleton skeleton-card"></div>';
+  h += '</div>';
+  h += '</div>';
+
   setTimeout(function() { loadAndRenderMultiDashboard(); }, 50);
 
   return h;
@@ -412,19 +468,19 @@ async function loadAndRenderMultiDashboard() {
 
   var globalPct = totalExpected > 0 ? Math.round(totalTemp / totalExpected * 100) : 0;
 
-  // Stats simplifiées : 2 cartes seulement
+  // Stats
   h += '<div class="global-stats-banner" style="grid-template-columns:1fr 1fr">';
   h += '<div class="global-stat"><div class="gs-value">' + S.sites.length + '</div><div class="gs-label">Sites actifs</div></div>';
   h += '<div class="global-stat' + (globalPct >= 100 ? ' gs-success' : '') + '"><div class="gs-value">' + globalPct + '%</div><div class="gs-label">Relevés complétés</div></div>';
   h += '</div>';
 
-  // Barre de progression
-  h += '<div class="card" style="margin-bottom:16px"><div class="card-body" style="padding:14px 18px"><div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-weight:600;font-size:13px;color:#475569">Progression globale</span><span style="font-weight:700;font-size:13px;color:' + (globalPct >= 100 ? 'var(--success)' : 'var(--primary)') + '">' + totalTemp + '/' + totalExpected + '</span></div><div class="progress"><div class="progress-bar" style="width:' + Math.min(100, globalPct) + '%;background:' + (globalPct >= 100 ? 'var(--success)' : globalPct >= 50 ? 'var(--primary)' : 'var(--warning)') + '"></div></div></div></div>';
+  // Progress bar
+  h += '<div class="card" style="margin-bottom:18px"><div class="card-body" style="padding:18px 22px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-weight:700;font-size:14px;color:var(--ink)">Progression globale</span><span style="font-weight:800;font-size:16px;color:' + (globalPct >= 100 ? 'var(--success)' : 'var(--primary)') + '">' + totalTemp + '/' + totalExpected + '</span></div><div class="progress" style="height:10px"><div class="progress-bar" style="width:' + Math.min(100, globalPct) + '%;background:' + (globalPct >= 100 ? 'var(--success)' : globalPct >= 50 ? 'var(--primary)' : 'var(--warning)') + '"></div></div></div></div>';
 
-  // Consignes urgentes + DLC expirées en rectangle
+  // Alerts
   if (totalUrgent > 0 || totalDlcExp > 0) {
-    h += '<div class="card" style="border-left:4px solid var(--danger);margin-bottom:16px">';
-    h += '<div class="card-header" style="color:var(--danger);background:var(--danger-bg)">🚨 Alertes à traiter <span class="badge badge-red" style="margin-left:auto">' + (totalUrgent + totalDlcExp) + '</span></div>';
+    h += '<div class="card" style="border-left:4px solid var(--danger);margin-bottom:18px">';
+    h += '<div class="card-header" style="color:var(--danger);background:var(--danger-bg)">🚨 Alertes à traiter <span class="badge badge-red" style="margin-left:auto;font-size:12px;padding:4px 12px">' + (totalUrgent + totalDlcExp) + '</span></div>';
     h += '<div class="card-body" style="padding:0">';
     allUrgentConsignes.forEach(function(c) {
       h += '<div class="list-item"><div class="list-icon" style="background:var(--danger-bg);color:var(--danger)">💬</div><div class="list-content"><div class="list-title" style="color:var(--danger)">' + esc(c.message.substring(0, 80)) + (c.message.length > 80 ? '...' : '') + '</div><div class="list-sub">📍 ' + esc(c._siteName || '') + ' — ' + esc(c.created_by_name || '') + '</div></div></div>';
@@ -435,17 +491,16 @@ async function loadAndRenderMultiDashboard() {
     h += '</div></div>';
   }
 
-  // Détail par site
-  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h3 style="font-size:15px;font-weight:700;color:#0f172a;margin:0">Détail par site</h3><span style="font-size:12px;color:var(--gray)">' + sitesOk + '/' + S.sites.length + ' conformes</span></div>';
+  // Site detail
+  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h3 style="font-size:17px;font-weight:800;color:var(--ink);margin:0">Détail par site</h3><span style="font-size:13px;color:var(--gray);font-weight:600">' + sitesOk + '/' + S.sites.length + ' conformes</span></div>';
 
-  stats.forEach(function(s) {
+  stats.forEach(function(s, idx) {
     var site = s.site;
     var pct = s.totalExpected > 0 ? Math.round(s.tempCount / s.totalExpected * 100) : 0;
-    var typeEmoji = {hotel:'🏨',restaurant:'🍽️',cuisine_centrale:'🏭',autre:'🏢'}[site.type] || '🏢';
+    var typeEmoji = { hotel: '🏨', restaurant: '🍽️', cuisine_centrale: '🏭', autre: '🏢' }[site.type] || '🏢';
     var isOk = pct >= 100 && s.dlcExpired === 0 && s.urgentConsignes === 0;
-    var borderColor = isOk ? 'var(--success)' : s.dlcExpired > 0 || s.urgentConsignes > 0 ? 'var(--danger)' : 'var(--primary)';
 
-    h += '<div class="site-overview-card" style="border-left-color:' + borderColor + '" onclick="switchSite(\'' + site.id + '\');navigate(\'dashboard\');">';
+    h += '<div class="site-overview-card hover-lift animate-in" onclick="switchSite(\'' + site.id + '\');navigate(\'dashboard\');">';
     h += '<div class="site-card-header"><div class="site-card-title">' + typeEmoji + ' ' + esc(site.name) + '</div><div class="site-card-badges">';
     if (isOk) h += '<span class="badge badge-green">✓ OK</span>';
     if (s.dlcExpired > 0) h += '<span class="badge badge-red">' + s.dlcExpired + ' DLC</span>';
@@ -458,7 +513,7 @@ async function loadAndRenderMultiDashboard() {
     h += '<div class="mini-stat"><div class="mini-stat-value">' + s.ordersOpen + '</div><div class="mini-stat-label">🛒 Cmd</div></div>';
     h += '<div class="mini-stat' + (s.urgentConsignes > 0 ? ' bad' : ' ok') + '"><div class="mini-stat-value">' + s.urgentConsignes + '</div><div class="mini-stat-label">💬 Urg.</div></div>';
     h += '</div>';
-    h += '<div style="margin-top:8px"><div class="progress" style="height:5px"><div class="progress-bar" style="width:' + Math.min(100, pct) + '%;background:' + (pct >= 100 ? 'var(--success)' : 'var(--primary)') + '"></div></div></div>';
+    h += '<div style="margin-top:10px"><div class="progress" style="height:6px"><div class="progress-bar" style="width:' + Math.min(100, pct) + '%;background:' + (pct >= 100 ? 'var(--success)' : 'var(--primary)') + '"></div></div></div>';
     h += '</div>';
   });
 

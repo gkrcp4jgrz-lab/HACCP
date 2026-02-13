@@ -117,38 +117,46 @@ function normalizeLotNumber(value) {
 function applyOcrResult(result, context) {
   var filled = [];
 
+  // Unified form field IDs (new) with fallback to old IDs
   if (context === 'dlc') {
     if (result.product_name) {
-      var el = document.getElementById('dlcProd');
+      var el = document.getElementById('recProduct') || document.getElementById('dlcProd');
       if (el && !el.value) { el.value = result.product_name; filled.push('produit'); }
     }
     if (result.dlc_date) {
-      var el2 = document.getElementById('dlcDate');
+      var el2 = document.getElementById('recDlcDate') || document.getElementById('dlcDate');
       var normalizedDate = normalizeOcrDate(result.dlc_date);
       if (el2 && normalizedDate) { el2.value = normalizedDate; filled.push('date DLC'); }
     }
     if (result.lot_number) {
-      var el3 = document.getElementById('dlcLot');
+      var el3 = document.getElementById('recLotNum') || document.getElementById('dlcLot');
       if (el3 && !el3.value) { el3.value = normalizeLotNumber(result.lot_number); filled.push('n° lot'); }
+    }
+    if (result.supplier) {
+      var el6 = document.getElementById('recSupplier');
+      if (el6 && !el6.value) { el6.value = result.supplier; filled.push('fournisseur'); }
     }
   } else {
     if (result.product_name) {
-      var el4 = document.getElementById('lotProd');
+      var el4 = document.getElementById('recProduct') || document.getElementById('lotProd');
       if (el4 && !el4.value) { el4.value = result.product_name; filled.push('produit'); }
     }
     if (result.lot_number) {
-      var el5 = document.getElementById('lotNum');
+      var el5 = document.getElementById('recLotNum') || document.getElementById('lotNum');
       if (el5 && !el5.value) { el5.value = normalizeLotNumber(result.lot_number); filled.push('n° lot'); }
     }
     if (result.supplier) {
-      var el7 = document.getElementById('lotSupp');
+      var el7 = document.getElementById('recSupplier') || document.getElementById('lotSupp');
       if (el7) {
-        // Tenter de matcher un fournisseur existant
-        var opts = el7.options;
-        for (var i = 0; i < opts.length; i++) {
-          if (opts[i].text.toLowerCase().indexOf(result.supplier.toLowerCase()) >= 0) {
-            el7.value = opts[i].value; filled.push('fournisseur'); break;
+        if (el7.tagName === 'SELECT') {
+          var opts = el7.options;
+          for (var i = 0; i < opts.length; i++) {
+            if (opts[i].text.toLowerCase().indexOf(result.supplier.toLowerCase()) >= 0) {
+              el7.value = opts[i].value; filled.push('fournisseur'); break;
+            }
           }
+        } else {
+          if (!el7.value) { el7.value = result.supplier; filled.push('fournisseur'); }
         }
       }
     }

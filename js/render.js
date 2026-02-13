@@ -9,12 +9,12 @@ function render() {
   if (!S.user) { app.innerHTML = renderAuth(); return; }
 
   if (S.loading) {
-    app.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;gap:12px"><div class="loading" style="width:32px;height:32px;border-width:3px"></div><span style="color:#666">Chargement...</span></div>';
+    app.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;background:var(--bg-page)"><div class="loading" style="width:36px;height:36px;border-width:3px"></div><span style="color:var(--muted);font-size:15px;font-weight:600">Chargement...</span></div>';
     return;
   }
 
   if (S.sites.length === 0 && !isSuperAdmin()) {
-    app.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh"><div class="card" style="max-width:500px;margin:20px"><div class="card-body"><div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Aucun site assigné</div><div class="empty-text">Contactez votre administrateur pour être ajouté à un site.</div></div></div></div></div>';
+    app.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg-page)"><div class="card" style="max-width:500px;margin:20px"><div class="card-body"><div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Aucun site assigné</div><div class="empty-text">Contactez votre administrateur pour être ajouté à un site.</div></div></div></div></div>';
     return;
   }
 
@@ -29,9 +29,9 @@ function render() {
 
 function renderAuth() {
   return '<div class="auth-wrapper"><div class="auth-card">' +
-    '<div class="auth-logo"><h1>HACCP Pro</h1><p>Gestion de la sécurité alimentaire</p></div>' +
+    '<div class="auth-logo"><div style="font-size:48px;margin-bottom:12px">🛡️</div><h1>HACCP Pro</h1><p>Sécurité alimentaire professionnelle</p></div>' +
     '<div id="authForm">' + renderLoginForm() + '</div>' +
-    '<p style="text-align:center;font-size:11px;color:var(--muted);margin-top:20px">Contactez votre administrateur pour obtenir vos identifiants.</p>' +
+    '<p style="text-align:center;font-size:12px;color:var(--muted);margin-top:24px;font-weight:500">Contactez votre administrateur pour obtenir vos identifiants.</p>' +
     '</div></div>';
 }
 
@@ -40,7 +40,7 @@ function renderLoginForm() {
     '<div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="loginEmail" required placeholder="votre@email.com" autocomplete="email"></div>' +
     '<div class="form-group"><label class="form-label">Mot de passe</label><input type="password" class="form-input" id="loginPass" required placeholder="••••••••" autocomplete="current-password"></div>' +
     '<div id="loginError" class="form-error" style="display:none"></div>' +
-    '<button type="submit" class="btn btn-primary btn-block btn-lg" id="loginBtn">Se connecter</button>' +
+    '<button type="submit" class="btn btn-primary btn-block btn-lg" id="loginBtn" style="margin-top:8px">Se connecter</button>' +
     '<div style="text-align:center;margin-top:12px"><a href="#" onclick="event.preventDefault();showForgotPassword()" style="font-size:12px;color:var(--accent);font-weight:500">Mot de passe oublie ?</a></div></form>';
 }
 
@@ -59,7 +59,7 @@ function renderRegisterForm() {
     '<div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="regEmail" required placeholder="votre@email.com"></div>' +
     '<div class="form-group"><label class="form-label">Mot de passe</label><input type="password" class="form-input" id="regPass" required minlength="6" placeholder="6 caractères minimum"></div>' +
     '<div id="regError" class="form-error" style="display:none"></div>' +
-    '<button type="submit" class="btn btn-primary btn-block btn-lg" id="regBtn">Créer un compte</button></form>';
+    '<button type="submit" class="btn btn-primary btn-block btn-lg" id="regBtn" style="margin-top:8px">Créer un compte</button></form>';
 }
 
 function renderChangePassword() {
@@ -72,7 +72,7 @@ function renderChangePassword() {
     '<div id="pwdStrength" style="font-size:11px;margin-top:4px"></div>' +
     '<div class="form-group"><label class="form-label">Confirmer le mot de passe</label><input type="password" class="form-input" id="newPass2" required minlength="8" placeholder="Confirmez votre mot de passe" autocomplete="new-password"></div>' +
     '<div id="pwdError" class="form-error" style="display:none"></div>' +
-    '<button type="submit" class="btn btn-primary btn-block btn-lg">Valider le nouveau mot de passe</button></form>' +
+    '<button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top:8px">Valider le nouveau mot de passe</button></form>' +
     '<div style="margin-top:12px;padding:10px;background:var(--bg-off);border-radius:6px;font-size:11px;color:var(--muted)">Le mot de passe doit contenir : 8+ caracteres, une majuscule, une minuscule, un chiffre</div>' +
     '</div></div>'
   );
@@ -136,7 +136,7 @@ function renderSidebar() {
   var roleName = S.profile ? ({super_admin:'Super Admin',manager:'Gérant',employee:'Employé'}[S.profile.role] || 'Utilisateur') : '';
 
   return '<nav class="sidebar' + (S.sidebarOpen?' open':'') + '">' +
-    '<div class="sidebar-header"><div class="sidebar-brand"><span>🛡️</span><h2>HACCP Pro</h2></div></div>' +
+    '<div class="sidebar-header"><div class="sidebar-brand"><span>🛡️</span><h2 class="brand-text">HACCP Pro</h2></div></div>' +
     siteSelector +
     '<div class="sidebar-nav">' + navHtml + '</div>' +
     '<div class="sidebar-user">' +
@@ -175,7 +175,17 @@ function renderMainContent() {
     default: content = renderDashboard();
   }
 
+  // Site dropdown in header for multi-site users (not on dashboard since it has its own)
+  var headerSiteDropdown = '';
+  if (S.sites.length > 1 && S.page !== 'dashboard') {
+    var sOpts = '';
+    S.sites.forEach(function(s) {
+      sOpts += '<option value="' + s.id + '"' + (s.id === S.currentSiteId ? ' selected' : '') + '>' + esc(s.name) + '</option>';
+    });
+    headerSiteDropdown = '<div class="site-dropdown"><select onchange="switchSite(this.value)">' + sOpts + '</select></div>';
+  }
+
   return '<div class="main-content">' +
-    '<header class="main-header"><button class="burger" onclick="toggleSidebar()">☰</button><h1>' + (titles[S.page] || 'HACCP Pro') + '</h1></header>' +
+    '<header class="main-header"><button class="burger" onclick="toggleSidebar()">☰</button><h1>' + (titles[S.page] || 'HACCP Pro') + '</h1>' + headerSiteDropdown + '</header>' +
     '<div class="main-body">' + content + '</div></div>';
 }

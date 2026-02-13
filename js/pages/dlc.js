@@ -1,45 +1,95 @@
+// =====================================================================
+// DLC & TRAÇABILITÉ — Unified Reception Form
+// =====================================================================
+
 function renderDLC() {
   var h = '';
-  
-  // DLC section
-  h += renderDlcTab();
-  
-  // Separator
-  h += '<div style="margin:20px 0;border-top:1px solid var(--border)"></div>';
-  
-  // Lots/Traçabilité section
-  h += renderLotsTab();
+
+  // Unified reception form
+  h += renderReceptionForm();
+
+  // Tabbed view: DLC / Lots
+  var activeTab = S.dlcTab || 'dlc';
+  h += '<div class="tabs">';
+  h += '<button class="tab' + (activeTab === 'dlc' ? ' active' : '') + '" onclick="S.dlcTab=\'dlc\';render()">📅 DLC en cours</button>';
+  h += '<button class="tab' + (activeTab === 'lots' ? ' active' : '') + '" onclick="S.dlcTab=\'lots\';render()">📦 Traçabilité</button>';
+  h += '</div>';
+
+  if (activeTab === 'lots') {
+    h += renderLotsTabContent();
+  } else {
+    h += renderDlcTabContent();
+  }
 
   return h;
 }
 
-function renderDlcTab() {
+// ── UNIFIED RECEPTION FORM ──
+
+function renderReceptionForm() {
   var h = '';
+  var products = getProductSuggestions();
+  var suppliers = getSupplierSuggestions();
 
-  // Form
-  h += '<div class="card"><div class="card-header">➕ Nouveau contrôle DLC</div><div class="card-body"><form onsubmit="handleDlc(event)">';
-  h += '<div class="form-row"><div class="form-group"><label class="form-label">Produit <span class="req">*</span></label><input type="text" class="form-input" id="dlcProd" required placeholder="Nom du produit"></div>';
-  h += '<div class="form-group"><label class="form-label">Date DLC <span class="req">*</span></label><input type="date" class="form-input" id="dlcDate" required></div></div>';
-  h += '<div class="form-group"><label class="form-label">N° de lot</label><input type="text" class="form-input" id="dlcLot" placeholder="Optionnel" style="text-transform:uppercase"></div>';
+  h += '<div class="card card-accent"><div class="card-header"><span style="font-size:18px">📥</span> Réception produit</div><div class="card-body">';
+  h += '<form onsubmit="handleReception(event)">';
 
-  // Photo zone DLC
+  // Row 1: Product + Lot
+  h += '<div class="form-row">';
+  h += '<div class="form-group"><label class="form-label">Produit <span class="req">*</span></label>';
+  h += '<div class="product-input-wrapper"><input type="text" class="form-input" id="recProduct" list="productList" required placeholder="Nom du produit" autocomplete="off"></div>';
+  h += '<datalist id="productList">';
+  products.forEach(function(p) { h += '<option value="' + esc(p) + '">'; });
+  h += '</datalist></div>';
+  h += '<div class="form-group"><label class="form-label">N° de lot</label><input type="text" class="form-input" id="recLotNum" placeholder="Ex: LOT-2026-001" style="text-transform:uppercase"></div>';
+  h += '</div>';
+
+  // Row 2: DLC date + Supplier
+  h += '<div class="form-row">';
+  h += '<div class="form-group"><label class="form-label">Date DLC <span class="req">*</span></label><input type="date" class="form-input" id="recDlcDate" required></div>';
+  h += '<div class="form-group"><label class="form-label">Fournisseur</label>';
+  h += '<div class="product-input-wrapper"><input type="text" class="form-input" id="recSupplier" list="supplierList" placeholder="Sélectionner ou saisir" autocomplete="off"></div>';
+  h += '<datalist id="supplierList">';
+  suppliers.forEach(function(s) { h += '<option value="' + esc(s) + '">'; });
+  h += '</datalist></div>';
+  h += '</div>';
+
+  // Photo zone
   h += '<div class="form-group"><label class="form-label">📸 Photo de l\'étiquette</label>';
   if (S.photoDlcData) {
-    h += '<div style="text-align:center;padding:12px;border:2px solid var(--success);border-radius:var(--radius);background:var(--success-bg)"><img src="' + S.photoDlcData + '" class="photo-preview"><br><button type="button" class="btn btn-ghost btn-sm" onclick="clearPhotoDlc()">✕ Supprimer la photo</button></div>';
+    h += '<div style="text-align:center;padding:14px;border:2px solid var(--success);border-radius:var(--radius);background:var(--success-bg)"><img src="' + S.photoDlcData + '" class="photo-preview"><br><button type="button" class="btn btn-ghost" onclick="clearPhotoDlc()">✕ Supprimer la photo</button></div>';
   } else {
-    h += '<label class="photo-box" for="photoDlcInput"><div class="photo-icon">📷</div><div class="photo-text">Prendre une photo de l\'étiquette</div><div class="photo-hint">La date DLC sera détectée automatiquement</div></label><input type="file" id="photoDlcInput" accept="image/*" capture="environment" onchange="handlePhotoFor(\'photoDlcInput\',\'dlc\')" style="display:none">';
+    h += '<label class="photo-box" for="photoDlcInput"><div class="photo-icon">📷</div><div class="photo-text">Prendre une photo de l\'étiquette</div><div class="photo-hint">DLC et N° de lot détectés automatiquement</div></label>';
+    h += '<input type="file" id="photoDlcInput" accept="image/*" capture="environment" onchange="handlePhotoFor(\'photoDlcInput\',\'dlc\')" style="display:none">';
   }
   h += '<div id="ocrStatusDlc"></div>';
   h += '</div>';
 
-  h += '<div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="dlcNotes" rows="2" placeholder="Observations..."></textarea></div>';
-  h += '<button type="submit" class="btn btn-success btn-block">✓ Enregistrer le contrôle DLC</button></form></div></div>';
+  // Notes
+  h += '<div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="recNotes" rows="2" placeholder="Observations..."></textarea></div>';
+
+  // Checkboxes
+  h += '<div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:18px">';
+  h += '<div class="form-check"><input type="checkbox" id="recSaveDlc" checked><label for="recSaveDlc">Enregistrer dans DLC</label></div>';
+  h += '<div class="form-check"><input type="checkbox" id="recSaveLot" checked><label for="recSaveLot">Enregistrer dans Traçabilité</label></div>';
+  h += '</div>';
+
+  h += '<button type="submit" class="btn btn-primary btn-lg btn-block">✓ Enregistrer la réception</button>';
+  h += '</form></div></div>';
+
+  return h;
+}
+
+// ── DLC TAB CONTENT ──
+
+function renderDlcTabContent() {
+  var h = '';
 
   // Filters
   h += '<div class="filters">';
-  ['all','warning','expired'].forEach(function(f) {
-    var labels = {all:'Tous',warning:'⚠️ À surveiller',expired:'❌ Expirés'};
-    h += '<button class="filter-btn' + (S.filter===f?' active':'') + '" onclick="S.filter=\'' + f + '\';render()">' + labels[f] + '</button>';
+  ['all', 'warning', 'expired'].forEach(function(f) {
+    var labels = { all: 'Tous', warning: '⚠️ À surveiller', expired: '❌ Expirés' };
+    h += '<button class="filter-btn' + (S.filter === f ? ' active' : '') + '" onclick="S.filter=\'' + f + '\';render()">' + labels[f] + '</button>';
   });
   h += '</div>';
 
@@ -51,21 +101,21 @@ function renderDlcTab() {
     return true;
   });
 
-  h += '<div class="card"><div class="card-header">📅 Suivi DLC <span class="badge badge-gray" style="margin-left:auto">' + dlcs.length + '</span></div>';
+  h += '<div class="card"><div class="card-header"><span style="font-size:18px">📅</span> Suivi DLC <span class="badge badge-gray" style="margin-left:auto;font-size:12px;padding:4px 12px">' + dlcs.length + '</span></div>';
   if (dlcs.length === 0) {
-    h += '<div class="card-body"><div class="empty"><div class="empty-icon">📅</div><div class="empty-title">Aucun contrôle DLC</div></div></div>';
+    h += '<div class="card-body"><div class="empty"><div class="empty-icon">📅</div><div class="empty-title">Aucun contrôle DLC</div><div class="empty-text">Enregistrez un produit avec le formulaire ci-dessus.</div></div></div>';
   } else {
     dlcs.forEach(function(d) {
       var days = daysUntil(d.dlc_date);
       var status = days < 0 ? 'expired' : days <= 2 ? 'warning' : 'valid';
       var statusLabel = days < 0 ? 'Expiré (J' + days + ')' : days === 0 ? 'Expire aujourd\'hui' : days <= 2 ? 'J-' + days : 'OK (J-' + days + ')';
-      var badgeClass = {valid:'badge-green',warning:'badge-yellow',expired:'badge-red'}[status];
-      var borderColor = {valid:'var(--success)',warning:'var(--warning)',expired:'var(--danger)'}[status];
+      var badgeClass = { valid: 'badge-green', warning: 'badge-yellow', expired: 'badge-red' }[status];
+      var borderColor = { valid: 'var(--success)', warning: 'var(--warning)', expired: 'var(--danger)' }[status];
       h += '<div class="list-item" style="border-left:3px solid ' + borderColor + '"><div class="list-content"><div class="list-title">' + esc(d.product_name) + '</div><div class="list-sub">DLC : <strong>' + fmtD(d.dlc_date) + '</strong> <span class="badge ' + badgeClass + '">' + statusLabel + '</span></div>';
       if (d.lot_number) h += '<div class="list-sub">Lot : ' + esc(d.lot_number) + '</div>';
       h += '</div><div class="list-actions">';
-      if (status === 'expired') h += '<button class="btn btn-danger btn-sm" onclick="updateDlcStatus(\'' + d.id + '\',\'discarded\')">Jeté</button>';
-      h += '<button class="btn btn-success btn-sm" onclick="updateDlcStatus(\'' + d.id + '\',\'consumed\')">Utilisé</button>';
+      if (status === 'expired') h += '<button class="btn btn-danger" onclick="updateDlcStatus(\'' + d.id + '\',\'discarded\')">🗑️ Jeté</button>';
+      h += '<button class="btn btn-success" onclick="updateDlcStatus(\'' + d.id + '\',\'consumed\')">✓ Utilisé</button>';
       h += '<button class="btn btn-ghost btn-sm" onclick="deleteDlc(\'' + d.id + '\')">🗑️</button>';
       h += '</div></div>';
     });
@@ -75,37 +125,17 @@ function renderDlcTab() {
   return h;
 }
 
-function renderLotsTab() {
+// ── LOTS TAB CONTENT ──
+
+function renderLotsTabContent() {
   var h = '';
 
-  h += '<div class="card"><div class="card-header">➕ Enregistrer un lot</div><div class="card-body"><form onsubmit="handleLot(event)">';
-  h += '<div class="form-row"><div class="form-group"><label class="form-label">Produit <span class="req">*</span></label><input type="text" class="form-input" id="lotProd" required placeholder="Nom du produit"></div>';
-  h += '<div class="form-group"><label class="form-label">N° de lot <span class="req">*</span></label><input type="text" class="form-input" id="lotNum" required placeholder="Ex: LOT-2026-001" style="text-transform:uppercase"></div></div>';
-  h += '<div class="form-row"><div class="form-group"><label class="form-label">Fournisseur</label><select class="form-select" id="lotSupp"><option value="">Sélectionner...</option>';
-  S.siteConfig.suppliers.forEach(function(s) { h += '<option value="' + esc(s.name) + '">' + esc(s.name) + '</option>'; });
-  h += '</select></div>';
-  h += '<div class="form-group"><label class="form-label">DLC</label><input type="date" class="form-input" id="lotDlc"></div></div>';
-
-  // Photo zone Lot
-  h += '<div class="form-group"><label class="form-label">📸 Photo de l\'étiquette</label>';
-  if (S.photoLotData) {
-    h += '<div style="text-align:center;padding:12px;border:2px solid var(--success);border-radius:var(--radius);background:var(--success-bg)"><img src="' + S.photoLotData + '" class="photo-preview"><br><button type="button" class="btn btn-ghost btn-sm" onclick="clearPhotoLot()">✕ Supprimer la photo</button></div>';
-  } else {
-    h += '<label class="photo-box" for="photoLotInput"><div class="photo-icon">📷</div><div class="photo-text">Prendre une photo de l\'étiquette</div><div class="photo-hint">Le N° de lot sera détecté automatiquement</div></label><input type="file" id="photoLotInput" accept="image/*" capture="environment" onchange="handlePhotoFor(\'photoLotInput\',\'lot\')" style="display:none">';
-  }
-  h += '<div id="ocrStatusLot"></div>';
-  h += '</div>';
-
-  h += '<div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="lotNotes" rows="2" placeholder="Observations..."></textarea></div>';
-  h += '<button type="submit" class="btn btn-success btn-block">✓ Enregistrer le lot</button></form></div></div>';
-
-  // List
-  h += '<div class="card"><div class="card-header">📦 Lots enregistrés <span class="badge badge-gray" style="margin-left:auto">' + S.data.lots.length + '</span></div>';
+  h += '<div class="card"><div class="card-header"><span style="font-size:18px">📦</span> Lots enregistrés <span class="badge badge-gray" style="margin-left:auto;font-size:12px;padding:4px 12px">' + S.data.lots.length + '</span></div>';
   if (S.data.lots.length === 0) {
-    h += '<div class="card-body"><div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Aucun lot enregistré</div></div></div>';
+    h += '<div class="card-body"><div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Aucun lot enregistré</div><div class="empty-text">Enregistrez vos lots via le formulaire de réception.</div></div></div>';
   } else {
     S.data.lots.forEach(function(l) {
-      h += '<div class="list-item"><div class="list-icon" style="background:var(--primary-light)">📦</div><div class="list-content"><div class="list-title">' + esc(l.product_name) + ' — <span style="font-family:monospace">' + esc(l.lot_number) + '</span></div><div class="list-sub">';
+      h += '<div class="list-item"><div class="list-icon" style="background:var(--primary-light)">📦</div><div class="list-content"><div class="list-title">' + esc(l.product_name) + ' — <span style="font-family:monospace;font-weight:800">' + esc(l.lot_number) + '</span></div><div class="list-sub">';
       if (l.supplier_name) h += '🏭 ' + esc(l.supplier_name) + ' · ';
       if (l.dlc_date) h += '📅 DLC: ' + fmtD(l.dlc_date) + ' · ';
       h += '⏰ ' + fmtDT(l.recorded_at) + ' par ' + esc(l.recorded_by_name);
@@ -119,4 +149,3 @@ function renderLotsTab() {
 
 // renderLots kept as alias for backward compatibility
 function renderLots() { S.dlcTab = 'lots'; return renderDLC(); }
-

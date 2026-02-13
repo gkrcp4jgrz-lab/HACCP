@@ -3,12 +3,14 @@ function renderReports() {
   var site = currentSite();
   var siteName = site ? esc(site.name) : 'Site';
 
-  // Synthese HACCP
-  h += '<div class="card" style="border-left:3px solid var(--accent)"><div class="card-header">Synthese HACCP du jour</div><div class="card-body">';
-  h += '<p style="font-size:13px;color:var(--muted);margin-bottom:14px">Rapport complet : temperatures, DLC, tracabilite, commandes et signalements pour <strong>' + siteName + '</strong>.</p>';
-  h += '<div class="form-row" style="margin-bottom:14px">';
+  // Header card with accent
+  h += '<div class="card" style="border-left:4px solid var(--accent);overflow:visible">';
+  h += '<div class="card-header" style="background:var(--accent-bg)"><span style="font-size:20px">🛡️</span> Synthese HACCP du jour</div>';
+  h += '<div class="card-body">';
+  h += '<p style="font-size:14px;color:var(--muted);margin-bottom:18px;font-weight:500;line-height:1.6">Rapport complet : temperatures, DLC, tracabilite, commandes et signalements pour <strong style="color:var(--ink)">' + siteName + '</strong>.</p>';
+  h += '<div class="form-row" style="margin-bottom:18px">';
   h += '<div class="form-group"><label class="form-label">Date du rapport</label><input type="date" class="form-input" id="rptFullDate" value="' + today() + '"></div>';
-  h += '<div class="form-group" style="display:flex;align-items:flex-end"><button class="btn btn-primary btn-lg" onclick="generateFullPDF()">Generer la synthese PDF</button></div>';
+  h += '<div class="form-group" style="display:flex;align-items:flex-end"><button class="btn btn-primary btn-lg btn-block" onclick="generateFullPDF()">🛡️ Generer la synthese HACCP</button></div>';
   h += '</div></div></div>';
 
   // Rapports individuels
@@ -33,9 +35,11 @@ function renderReports() {
   h += '</div></div></div>';
 
   // Rappel reglementaire
-  h += '<div style="padding:14px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;color:var(--muted)">';
-  h += '<strong>Rappel :</strong> Les documents HACCP doivent etre conserves minimum 2 ans (Reglement CE 852/2004). Enregistrez le rapport en PDF depuis votre navigateur.';
-  h += '</div>';
+  h += '<div class="card"><div class="card-body" style="display:flex;align-items:flex-start;gap:14px">';
+  h += '<div style="width:40px;height:40px;background:var(--accent-bg);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">📌</div>';
+  h += '<div><p style="font-size:13px;color:var(--ink);font-weight:700;margin-bottom:4px">Rappel reglementaire</p>';
+  h += '<p style="font-size:13px;color:var(--muted);font-weight:500;line-height:1.5">Les documents HACCP doivent etre conserves minimum 2 ans (Reglement CE 852/2004). Enregistrez le rapport en PDF depuis votre navigateur.</p>';
+  h += '</div></div></div>';
 
   return h;
 }

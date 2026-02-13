@@ -91,8 +91,10 @@ async function initApp() {
 async function addTemperature(type, refId, value, corrAction, corrNote) {
   var equip = type === 'equipment' ? S.siteConfig.equipment.find(function(e){return e.id===refId;}) : null;
   var prod = type === 'product' ? S.siteConfig.products.find(function(p){return p.id===refId;}) : null;
-  var minT = equip ? equip.temp_min : (prod ? prod.temp_min : -999);
-  var maxT = equip ? equip.temp_max : (prod ? prod.temp_max : 999);
+  var rawMin = equip ? equip.temp_min : (prod ? prod.temp_min : null);
+  var rawMax = equip ? equip.temp_max : (prod ? prod.temp_max : null);
+  var minT = (rawMin != null && rawMin !== '') ? Number(rawMin) : -999;
+  var maxT = (rawMax != null && rawMax !== '') ? Number(rawMax) : 999;
   var conform = value >= minT && value <= maxT;
   var rec = {
     site_id: S.currentSiteId, record_type: type,
@@ -119,6 +121,30 @@ async function addTemperature(type, refId, value, corrAction, corrNote) {
   }
 
   await loadSiteData(); render();
+}
+
+// -- Internal insert helpers (no loadSiteData/render) --
+async function _insertDlcRecord(productName, dlcDate, lotNumber, notes, photoData) {
+  var rec = {
+    site_id: S.currentSiteId, product_name: productName, dlc_date: dlcDate,
+    lot_number: lotNumber || '', photo_data: photoData || null,
+    notes: notes || '', recorded_by: S.user.id, recorded_by_name: userName()
+  };
+  var r = await sb.from('dlcs').insert(rec);
+  if (r.error) throw new Error(r.error.message);
+  return r;
+}
+
+async function _insertLotRecord(productName, lotNumber, supplierName, dlcDate, notes, photoData) {
+  var rec = {
+    site_id: S.currentSiteId, product_name: productName, lot_number: lotNumber,
+    supplier_name: supplierName || '', dlc_date: dlcDate || null,
+    photo_data: photoData || null, notes: notes || '',
+    recorded_by: S.user.id, recorded_by_name: userName()
+  };
+  var r = await sb.from('lots').insert(rec);
+  if (r.error) throw new Error(r.error.message);
+  return r;
 }
 
 // -- DLC --

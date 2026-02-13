@@ -106,7 +106,9 @@ window.handleTempEquip = async function(e) {
   var numVal = sanitizeNumeric(val);
   if (numVal === null) { showToast('Valeur de temperature invalide', 'error'); return; }
   var eq = S.siteConfig.equipment.find(function(e){return e.id===eqId;});
-  if (eq && (numVal < eq.temp_min || numVal > eq.temp_max)) {
+  var eqMin = (eq && eq.temp_min != null && eq.temp_min !== '') ? Number(eq.temp_min) : -999;
+  var eqMax = (eq && eq.temp_max != null && eq.temp_max !== '') ? Number(eq.temp_max) : 999;
+  if (eq && (numVal < eqMin || numVal > eqMax)) {
     var action = prompt('Temperature non conforme !\nAction corrective effectuee :\n(Ex: Degivrage, Appel SAV, Transfert produits...)');
     if (!action) return;
     await addTemperature('equipment', eqId, numVal, action, '');
@@ -123,7 +125,9 @@ window.handleTempProd = async function(e) {
   var numVal = sanitizeNumeric(val);
   if (numVal === null) { showToast('Valeur de temperature invalide', 'error'); return; }
   var pr = S.siteConfig.products.find(function(p){return p.id===prId;});
-  if (pr && (numVal < pr.temp_min || numVal > pr.temp_max)) {
+  var prMin = (pr && pr.temp_min != null && pr.temp_min !== '') ? Number(pr.temp_min) : -999;
+  var prMax = (pr && pr.temp_max != null && pr.temp_max !== '') ? Number(pr.temp_max) : 999;
+  if (pr && (numVal < prMin || numVal > prMax)) {
     var action = prompt('Temperature non conforme !\nAction corrective effectuee :');
     if (!action) return;
     await addTemperature('product', prId, numVal, action, '');
@@ -143,6 +147,54 @@ window.handleLot = async function(e) {
   e.preventDefault();
   await addLot($('lotProd').value, $('lotNum').value, $('lotSupp').value, $('lotDlc').value, $('lotNotes').value);
   $('lotProd').value = ''; $('lotNum').value = ''; $('lotSupp').value = ''; $('lotDlc').value = ''; $('lotNotes').value = '';
+};
+
+// ── UNIFIED RECEPTION HANDLER ──
+window.handleReception = async function(e) {
+  e.preventDefault();
+  var product = $('recProduct').value.trim();
+  var lotNum = $('recLotNum').value.trim().toUpperCase();
+  var dlcDate = $('recDlcDate').value;
+  var supplier = $('recSupplier').value.trim();
+  var notes = $('recNotes').value.trim();
+  var saveDlc = $('recSaveDlc').checked;
+  var saveLot = $('recSaveLot').checked;
+  var photoData = S.photoDlcData || null;
+
+  if (!product || !dlcDate) return;
+  if (!saveDlc && !saveLot) { alert('Veuillez cocher au moins une option d\'enregistrement.'); return; }
+
+  var btn = e.target.querySelector('button[type="submit"]');
+  var origText = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = '<span class="loading"></span> Enregistrement...';
+
+  try {
+    if (saveDlc) {
+      await _insertDlcRecord(product, dlcDate, lotNum, notes, photoData);
+    }
+    if (saveLot && lotNum) {
+      await _insertLotRecord(product, lotNum, supplier, dlcDate, notes, photoData);
+    }
+    S.photoDlcData = null;
+    await loadSiteData();
+    render();
+    showToast('Réception enregistrée');
+  } catch(ex) {
+    alert('Erreur: ' + (ex.message || ex));
+    btn.disabled = false; btn.innerHTML = origText;
+  }
+};
+
+// ── TOAST HELPER ──
+window.showToast = function(msg, type) {
+  var existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  var toast = document.createElement('div');
+  toast.className = 'toast' + (type === 'error' ? ' toast-error' : type === 'success' ? ' toast-success' : ' toast-success');
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(function() { toast.classList.add('show'); }, 10);
+  setTimeout(function() { toast.classList.remove('show'); setTimeout(function() { toast.remove(); }, 300); }, 2500);
 };
 
 window.handleOrder = async function(e) {

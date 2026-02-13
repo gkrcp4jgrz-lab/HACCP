@@ -31,6 +31,7 @@ var S = {
   siteConfig: { equipment: [], products: [], suppliers: [], modules: [] },
   data: { temperatures: [], dlcs: [], lots: [], orders: [], consignes: [], incident_reports: [] },
   filter: 'all',
+  dlcTab: 'dlc',
   adminTab: 'users',
   settingsTab: 'equipment',
   notifTab: 'alerts',
@@ -169,4 +170,21 @@ function exportCSV(filename, headers, rows) {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   showToast('Export CSV téléchargé', 'success');
+}
+
+// ── PRODUCT & SUPPLIER SUGGESTIONS ──
+
+function getProductSuggestions() {
+  var names = {};
+  S.siteConfig.products.forEach(function(p) { if (p.name) names[p.name] = true; });
+  S.data.dlcs.forEach(function(d) { if (d.product_name) names[d.product_name] = true; });
+  S.data.lots.forEach(function(l) { if (l.product_name) names[l.product_name] = true; });
+  return Object.keys(names).sort();
+}
+
+function getSupplierSuggestions() {
+  var names = {};
+  S.siteConfig.suppliers.forEach(function(s) { if (s.name) names[s.name] = true; });
+  S.data.lots.forEach(function(l) { if (l.supplier_name) names[l.supplier_name] = true; });
+  return Object.keys(names).sort();
 }
