@@ -37,7 +37,7 @@ function renderAuth() {
 
 function renderLoginForm() {
   return '<form onsubmit="handleLogin(event)">' +
-    '<div class="form-group"><label class="form-label">Identifiant</label><input type="text" class="form-input" id="loginId" required placeholder="Ex : JR0001" autocomplete="username" style="text-transform:uppercase;letter-spacing:1px;font-weight:600"></div>' +
+    '<div class="form-group"><label class="form-label">Identifiant</label><input type="text" class="form-input" id="loginId" required placeholder="Ex : JR0001 ou email" autocomplete="username" style="letter-spacing:1px;font-weight:600"></div>' +
     '<div class="form-group"><label class="form-label">Mot de passe</label><input type="password" class="form-input" id="loginPass" required placeholder="••••••••" autocomplete="current-password"></div>' +
     '<div id="loginError" class="form-error" style="display:none"></div>' +
     '<button type="submit" class="btn btn-primary btn-block btn-lg" id="loginBtn" style="margin-top:8px">Se connecter</button></form>';

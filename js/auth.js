@@ -38,18 +38,56 @@ async function doLoginById(loginId, pass) {
 
   // Lookup the email via secure RPC function (works for anon)
   var email = null;
+  var rpcAvailable = true;
   try {
     var lookup = await sb.rpc('lookup_login_id', { p_login_id: loginId.toUpperCase() });
+    if (lookup.error) rpcAvailable = false;
     if (lookup.data && lookup.data.length > 0) {
       email = lookup.data[0].email;
     }
   } catch(e) {
-    console.warn('lookup_login_id RPC not available, trying email fallback');
+    rpcAvailable = false;
+    console.warn('lookup_login_id RPC not available');
   }
 
-  // Fallback: if input contains @, try as direct email (migration period)
+  // Fallback 1: input looks like an email — use it directly
   if (!email && loginId.indexOf('@') > -1) {
     email = loginId;
+  }
+
+  // Fallback 2: RPC not available (SQL not run yet) — try as direct email
+  if (!email && !rpcAvailable) {
+    // Try direct Supabase auth with input as email (migration period)
+    var directR = await sb.auth.signInWithPassword({ email: loginId, password: pass });
+    if (!directR.error) {
+      recordLoginAttempt(true);
+      S.user = directR.data.user;
+      await loadProfile();
+      resetSessionTimer();
+      if (S.profile && S.profile.must_change_password) {
+        renderChangePassword();
+        return;
+      }
+      await initApp();
+      return;
+    }
+    // Also try as internal email format
+    var internalEmail = loginIdToEmail(loginId);
+    var directR2 = await sb.auth.signInWithPassword({ email: internalEmail, password: pass });
+    if (!directR2.error) {
+      recordLoginAttempt(true);
+      S.user = directR2.data.user;
+      await loadProfile();
+      resetSessionTimer();
+      if (S.profile && S.profile.must_change_password) {
+        renderChangePassword();
+        return;
+      }
+      await initApp();
+      return;
+    }
+    recordLoginAttempt(false);
+    throw new Error('Identifiant ou mot de passe incorrect');
   }
 
   if (!email) {
