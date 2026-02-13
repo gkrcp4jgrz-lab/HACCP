@@ -37,10 +37,20 @@ function renderAuth() {
 
 function renderLoginForm() {
   return '<form onsubmit="handleLogin(event)">' +
-    '<div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="loginEmail" required placeholder="votre@email.com"></div>' +
-    '<div class="form-group"><label class="form-label">Mot de passe</label><input type="password" class="form-input" id="loginPass" required placeholder="••••••••"></div>' +
+    '<div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="loginEmail" required placeholder="votre@email.com" autocomplete="email"></div>' +
+    '<div class="form-group"><label class="form-label">Mot de passe</label><input type="password" class="form-input" id="loginPass" required placeholder="••••••••" autocomplete="current-password"></div>' +
     '<div id="loginError" class="form-error" style="display:none"></div>' +
-    '<button type="submit" class="btn btn-primary btn-block btn-lg" id="loginBtn">Se connecter</button></form>';
+    '<button type="submit" class="btn btn-primary btn-block btn-lg" id="loginBtn">Se connecter</button>' +
+    '<div style="text-align:center;margin-top:12px"><a href="#" onclick="event.preventDefault();showForgotPassword()" style="font-size:12px;color:var(--accent);font-weight:500">Mot de passe oublie ?</a></div></form>';
+}
+
+function renderForgotPasswordForm() {
+  return '<form onsubmit="handleForgotPassword(event)">' +
+    '<div style="text-align:center;margin-bottom:16px"><span style="font-size:28px">🔐</span><h3 style="font-size:16px;margin-top:8px">Reinitialiser le mot de passe</h3><p style="font-size:12px;color:var(--muted);margin-top:4px">Un lien de reinitialisation sera envoye a votre email.</p></div>' +
+    '<div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="resetEmail" required placeholder="votre@email.com" autocomplete="email"></div>' +
+    '<div id="resetError" class="form-error" style="display:none"></div>' +
+    '<button type="submit" class="btn btn-primary btn-block btn-lg" id="resetBtn">Envoyer le lien</button>' +
+    '<div style="text-align:center;margin-top:12px"><a href="#" onclick="event.preventDefault();showLoginFromReset()" style="font-size:12px;color:var(--accent);font-weight:500">Retour a la connexion</a></div></form>';
 }
 
 function renderRegisterForm() {
@@ -56,12 +66,15 @@ function renderChangePassword() {
   document.body.insertAdjacentHTML('beforeend',
     '<div class="pwd-overlay" id="pwdOverlay"><div class="pwd-card">' +
     '<h2>🔐 Changement de mot de passe requis</h2>' +
-    '<p>Votre mot de passe provisoire doit être changé avant de continuer.</p>' +
+    '<p>Votre mot de passe provisoire doit etre change avant de continuer.</p>' +
     '<form onsubmit="handleChangePassword(event)">' +
-    '<div class="form-group"><label class="form-label">Nouveau mot de passe</label><input type="password" class="form-input" id="newPass1" required minlength="6" placeholder="6 caractères minimum"></div>' +
-    '<div class="form-group"><label class="form-label">Confirmer le mot de passe</label><input type="password" class="form-input" id="newPass2" required minlength="6" placeholder="Confirmez votre mot de passe"></div>' +
+    '<div class="form-group"><label class="form-label">Nouveau mot de passe</label><input type="password" class="form-input" id="newPass1" required minlength="8" placeholder="8 caracteres minimum" autocomplete="new-password" oninput="updatePwdStrength(this.value)"></div>' +
+    '<div id="pwdStrength" style="font-size:11px;margin-top:4px"></div>' +
+    '<div class="form-group"><label class="form-label">Confirmer le mot de passe</label><input type="password" class="form-input" id="newPass2" required minlength="8" placeholder="Confirmez votre mot de passe" autocomplete="new-password"></div>' +
     '<div id="pwdError" class="form-error" style="display:none"></div>' +
-    '<button type="submit" class="btn btn-primary btn-block btn-lg">Valider le nouveau mot de passe</button></form></div></div>'
+    '<button type="submit" class="btn btn-primary btn-block btn-lg">Valider le nouveau mot de passe</button></form>' +
+    '<div style="margin-top:12px;padding:10px;background:var(--bg-off);border-radius:6px;font-size:11px;color:var(--muted)">Le mot de passe doit contenir : 8+ caracteres, une majuscule, une minuscule, un chiffre</div>' +
+    '</div></div>'
   );
 }
 

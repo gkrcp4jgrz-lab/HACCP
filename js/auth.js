@@ -1,5 +1,5 @@
 // =====================================================================
-// AUTH
+// AUTH — with rate limiting, session timeout, password reset
 // =====================================================================
 
 async function checkAuth() {
@@ -8,6 +8,7 @@ async function checkAuth() {
     if (sess.data.session) {
       S.user = sess.data.session.user;
       await loadProfile();
+      resetSessionTimer();
       return true;
     }
   } catch(e) { console.error('Auth check error:', e); }
@@ -30,10 +31,19 @@ async function loadProfile() {
 }
 
 async function doLogin(email, pass) {
+  // Rate limit check
+  var rl = checkLoginRateLimit();
+  if (!rl.allowed) throw new Error(rl.message);
+
   var r = await sb.auth.signInWithPassword({ email: email, password: pass });
-  if (r.error) throw r.error;
+  if (r.error) {
+    recordLoginAttempt(false);
+    throw r.error;
+  }
+  recordLoginAttempt(true);
   S.user = r.data.user;
   await loadProfile();
+  resetSessionTimer();
   if (S.profile && S.profile.must_change_password) {
     renderChangePassword();
     return;
@@ -48,10 +58,11 @@ async function doRegister(email, pass, name) {
     options: { data: { full_name: name } }
   });
   if (r.error) throw r.error;
-  alert('Inscription réussie ! Vérifiez votre email pour confirmer votre compte, puis connectez-vous.');
+  showToast('Inscription reussie ! Verifiez votre email.', 'success', 5000);
 }
 
 async function doLogout() {
+  if (_sessionTimer) clearTimeout(_sessionTimer);
   await sb.auth.signOut();
   S.user = null;
   S.profile = null;
@@ -60,7 +71,17 @@ async function doLogout() {
   render();
 }
 
+async function doPasswordReset(email) {
+  var r = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + window.location.pathname
+  });
+  if (r.error) throw r.error;
+  showToast('Email de reinitialisation envoye !', 'success', 5000);
+}
+
 async function changePassword(newPass) {
+  var v = validatePassword(newPass);
+  if (!v.valid) throw new Error(v.message);
   var r = await sb.auth.updateUser({ password: newPass });
   if (r.error) throw r.error;
   await sb.from('profiles').update({ must_change_password: false }).eq('id', S.user.id);
@@ -79,7 +100,7 @@ async function createUser(email, tempPass, fullName, role) {
   });
   if (r.error) throw r.error;
   var newUser = r.data.user;
-  if (!newUser) throw new Error('Utilisateur non créé');
+  if (!newUser) throw new Error('Utilisateur non cree');
 
   if (savedToken) {
     await sb.auth.setSession({ access_token: savedToken.access_token, refresh_token: savedToken.refresh_token });
@@ -92,7 +113,21 @@ async function createUser(email, tempPass, fullName, role) {
     if (r2.error) throw r2.error;
   }
 
-  await sb.from('profiles').update({ must_change_password: false }).eq('id', newUser.id);
+  await sb.from('profiles').update({ must_change_password: true }).eq('id', newUser.id);
 
   return newUser;
+}
+
+// Listen for auth state changes (session refresh, etc.)
+if (sb) {
+  sb.auth.onAuthStateChange(function(event, session) {
+    if (event === 'SIGNED_OUT') {
+      S.user = null;
+      S.profile = null;
+      render();
+    } else if (event === 'TOKEN_REFRESHED' && session) {
+      S.user = session.user;
+      resetSessionTimer();
+    }
+  });
 }

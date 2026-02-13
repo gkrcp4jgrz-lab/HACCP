@@ -55,3 +55,118 @@ function moduleEnabled(key) {
   var m = S.siteConfig.modules.find(function(mod) { return mod.module_key === key; });
   return m ? m.enabled : true;
 }
+
+// ── RATE LIMITING (login brute-force protection) ──
+var _loginAttempts = { count: 0, lastAttempt: 0, lockUntil: 0 };
+var LOGIN_MAX_ATTEMPTS = 5;
+var LOGIN_LOCKOUT_MS = 60000; // 1 minute lockout
+
+function checkLoginRateLimit() {
+  var now = Date.now();
+  if (_loginAttempts.lockUntil > now) {
+    var secs = Math.ceil((_loginAttempts.lockUntil - now) / 1000);
+    return { allowed: false, message: 'Trop de tentatives. Reessayez dans ' + secs + 's.' };
+  }
+  // Reset after lockout period
+  if (now - _loginAttempts.lastAttempt > LOGIN_LOCKOUT_MS) {
+    _loginAttempts.count = 0;
+  }
+  return { allowed: true };
+}
+
+function recordLoginAttempt(success) {
+  var now = Date.now();
+  if (success) {
+    _loginAttempts.count = 0;
+    _loginAttempts.lockUntil = 0;
+  } else {
+    _loginAttempts.count++;
+    _loginAttempts.lastAttempt = now;
+    if (_loginAttempts.count >= LOGIN_MAX_ATTEMPTS) {
+      _loginAttempts.lockUntil = now + LOGIN_LOCKOUT_MS;
+      _loginAttempts.count = 0;
+    }
+  }
+}
+
+// ── SESSION TIMEOUT (auto-logout after inactivity) ──
+var SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 min
+var _sessionTimer = null;
+var _lastActivity = Date.now();
+
+function resetSessionTimer() {
+  _lastActivity = Date.now();
+  if (_sessionTimer) clearTimeout(_sessionTimer);
+  if (S.user) {
+    _sessionTimer = setTimeout(function() {
+      if (Date.now() - _lastActivity >= SESSION_TIMEOUT_MS) {
+        showToast('Session expirée par inactivité', 'warning');
+        doLogout();
+      }
+    }, SESSION_TIMEOUT_MS);
+  }
+}
+
+// Activity listener for session timeout
+['click', 'keydown', 'touchstart', 'scroll'].forEach(function(evt) {
+  document.addEventListener(evt, function() { resetSessionTimer(); }, { passive: true });
+});
+
+// ── TOAST NOTIFICATIONS (better UX than alert) ──
+function showToast(message, type, duration) {
+  type = type || 'info';
+  duration = duration || 3500;
+  var container = document.getElementById('toastContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toastContainer';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+  var icons = { success: '✅', error: '❌', warning: '⚠️', info: '💡' };
+  var toast = document.createElement('div');
+  toast.className = 'toast toast-' + type;
+  toast.innerHTML = '<span>' + (icons[type] || '') + ' ' + esc(message) + '</span>';
+  container.appendChild(toast);
+  setTimeout(function() { toast.classList.add('show'); }, 10);
+  setTimeout(function() {
+    toast.classList.remove('show');
+    setTimeout(function() { toast.remove(); }, 300);
+  }, duration);
+}
+
+// ── PASSWORD STRENGTH VALIDATION ──
+function validatePassword(pass) {
+  if (pass.length < 8) return { valid: false, message: 'Minimum 8 caractères' };
+  if (!/[A-Z]/.test(pass)) return { valid: false, message: 'Au moins une majuscule requise' };
+  if (!/[a-z]/.test(pass)) return { valid: false, message: 'Au moins une minuscule requise' };
+  if (!/[0-9]/.test(pass)) return { valid: false, message: 'Au moins un chiffre requis' };
+  return { valid: true, message: 'Mot de passe fort' };
+}
+
+// ── INPUT SANITIZATION ──
+function sanitizeNumeric(val) {
+  var n = parseFloat(val);
+  if (isNaN(n) || !isFinite(n)) return null;
+  return n;
+}
+
+// ── CSV EXPORT HELPER ──
+function exportCSV(filename, headers, rows) {
+  var bom = '\uFEFF'; // UTF-8 BOM for Excel
+  var csv = bom + headers.join(';') + '\n';
+  rows.forEach(function(row) {
+    csv += row.map(function(cell) {
+      var s = String(cell == null ? '' : cell).replace(/"/g, '""');
+      return '"' + s + '"';
+    }).join(';') + '\n';
+  });
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Export CSV téléchargé', 'success');
+}
