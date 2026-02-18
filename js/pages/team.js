@@ -11,14 +11,14 @@ function renderTeam() {
   // Create employee form
   h += '<div class="card"><div class="card-header">Ajouter un membre a ' + esc(site.name) + '</div><div class="card-body"><form onsubmit="handleTeamAddUser(event)">';
   h += '<div class="form-row"><div class="form-group"><label class="form-label">Nom complet <span class="req">*</span></label><input type="text" class="form-input" id="teamName" required placeholder="Jean Renard" oninput="previewTeamLoginId(this.value)"></div>';
-  h += '<div class="form-group"><label class="form-label">Identifiant (auto)</label><div style="padding:10px 14px;background:var(--bg-off);border-radius:8px;font-size:16px;font-weight:700;letter-spacing:2px;color:var(--brand-primary,var(--primary))" id="teamLoginPreview">—</div></div></div>';
+  h += '<div class="form-group"><label class="form-label">Identifiant (auto)</label><div class="v2-login-preview" id="teamLoginPreview">—</div></div></div>';
   h += '<div class="form-row"><div class="form-group"><label class="form-label">Mot de passe provisoire <span class="req">*</span></label><input type="text" class="form-input" id="teamPass" required value="Haccp2026!"></div>';
   h += '<div class="form-group"><label class="form-label">Role sur le site</label><select class="form-select" id="teamRole"><option value="employee">Employe</option><option value="manager">Gerant</option></select></div></div>';
-  h += '<div style="background:var(--primary-light,#f0fdf4);padding:12px;border-radius:8px;margin-bottom:16px;font-size:13px"><strong>Info :</strong> L\'identifiant sera genere automatiquement. Communiquez l\'identifiant et le mot de passe a l\'employe pour qu\'il puisse se connecter.</div>';
+  h += '<div class="v2-callout v2-callout--info v2-mb-16"><strong>Info :</strong> L\'identifiant sera genere automatiquement. Communiquez l\'identifiant et le mot de passe a l\'employe pour qu\'il puisse se connecter.</div>';
   h += '<button type="submit" class="btn btn-primary btn-lg" id="teamAddBtn">Ajouter au site</button></form></div></div>';
 
   // Team list
-  h += '<div class="card"><div class="card-header">Equipe de ' + esc(site.name) + '</div><div class="card-body" id="teamListContainer"><div style="text-align:center;padding:20px"><div class="loading"></div></div></div></div>';
+  h += '<div class="card"><div class="card-header">Equipe de ' + esc(site.name) + '</div><div class="card-body" id="teamListContainer"><div class="v2-loading-inline"><div class="loading"></div></div></div></div>';
 
   setTimeout(function() { loadAndRenderTeam(); }, 50);
 
@@ -52,7 +52,7 @@ async function loadAndRenderTeam() {
       var loginId = p.login_id || '—';
       html += '<tr>';
       html += '<td><strong>' + esc(p.full_name||'—') + '</strong></td>';
-      html += '<td><span style="background:var(--brand-primary,var(--primary));color:#fff;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:1px">' + esc(loginId) + '</span>';
+      html += '<td><span class="v2-login-badge v2-text-xs">' + esc(loginId) + '</span>';
       if (isManager()) {
         html += ' <button onclick="handleEditLoginId(\'' + p.id + '\',\'' + esc(loginId) + '\')" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--brand-primary,var(--primary))">modifier</button>';
       }

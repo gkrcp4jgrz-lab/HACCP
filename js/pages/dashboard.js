@@ -29,13 +29,13 @@ function renderDashboard() {
   var firstName = userName().split(' ')[0];
 
   h += '<div class="greeting-banner">';
-  h += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">';
+  h += '<div class="v2-flex v2-items-center v2-justify-between v2-flex-wrap v2-gap-12">';
   h += '<div class="greeting-text"><h2>' + greeting + ', ' + esc(firstName) + '</h2>';
   h += '<p>' + fmtD(today()) + ' · ' + esc(site.name) + '</p></div>';
   if (S.sites.length > 1) {
-    h += '<div><select onchange="switchSite(this.value)" style="padding:8px 32px 8px 14px;border:1.5px solid rgba(255,255,255,.15);border-radius:8px;font-size:13px;font-weight:600;background:rgba(255,255,255,.1);color:#F1F5F9;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' fill=\'%2394a3b8\' viewBox=\'0 0 16 16\'%3E%3Cpath d=\'M8 11L3 6h10z\'/%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 10px center">';
+    h += '<div><select class="v2-greeting-select" onchange="switchSite(this.value)">';
     S.sites.forEach(function(s) {
-      h += '<option value="' + s.id + '"' + (s.id === S.currentSiteId ? ' selected' : '') + ' style="background:#1E293B;color:#F1F5F9">' + esc(s.name) + '</option>';
+      h += '<option value="' + s.id + '"' + (s.id === S.currentSiteId ? ' selected' : '') + '>' + esc(s.name) + '</option>';
     });
     h += '</select></div>';
   }
@@ -53,24 +53,24 @@ function renderDashboard() {
   h += '<div class="stats-grid">';
 
   var tempPct = totalExpected > 0 ? Math.round(tempCount / totalExpected * 100) : 0;
-  h += '<div class="stat-card' + (tempCount >= totalExpected ? ' success' : '') + '" onclick="navigate(\'temperatures\')" style="cursor:pointer">';
-  h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><span style="font-size:28px">🌡️</span>';
+  h += '<div class="stat-card v2-clickable' + (tempCount >= totalExpected ? ' success' : '') + '" onclick="navigate(\'temperatures\')">';
+  h += '<div class="v2-flex v2-items-center v2-justify-between v2-mb-8"><span class="v2-text-5xl">🌡️</span>';
   if (totalExpected > 0) {
-    h += '<div style="width:42px;height:42px;border-radius:50%;border:3px solid ' + (tempPct >= 100 ? 'var(--success)' : 'var(--primary)') + ';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:' + (tempPct >= 100 ? 'var(--success)' : 'var(--primary)') + '">' + tempPct + '%</div>';
+    h += '<div class="v2-radial-pct ' + (tempPct >= 100 ? 'v2-radial-pct--ok' : 'v2-radial-pct--primary') + '">' + tempPct + '%</div>';
   }
   h += '</div>';
   h += '<div class="stat-value">' + tempCount + '/' + totalExpected + '</div><div class="stat-label">Relevés aujourd\'hui</div></div>';
 
-  h += '<div class="stat-card' + (dlcWarnings.length > 0 ? ' warning' : ' success') + '" onclick="navigate(\'dlc\')" style="cursor:pointer">';
-  h += '<div style="margin-bottom:8px"><span style="font-size:28px">📅</span></div>';
+  h += '<div class="stat-card v2-clickable' + (dlcWarnings.length > 0 ? ' warning' : ' success') + '" onclick="navigate(\'dlc\')">';
+  h += '<div class="v2-mb-8"><span class="v2-text-5xl">📅</span></div>';
   h += '<div class="stat-value">' + dlcWarnings.length + '</div><div class="stat-label">DLC à surveiller</div></div>';
 
-  h += '<div class="stat-card' + (dlcExpired.length > 0 ? ' danger' : ' success') + '" onclick="navigate(\'dlc\')" style="cursor:pointer">';
-  h += '<div style="margin-bottom:8px"><span style="font-size:28px">❌</span></div>';
+  h += '<div class="stat-card v2-clickable' + (dlcExpired.length > 0 ? ' danger' : ' success') + '" onclick="navigate(\'dlc\')">';
+  h += '<div class="v2-mb-8"><span class="v2-text-5xl">❌</span></div>';
   h += '<div class="stat-value">' + dlcExpired.length + '</div><div class="stat-label">DLC expirées</div></div>';
 
-  h += '<div class="stat-card' + (ordersToOrder.length > 0 ? ' warning' : ' success') + '" onclick="navigate(\'orders\')" style="cursor:pointer">';
-  h += '<div style="margin-bottom:8px"><span style="font-size:28px">🛒</span></div>';
+  h += '<div class="stat-card v2-clickable' + (ordersToOrder.length > 0 ? ' warning' : ' success') + '" onclick="navigate(\'orders\')">';
+  h += '<div class="v2-mb-8"><span class="v2-text-5xl">🛒</span></div>';
   h += '<div class="stat-value">' + ordersToOrder.length + '</div><div class="stat-label">À commander</div></div>';
   h += '</div>';
 
@@ -78,23 +78,23 @@ function renderDashboard() {
   if (totalExpected > 0) {
     var pct = Math.min(100, Math.round(tempCount / totalExpected * 100));
     h += '<div class="card"><div class="card-body">';
-    h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
-    h += '<div><strong style="font-size:15px;font-weight:800">Progression relevés du jour</strong></div>';
-    h += '<div style="display:flex;align-items:center;gap:8px"><span style="font-weight:800;font-size:18px;color:' + (pct >= 100 ? 'var(--success)' : 'var(--primary)') + '">' + pct + '%</span>';
-    if (pct >= 100) h += '<span style="font-size:18px">✅</span>';
+    h += '<div class="v2-flex v2-justify-between v2-items-center v2-mb-10">';
+    h += '<div><strong class="v2-text-lg v2-font-800">Progression relevés du jour</strong></div>';
+    h += '<div class="v2-flex v2-items-center v2-gap-8"><span class="v2-font-800 v2-text-2xl ' + (pct >= 100 ? 'v2-text-ok' : 'v2-text-primary') + '">' + pct + '%</span>';
+    if (pct >= 100) h += '<span class="v2-text-2xl">✅</span>';
     h += '</div></div>';
-    h += '<div class="progress" style="height:10px;border-radius:5px"><div class="progress-bar" style="width:' + pct + '%;background:' + (pct >= 100 ? 'var(--success)' : 'var(--primary)') + ';border-radius:5px"></div></div>';
+    h += '<div class="progress v2-progress-lg"><div class="progress-bar" style="width:' + pct + '%;background:' + (pct >= 100 ? 'var(--success)' : 'var(--primary)') + '"></div></div>';
     h += '</div></div>';
   }
 
   // ── 5. ALERTS (Urgent consignes + DLC expired combined) ──
   var totalAlerts = urgentConsignes.length + dlcExpired.length;
   if (totalAlerts > 0) {
-    h += '<div class="card" style="border-left:4px solid var(--danger)"><div class="card-header" style="color:var(--danger);background:var(--danger-bg)">🚨 Alertes <span class="badge badge-red" style="margin-left:auto;font-size:12px;padding:4px 12px">' + totalAlerts + '</span></div><div class="card-body" style="padding:0">';
+    h += '<div class="card v2-card--danger-left"><div class="card-header v2-card-header--danger">🚨 Alertes <span class="badge badge-red v2-badge-lg v2-ml-auto">' + totalAlerts + '</span></div><div class="card-body v2-p-0">';
 
     urgentConsignes.forEach(function(c) {
       h += '<div class="list-item">';
-      h += '<div class="list-content"><div class="list-title" style="color:var(--danger);font-weight:700;font-size:14px">💬 ' + esc(c.message) + '</div>';
+      h += '<div class="list-content"><div class="list-title v2-text-danger v2-font-700 v2-text-md">💬 ' + esc(c.message) + '</div>';
       h += '<div class="list-sub">Par ' + esc(c.created_by_name) + ' · ' + fmtDT(c.created_at) + '</div></div>';
       h += '<div class="list-actions"><button class="btn btn-success" onclick="event.stopPropagation();markConsigneRead(\'' + c.id + '\')">✓ Traité</button></div>';
       h += '</div>';
@@ -102,7 +102,7 @@ function renderDashboard() {
 
     dlcExpired.forEach(function(d) {
       h += '<div class="list-item">';
-      h += '<div class="list-content"><div class="list-title" style="color:var(--danger);font-size:14px">📅 ' + esc(d.product_name) + ' <span class="badge badge-red">Expiré (J' + daysUntil(d.dlc_date) + ')</span></div>';
+      h += '<div class="list-content"><div class="list-title v2-text-danger v2-text-md">📅 ' + esc(d.product_name) + ' <span class="badge badge-red">Expiré (J' + daysUntil(d.dlc_date) + ')</span></div>';
       h += '<div class="list-sub">DLC : ' + fmtD(d.dlc_date) + (d.lot_number ? ' · Lot : ' + esc(d.lot_number) : '') + '</div></div>';
       h += '<div class="list-actions">';
       h += '<button class="btn btn-danger" onclick="updateDlcStatus(\'' + d.id + '\',\'discarded\')">🗑️ Jeter</button>';
@@ -115,11 +115,11 @@ function renderDashboard() {
 
   // DLC warnings (non-expired)
   if (dlcWarnings.length > 0) {
-    h += '<div class="card" style="border-left:4px solid var(--warning)"><div class="card-header" style="background:var(--warning-bg)">⚠️ DLC à surveiller <span class="badge badge-yellow" style="margin-left:auto;font-size:12px;padding:4px 12px">' + dlcWarnings.length + '</span></div><div class="card-body" style="padding:0">';
+    h += '<div class="card v2-card--warning-left"><div class="card-header v2-card-header--warning">⚠️ DLC à surveiller <span class="badge badge-yellow v2-badge-lg v2-ml-auto">' + dlcWarnings.length + '</span></div><div class="card-body v2-p-0">';
     dlcWarnings.forEach(function(d) {
       var days = daysUntil(d.dlc_date);
       h += '<div class="list-item">';
-      h += '<div class="list-content"><div class="list-title" style="color:var(--warning);font-size:14px">' + esc(d.product_name) + ' <span class="badge badge-yellow">J-' + days + '</span></div>';
+      h += '<div class="list-content"><div class="list-title v2-text-warning v2-text-md">' + esc(d.product_name) + ' <span class="badge badge-yellow">J-' + days + '</span></div>';
       h += '<div class="list-sub">DLC : ' + fmtD(d.dlc_date) + (d.lot_number ? ' · Lot : ' + esc(d.lot_number) : '') + '</div></div>';
       h += '<div class="list-actions"><button class="btn btn-success" onclick="updateDlcStatus(\'' + d.id + '\',\'consumed\')">✓ Utilisé</button></div>';
       h += '</div>';
@@ -136,13 +136,13 @@ function renderDashboard() {
       bySupplier[key].push(o);
     });
 
-    h += '<div class="card" style="border-left:4px solid var(--warning)"><div class="card-header" style="background:var(--warning-bg)">🛒 Liste des courses <span class="badge badge-yellow" style="margin-left:auto;font-size:12px;padding:4px 12px">' + ordersToOrder.length + ' article' + (ordersToOrder.length > 1 ? 's' : '') + '</span></div><div class="card-body">';
+    h += '<div class="card v2-card--warning-left"><div class="card-header v2-card-header--warning">🛒 Liste des courses <span class="badge badge-yellow v2-badge-lg v2-ml-auto">' + ordersToOrder.length + ' article' + (ordersToOrder.length > 1 ? 's' : '') + '</span></div><div class="card-body">';
 
     Object.keys(bySupplier).forEach(function(supplier) {
-      h += '<div style="margin-bottom:18px">';
-      h += '<h4 style="font-size:15px;font-weight:800;color:var(--ink);margin:0 0 10px;padding-bottom:8px;border-bottom:2px solid var(--primary-light);display:flex;align-items:center;gap:8px"><span style="font-size:20px">🏭</span> ' + esc(supplier) + '</h4>';
+      h += '<div class="v2-supplier-group">';
+      h += '<h4 class="v2-supplier-group__title"><span class="v2-text-3xl">🏭</span> ' + esc(supplier) + '</h4>';
       bySupplier[supplier].forEach(function(o) {
-        h += '<div class="list-item" style="padding:8px 0">';
+        h += '<div class="list-item v2-py-8">';
         h += '<div class="list-content"><div class="list-title">' + esc(o.product_name) + '</div>';
         h += '<div class="list-sub">' + (o.quantity || 1) + ' ' + (o.unit || 'unité') + (o.notes ? ' · ' + esc(o.notes) : '') + '</div></div>';
         h += '<div class="list-actions"><button class="btn btn-success" onclick="dashMarkOrdered(\'' + o.id + '\')">✓ Commandé</button></div>';
@@ -158,20 +158,20 @@ function renderDashboard() {
   if (normalConsignes.length > 0) {
     h += '<div class="card"><div class="card-header">💬 Dernières consignes</div><div class="card-body">';
     normalConsignes.forEach(function(c) {
-      var prioStyle = c.priority === 'high' ? 'color:var(--warning)' : '';
-      h += '<div class="list-item" style="border-bottom:1px solid var(--gray-border);padding:10px 0">';
-      h += '<div class="list-content"><div class="list-title" style="' + prioStyle + '">' + esc(c.message) + '</div>';
+      var prioClass = c.priority === 'high' ? ' v2-text-warning' : '';
+      h += '<div class="list-item v2-list-item--bordered">';
+      h += '<div class="list-content"><div class="list-title' + prioClass + '">' + esc(c.message) + '</div>';
       h += '<div class="list-sub">' + esc(c.created_by_name) + ' · ' + fmtDT(c.created_at) + '</div></div></div>';
     });
-    h += '<div style="text-align:center;padding-top:12px"><button class="btn btn-ghost" onclick="navigate(\'consignes\')">Voir toutes les consignes →</button></div>';
+    h += '<div class="v2-text-center v2-pt-12"><button class="btn btn-ghost" onclick="navigate(\'consignes\')">Voir toutes les consignes →</button></div>';
     h += '</div></div>';
   }
 
   // ── COMMANDES EN COURS DE LIVRAISON ──
   if (ordersOrdered.length > 0) {
-    h += '<div class="card"><div class="card-header">📦 En attente de livraison <span class="badge badge-blue" style="margin-left:auto;font-size:12px;padding:4px 12px">' + ordersOrdered.length + '</span></div><div class="card-body">';
+    h += '<div class="card"><div class="card-header">📦 En attente de livraison <span class="badge badge-blue v2-badge-lg v2-ml-auto">' + ordersOrdered.length + '</span></div><div class="card-body">';
     ordersOrdered.forEach(function(o) {
-      h += '<div class="list-item" style="padding:8px 0">';
+      h += '<div class="list-item v2-py-8">';
       h += '<div class="list-content"><div class="list-title">' + esc(o.product_name) + '</div>';
       h += '<div class="list-sub">' + (o.supplier_name ? '🏭 ' + esc(o.supplier_name) + ' · ' : '') + (o.quantity || 1) + ' ' + (o.unit || 'unité') + ' · Commandé le ' + fmtD(o.ordered_at) + '</div></div>';
       h += '<div class="list-actions"><button class="btn btn-primary" onclick="dashMarkReceived(\'' + o.id + '\')">✓ Reçu</button></div>';
@@ -191,7 +191,7 @@ function renderDashboard() {
 function renderDashboardTimeline(tempCount, totalExpected, dlcExpired, dlcWarnings, ordersToOrder, ordersOrdered, urgentConsignes) {
   var h = '';
 
-  h += '<div style="margin:24px 0 18px"><h3 style="margin:0;font-size:17px;font-weight:800;color:var(--ink)">📋 Ma Journée</h3></div>';
+  h += '<div class="v2-section-title">📋 Ma Journée</div>';
 
   h += '<div class="timeline">';
 
@@ -211,8 +211,8 @@ function renderDashboardTimeline(tempCount, totalExpected, dlcExpired, dlcWarnin
     }
     h += '</div>';
     if (!tempDone && totalExpected > 0) {
-      h += '<div style="margin-top:8px"><div class="progress" style="height:8px"><div class="progress-bar" style="width:' + tempPct + '%;background:' + (tempPct > 50 ? 'var(--primary)' : 'var(--warning)') + '"></div></div>';
-      h += '<div class="tl-card-sub" style="margin-top:6px">' + (totalExpected - tempCount) + ' relevé(s) restant(s)</div></div>';
+      h += '<div class="v2-mt-8"><div class="progress v2-progress-sm"><div class="progress-bar" style="width:' + tempPct + '%;background:' + (tempPct > 50 ? 'var(--primary)' : 'var(--warning)') + '"></div></div>';
+      h += '<div class="tl-card-sub v2-mt-6">' + (totalExpected - tempCount) + ' relevé(s) restant(s)</div></div>';
     } else if (tempDone) {
       h += '<div class="tl-card-sub">Tous les relevés sont complétés</div>';
     } else {
@@ -221,7 +221,7 @@ function renderDashboardTimeline(tempCount, totalExpected, dlcExpired, dlcWarnin
 
     var nonConform = S.data.temperatures.filter(function(t) { return !t.is_conform; });
     if (nonConform.length > 0) {
-      h += '<div style="margin-top:8px;padding:8px 12px;background:var(--danger-bg);border-radius:8px;font-size:13px;color:var(--danger);font-weight:700">⚠️ ' + nonConform.length + ' non-conformité(s) détectée(s)</div>';
+      h += '<div class="v2-alert-inline v2-alert-inline--danger v2-mt-8">⚠️ ' + nonConform.length + ' non-conformité(s) détectée(s)</div>';
     }
     h += '</div></div>';
   }
@@ -242,18 +242,18 @@ function renderDashboardTimeline(tempCount, totalExpected, dlcExpired, dlcWarnin
     h += '</div>';
 
     if (dlcExpired.length > 0) {
-      h += '<div style="margin-top:6px">';
+      h += '<div class="v2-mt-6">';
       dlcExpired.slice(0, 3).forEach(function(d) {
-        h += '<div style="font-size:13px;padding:4px 0;color:var(--danger);font-weight:600">❌ <strong>' + esc(d.product_name) + '</strong> — expirée depuis ' + Math.abs(daysUntil(d.dlc_date)) + 'j</div>';
+        h += '<div class="v2-tl-alert v2-tl-alert--danger">❌ <strong>' + esc(d.product_name) + '</strong> — expirée depuis ' + Math.abs(daysUntil(d.dlc_date)) + 'j</div>';
       });
       if (dlcExpired.length > 3) h += '<div class="tl-card-sub">+ ' + (dlcExpired.length - 3) + ' autre(s)...</div>';
       h += '</div>';
     }
     if (dlcWarnings.length > 0) {
-      h += '<div style="margin-top:6px">';
+      h += '<div class="v2-mt-6">';
       dlcWarnings.slice(0, 3).forEach(function(d) {
         var days = daysUntil(d.dlc_date);
-        h += '<div style="font-size:13px;padding:4px 0;color:var(--warning);font-weight:600">⚠️ <strong>' + esc(d.product_name) + '</strong> — ' + (days === 0 ? 'expire aujourd\'hui' : days + 'j restant(s)') + '</div>';
+        h += '<div class="v2-tl-alert v2-tl-alert--warning">⚠️ <strong>' + esc(d.product_name) + '</strong> — ' + (days === 0 ? 'expire aujourd\'hui' : days + 'j restant(s)') + '</div>';
       });
       if (dlcWarnings.length > 3) h += '<div class="tl-card-sub">+ ' + (dlcWarnings.length - 3) + ' autre(s)...</div>';
       h += '</div>';
@@ -283,7 +283,7 @@ function renderDashboardTimeline(tempCount, totalExpected, dlcExpired, dlcWarnin
 
     if (urgentConsignes.length > 0) {
       urgentConsignes.slice(0, 2).forEach(function(c) {
-        h += '<div style="font-size:13px;padding:5px 0;color:var(--danger);font-weight:600">🚨 ' + esc(c.message.substring(0, 80)) + (c.message.length > 80 ? '...' : '') + '</div>';
+        h += '<div class="v2-tl-alert v2-tl-alert--danger">🚨 ' + esc(c.message.substring(0, 80)) + (c.message.length > 80 ? '...' : '') + '</div>';
       });
     } else if (allConsignes.length > 0) {
       h += '<div class="tl-card-sub">' + allConsignes.length + ' consigne(s) active(s)</div>';
@@ -311,14 +311,14 @@ function renderDashboardTimeline(tempCount, totalExpected, dlcExpired, dlcWarnin
     if (ordersToOrder.length > 0) {
       var bySupp = {};
       ordersToOrder.forEach(function(o) { var s = o.supplier_name || 'Sans fournisseur'; bySupp[s] = (bySupp[s] || 0) + 1; });
-      h += '<div style="margin-top:6px">';
+      h += '<div class="v2-mt-6">';
       Object.keys(bySupp).slice(0, 3).forEach(function(s) {
-        h += '<div style="font-size:13px;padding:3px 0;color:var(--warning);font-weight:600">📞 ' + esc(s) + ' — ' + bySupp[s] + ' produit(s)</div>';
+        h += '<div class="v2-tl-alert v2-tl-alert--warning">📞 ' + esc(s) + ' — ' + bySupp[s] + ' produit(s)</div>';
       });
       h += '</div>';
     }
     if (ordersOrdered.length > 0) {
-      h += '<div style="font-size:13px;color:var(--gray);margin-top:3px;font-weight:500">📦 ' + ordersOrdered.length + ' livraison(s) attendue(s)</div>';
+      h += '<div class="v2-text-sm v2-text-muted v2-mt-4 v2-font-500">📦 ' + ordersOrdered.length + ' livraison(s) attendue(s)</div>';
     }
     if (totalOrders === 0) {
       h += '<div class="tl-card-sub">Aucune commande en cours</div>';
@@ -335,7 +335,7 @@ function renderDashboardTimeline(tempCount, totalExpected, dlcExpired, dlcWarnin
     h += '<span class="badge badge-red">' + incidents.length + ' ouvert(s)</span>';
     h += '</div>';
     incidents.slice(0, 2).forEach(function(r) {
-      h += '<div style="font-size:13px;padding:4px 0;color:var(--danger);font-weight:600">' + esc(r.title) + '</div>';
+      h += '<div class="v2-tl-alert v2-tl-alert--danger">' + esc(r.title) + '</div>';
     });
     h += '</div></div>';
   }
@@ -421,17 +421,17 @@ function renderMultiSiteDashboard() {
   var firstName = userName().split(' ')[0];
 
   h += '<div class="greeting-banner">';
-  h += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">';
+  h += '<div class="v2-flex v2-items-center v2-justify-between v2-flex-wrap v2-gap-12">';
   h += '<div class="greeting-text"><h2>' + greeting + ', ' + esc(firstName) + '</h2>';
   h += '<p>Vue globale — ' + S.sites.length + ' site' + (S.sites.length > 1 ? 's' : '') + ' · ' + fmtD(today()) + '</p></div>';
-  h += '<button style="padding:8px 16px;border:1.5px solid rgba(255,255,255,.15);border-radius:8px;font-size:13px;font-weight:600;background:rgba(255,255,255,.1);color:#F1F5F9;cursor:pointer" onclick="_multiSiteCache=null;loadAndRenderMultiDashboard();">↻ Actualiser</button>';
+  h += '<button class="v2-greeting-select" onclick="_multiSiteCache=null;loadAndRenderMultiDashboard();">↻ Actualiser</button>';
   h += '</div></div>';
 
   // Container with skeleton loading
   h += '<div id="multiDashContainer">';
   h += '<div class="skeleton skeleton-card"></div>';
   h += '<div class="skeleton skeleton-card"></div>';
-  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">';
+  h += '<div class="v2-grid-2">';
   h += '<div class="skeleton skeleton-card"></div>';
   h += '<div class="skeleton skeleton-card"></div>';
   h += '</div>';
@@ -469,30 +469,30 @@ async function loadAndRenderMultiDashboard() {
   var globalPct = totalExpected > 0 ? Math.round(totalTemp / totalExpected * 100) : 0;
 
   // Stats
-  h += '<div class="global-stats-banner" style="grid-template-columns:1fr 1fr">';
+  h += '<div class="global-stats-banner v2-grid-2">';
   h += '<div class="global-stat"><div class="gs-value">' + S.sites.length + '</div><div class="gs-label">Sites actifs</div></div>';
   h += '<div class="global-stat' + (globalPct >= 100 ? ' gs-success' : '') + '"><div class="gs-value">' + globalPct + '%</div><div class="gs-label">Relevés complétés</div></div>';
   h += '</div>';
 
   // Progress bar
-  h += '<div class="card" style="margin-bottom:18px"><div class="card-body" style="padding:18px 22px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-weight:700;font-size:14px;color:var(--ink)">Progression globale</span><span style="font-weight:800;font-size:16px;color:' + (globalPct >= 100 ? 'var(--success)' : 'var(--primary)') + '">' + totalTemp + '/' + totalExpected + '</span></div><div class="progress" style="height:10px"><div class="progress-bar" style="width:' + Math.min(100, globalPct) + '%;background:' + (globalPct >= 100 ? 'var(--success)' : globalPct >= 50 ? 'var(--primary)' : 'var(--warning)') + '"></div></div></div></div>';
+  h += '<div class="card v2-mb-18"><div class="card-body v2-card-body--compact"><div class="v2-flex v2-justify-between v2-items-center v2-mb-8"><span class="v2-font-700 v2-text-md">Progression globale</span><span class="v2-font-800 v2-text-xl ' + (globalPct >= 100 ? 'v2-text-ok' : 'v2-text-primary') + '">' + totalTemp + '/' + totalExpected + '</span></div><div class="progress v2-progress-lg"><div class="progress-bar" style="width:' + Math.min(100, globalPct) + '%;background:' + (globalPct >= 100 ? 'var(--success)' : globalPct >= 50 ? 'var(--primary)' : 'var(--warning)') + '"></div></div></div></div>';
 
   // Alerts
   if (totalUrgent > 0 || totalDlcExp > 0) {
-    h += '<div class="card" style="border-left:4px solid var(--danger);margin-bottom:18px">';
-    h += '<div class="card-header" style="color:var(--danger);background:var(--danger-bg)">🚨 Alertes à traiter <span class="badge badge-red" style="margin-left:auto;font-size:12px;padding:4px 12px">' + (totalUrgent + totalDlcExp) + '</span></div>';
-    h += '<div class="card-body" style="padding:0">';
+    h += '<div class="card v2-card--danger-left v2-mb-18">';
+    h += '<div class="card-header v2-card-header--danger">🚨 Alertes à traiter <span class="badge badge-red v2-badge-lg v2-ml-auto">' + (totalUrgent + totalDlcExp) + '</span></div>';
+    h += '<div class="card-body v2-p-0">';
     allUrgentConsignes.forEach(function(c) {
-      h += '<div class="list-item"><div class="list-icon" style="background:var(--danger-bg);color:var(--danger)">💬</div><div class="list-content"><div class="list-title" style="color:var(--danger)">' + esc(c.message.substring(0, 80)) + (c.message.length > 80 ? '...' : '') + '</div><div class="list-sub">📍 ' + esc(c._siteName || '') + ' — ' + esc(c.created_by_name || '') + '</div></div></div>';
+      h += '<div class="list-item"><div class="list-icon v2-list-icon--danger">💬</div><div class="list-content"><div class="list-title v2-text-danger">' + esc(c.message.substring(0, 80)) + (c.message.length > 80 ? '...' : '') + '</div><div class="list-sub">📍 ' + esc(c._siteName || '') + ' — ' + esc(c.created_by_name || '') + '</div></div></div>';
     });
     if (totalDlcExp > 0) {
-      h += '<div class="list-item"><div class="list-icon" style="background:var(--danger-bg);color:var(--danger)">📅</div><div class="list-content"><div class="list-title" style="color:var(--danger)">' + totalDlcExp + ' DLC expirée(s)</div><div class="list-sub">Vérifiez chaque site</div></div></div>';
+      h += '<div class="list-item"><div class="list-icon v2-list-icon--danger">📅</div><div class="list-content"><div class="list-title v2-text-danger">' + totalDlcExp + ' DLC expirée(s)</div><div class="list-sub">Vérifiez chaque site</div></div></div>';
     }
     h += '</div></div>';
   }
 
   // Site detail
-  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h3 style="font-size:17px;font-weight:800;color:var(--ink);margin:0">Détail par site</h3><span style="font-size:13px;color:var(--gray);font-weight:600">' + sitesOk + '/' + S.sites.length + ' conformes</span></div>';
+  h += '<div class="v2-flex v2-justify-between v2-items-center v2-mb-14"><h3 class="v2-section-heading">Détail par site</h3><span class="v2-text-sm v2-text-muted v2-font-600">' + sitesOk + '/' + S.sites.length + ' conformes</span></div>';
 
   stats.forEach(function(s, idx) {
     var site = s.site;
@@ -513,7 +513,7 @@ async function loadAndRenderMultiDashboard() {
     h += '<div class="mini-stat"><div class="mini-stat-value">' + s.ordersOpen + '</div><div class="mini-stat-label">🛒 Cmd</div></div>';
     h += '<div class="mini-stat' + (s.urgentConsignes > 0 ? ' bad' : ' ok') + '"><div class="mini-stat-value">' + s.urgentConsignes + '</div><div class="mini-stat-label">💬 Urg.</div></div>';
     h += '</div>';
-    h += '<div style="margin-top:10px"><div class="progress" style="height:6px"><div class="progress-bar" style="width:' + Math.min(100, pct) + '%;background:' + (pct >= 100 ? 'var(--success)' : 'var(--primary)') + '"></div></div></div>';
+    h += '<div class="v2-mt-10"><div class="progress v2-progress-xs"><div class="progress-bar" style="width:' + Math.min(100, pct) + '%;background:' + (pct >= 100 ? 'var(--success)' : 'var(--primary)') + '"></div></div></div>';
     h += '</div>';
   });
 

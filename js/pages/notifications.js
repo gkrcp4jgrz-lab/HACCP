@@ -33,10 +33,10 @@ function renderNotifAlerts() {
   var infos = alerts.filter(function(a) { return a.level === 'info'; });
 
   // Résumé
-  h += '<div class="stats-grid" style="margin-bottom:22px">';
-  h += '<div class="stat-card danger"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="font-size:24px">🚨</span><div class="stat-value">' + critical.length + '</div></div><div class="stat-label">Critiques</div></div>';
-  h += '<div class="stat-card warning"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="font-size:24px">⚠️</span><div class="stat-value">' + warnings.length + '</div></div><div class="stat-label">Avertissements</div></div>';
-  h += '<div class="stat-card success"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="font-size:24px">ℹ️</span><div class="stat-value">' + infos.length + '</div></div><div class="stat-label">Informations</div></div>';
+  h += '<div class="stats-grid v2-mb-22">';
+  h += '<div class="stat-card danger"><div class="v2-flex v2-items-center v2-gap-10 v2-mb-6"><span class="v2-text-4xl">🚨</span><div class="stat-value">' + critical.length + '</div></div><div class="stat-label">Critiques</div></div>';
+  h += '<div class="stat-card warning"><div class="v2-flex v2-items-center v2-gap-10 v2-mb-6"><span class="v2-text-4xl">⚠️</span><div class="stat-value">' + warnings.length + '</div></div><div class="stat-label">Avertissements</div></div>';
+  h += '<div class="stat-card success"><div class="v2-flex v2-items-center v2-gap-10 v2-mb-6"><span class="v2-text-4xl">ℹ️</span><div class="stat-value">' + infos.length + '</div></div><div class="stat-label">Informations</div></div>';
   h += '</div>';
 
   if (alerts.length === 0) {
@@ -46,27 +46,27 @@ function renderNotifAlerts() {
 
   // Alertes critiques
   if (critical.length > 0) {
-    h += '<div class="card" style="border-left:4px solid var(--danger)">';
-    h += '<div class="card-header" style="color:var(--danger);background:var(--danger-bg)"><span style="font-size:18px">🚨</span> Alertes critiques <span class="badge badge-red" style="margin-left:auto;font-size:12px;padding:4px 12px">' + critical.length + '</span></div>';
-    h += '<div class="card-body" style="padding:0">';
+    h += '<div class="card v2-card--danger-left">';
+    h += '<div class="card-header v2-card-header--danger"><span class="v2-text-2xl">🚨</span> Alertes critiques <span class="badge badge-red v2-badge-lg v2-ml-auto">' + critical.length + '</span></div>';
+    h += '<div class="card-body v2-p-0">';
     critical.forEach(function(a) { h += renderAlertItem(a); });
     h += '</div></div>';
   }
 
   // Avertissements
   if (warnings.length > 0) {
-    h += '<div class="card" style="border-left:4px solid var(--warning)">';
-    h += '<div class="card-header" style="color:var(--warning);background:var(--warning-bg)"><span style="font-size:18px">⚠️</span> Avertissements <span class="badge badge-yellow" style="margin-left:auto;font-size:12px;padding:4px 12px">' + warnings.length + '</span></div>';
-    h += '<div class="card-body" style="padding:0">';
+    h += '<div class="card v2-card--warning-left">';
+    h += '<div class="card-header v2-card-header--warning"><span class="v2-text-2xl">⚠️</span> Avertissements <span class="badge badge-yellow v2-badge-lg v2-ml-auto">' + warnings.length + '</span></div>';
+    h += '<div class="card-body v2-p-0">';
     warnings.forEach(function(a) { h += renderAlertItem(a); });
     h += '</div></div>';
   }
 
   // Infos
   if (infos.length > 0) {
-    h += '<div class="card" style="border-left:4px solid var(--primary)">';
-    h += '<div class="card-header" style="color:var(--primary);background:var(--primary-bg)"><span style="font-size:18px">ℹ️</span> Informations <span class="badge badge-blue" style="margin-left:auto;font-size:12px;padding:4px 12px">' + infos.length + '</span></div>';
-    h += '<div class="card-body" style="padding:0">';
+    h += '<div class="card v2-card--primary-left">';
+    h += '<div class="card-header" style="color:var(--primary);background:var(--primary-bg)"><span class="v2-text-2xl">ℹ️</span> Informations <span class="badge badge-blue v2-badge-lg v2-ml-auto">' + infos.length + '</span></div>';
+    h += '<div class="card-body v2-p-0">';
     infos.forEach(function(a) { h += renderAlertItem(a); });
     h += '</div></div>';
   }
@@ -85,7 +85,7 @@ function renderAlertItem(alert) {
   h += '<div class="list-content">';
   h += '<div class="list-title">' + esc(alert.title) + '</div>';
   h += '<div class="list-sub">' + esc(alert.message) + '</div>';
-  if (alert.time) h += '<div class="list-sub" style="font-size:11px;margin-top:3px;font-weight:600">📅 ' + alert.time + '</div>';
+  if (alert.time) h += '<div class="list-sub v2-text-xs v2-mt-4 v2-font-600">📅 ' + alert.time + '</div>';
   h += '</div>';
   if (alert.action) {
     h += '<div class="list-actions">' + alert.action + '</div>';
@@ -240,7 +240,7 @@ function renderNotifReports() {
   var h = '';
 
   // Formulaire de signalement
-  h += '<div class="card"><div class="card-header"><span style="font-size:18px">🚨</span> Signaler un problème</div><div class="card-body">';
+  h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">🚨</span> Signaler un problème</div><div class="card-body">';
   h += '<form onsubmit="handleNewReport(event)">';
   h += '<div class="form-group"><label class="form-label">Titre <span class="req">*</span></label>';
   h += '<input type="text" class="form-input" id="reportTitle" required placeholder="Ex: Frigo chambre 2 en panne"></div>';
@@ -269,8 +269,8 @@ function renderNotifReports() {
   h += '</form></div></div>';
 
   // Liste des signalements en cours
-  h += '<div class="card"><div class="card-header"><span style="font-size:18px">📋</span> Signalements en cours</div>';
-  h += '<div class="card-body" style="padding:0" id="reportsListContainer"><div style="text-align:center;padding:24px"><div class="loading" style="width:28px;height:28px;border-width:3px"></div></div></div></div>';
+  h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">📋</span> Signalements en cours</div>';
+  h += '<div class="card-body v2-p-0" id="reportsListContainer"><div class="v2-loading-inline"><div class="loading" style="width:28px;height:28px;border-width:3px"></div></div></div></div>';
 
   // Charger la liste après rendu
   setTimeout(function() { loadAndRenderReports(); }, 50);
@@ -303,12 +303,12 @@ async function loadAndRenderReports() {
       var catEmojis = { equipment:'🔧', hygiene:'🧹', temperature:'🌡️', product:'📦', other:'📋' };
       var statusLabels = { open:'🔴 Ouvert', in_progress:'🟡 En cours', resolved:'🟢 Résolu' };
 
-      h += '<div class="list-item" style="border-left:3px solid ' + prioColor + '">';
+      h += '<div class="list-item ' + (rep.priority === 'urgent' ? 'v2-list-item--border-left-nok' : 'v2-list-item--border-left-warning') + '">';
       h += '<div class="list-icon" style="background:' + prioBg + ';font-size:18px">' + (catEmojis[rep.category] || '📋') + '</div>';
       h += '<div class="list-content">';
       h += '<div class="list-title">' + esc(rep.title) + '</div>';
       h += '<div class="list-sub">' + esc(rep.description.substring(0, 120)) + '</div>';
-      h += '<div class="list-sub" style="margin-top:4px;font-size:11px">';
+      h += '<div class="list-sub v2-mt-4 v2-text-xs">';
       h += '<span class="badge' + (rep.priority === 'urgent' ? ' badge-red' : ' badge-yellow') + '">' + (rep.priority === 'urgent' ? '🔴 Urgent' : '🟡 Normal') + '</span> ';
       h += '<span class="badge badge-gray">' + (statusLabels[rep.status] || rep.status) + '</span> ';
       h += '— ' + fmtDT(rep.created_at) + ' par ' + esc(rep.reported_by_name || 'Inconnu');
@@ -326,7 +326,7 @@ async function loadAndRenderReports() {
 
     container.innerHTML = h;
   } catch(e) {
-    container.innerHTML = '<p style="color:var(--danger);padding:18px;font-weight:600">Erreur de chargement</p>';
+    container.innerHTML = '<p class="v2-text-danger v2-font-600" style="padding:18px">Erreur de chargement</p>';
     console.error('Load reports error:', e);
   }
 }
@@ -335,8 +335,8 @@ async function loadAndRenderReports() {
 
 function renderNotifHistory() {
   var h = '';
-  h += '<div class="card"><div class="card-header"><span style="font-size:18px">📋</span> Signalements résolus</div>';
-  h += '<div class="card-body" style="padding:0" id="reportsHistoryContainer"><div style="text-align:center;padding:24px"><div class="loading" style="width:28px;height:28px;border-width:3px"></div></div></div></div>';
+  h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">📋</span> Signalements résolus</div>';
+  h += '<div class="card-body v2-p-0" id="reportsHistoryContainer"><div class="v2-loading-inline"><div class="loading" style="width:28px;height:28px;border-width:3px"></div></div></div></div>';
 
   setTimeout(function() { loadAndRenderReportHistory(); }, 50);
   return h;
@@ -364,11 +364,11 @@ async function loadAndRenderReportHistory() {
     reports.forEach(function(rep) {
       var catEmojis = { equipment:'🔧', hygiene:'🧹', temperature:'🌡️', product:'📦', other:'📋' };
       h += '<div class="list-item">';
-      h += '<div class="list-icon" style="background:var(--success-bg);color:var(--success);font-size:18px">' + (catEmojis[rep.category] || '📋') + '</div>';
+      h += '<div class="list-icon v2-list-icon--ok v2-text-2xl">' + (catEmojis[rep.category] || '📋') + '</div>';
       h += '<div class="list-content">';
       h += '<div class="list-title" style="text-decoration:line-through;color:var(--gray)">' + esc(rep.title) + '</div>';
       h += '<div class="list-sub">' + esc(rep.description.substring(0, 80)) + '</div>';
-      h += '<div class="list-sub" style="font-size:11px;margin-top:3px">';
+      h += '<div class="list-sub v2-text-xs v2-mt-4">';
       h += '<span class="badge badge-green">✓ Résolu</span> ';
       h += fmtDT(rep.resolved_at || rep.created_at) + ' — Signalé par ' + esc(rep.reported_by_name || 'Inconnu');
       if (rep.resolved_by_name) h += ' — Résolu par ' + esc(rep.resolved_by_name);
@@ -377,7 +377,7 @@ async function loadAndRenderReportHistory() {
 
     container.innerHTML = h;
   } catch(e) {
-    container.innerHTML = '<p style="color:var(--danger);padding:18px;font-weight:600">Erreur de chargement</p>';
+    container.innerHTML = '<p class="v2-text-danger v2-font-600" style="padding:18px">Erreur de chargement</p>';
   }
 }
 

@@ -31,7 +31,7 @@ function renderReceptionForm() {
   var products = getProductSuggestions();
   var suppliers = getSupplierSuggestions();
 
-  h += '<div class="card card-accent"><div class="card-header"><span style="font-size:18px">📥</span> Réception produit</div><div class="card-body">';
+  h += '<div class="card card-accent"><div class="card-header"><span class="v2-text-2xl">📥</span> Réception produit</div><div class="card-body">';
   h += '<form onsubmit="handleReception(event)">';
 
   // Row 1: Product + Lot
@@ -69,7 +69,7 @@ function renderReceptionForm() {
   h += '<div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="recNotes" rows="2" placeholder="Observations..."></textarea></div>';
 
   // Checkboxes
-  h += '<div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:18px">';
+  h += '<div class="v2-flex v2-gap-24 v2-flex-wrap v2-mb-18">';
   h += '<div class="form-check"><input type="checkbox" id="recSaveDlc" checked><label for="recSaveDlc">Enregistrer dans DLC</label></div>';
   h += '<div class="form-check"><input type="checkbox" id="recSaveLot" checked><label for="recSaveLot">Enregistrer dans Traçabilité</label></div>';
   h += '</div>';
@@ -101,7 +101,7 @@ function renderDlcTabContent() {
     return true;
   });
 
-  h += '<div class="card"><div class="card-header"><span style="font-size:18px">📅</span> Suivi DLC <span class="badge badge-gray" style="margin-left:auto;font-size:12px;padding:4px 12px">' + dlcs.length + '</span></div>';
+  h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">📅</span> Suivi DLC <span class="badge badge-gray v2-badge-lg v2-ml-auto">' + dlcs.length + '</span></div>';
   if (dlcs.length === 0) {
     h += '<div class="card-body"><div class="empty"><div class="empty-icon">📅</div><div class="empty-title">Aucun contrôle DLC</div><div class="empty-text">Enregistrez un produit avec le formulaire ci-dessus.</div></div></div>';
   } else {
@@ -111,7 +111,7 @@ function renderDlcTabContent() {
       var statusLabel = days < 0 ? 'Expiré (J' + days + ')' : days === 0 ? 'Expire aujourd\'hui' : days <= 2 ? 'J-' + days : 'OK (J-' + days + ')';
       var badgeClass = { valid: 'badge-green', warning: 'badge-yellow', expired: 'badge-red' }[status];
       var borderColor = { valid: 'var(--success)', warning: 'var(--warning)', expired: 'var(--danger)' }[status];
-      h += '<div class="list-item" style="border-left:3px solid ' + borderColor + '"><div class="list-content"><div class="list-title">' + esc(d.product_name) + '</div><div class="list-sub">DLC : <strong>' + fmtD(d.dlc_date) + '</strong> <span class="badge ' + badgeClass + '">' + statusLabel + '</span></div>';
+      h += '<div class="list-item ' + (status === 'valid' ? 'v2-list-item--border-left-ok' : 'v2-list-item--border-left-nok') + '"><div class="list-content"><div class="list-title">' + esc(d.product_name) + '</div><div class="list-sub">DLC : <strong>' + fmtD(d.dlc_date) + '</strong> <span class="badge ' + badgeClass + '">' + statusLabel + '</span></div>';
       if (d.lot_number) h += '<div class="list-sub">Lot : ' + esc(d.lot_number) + '</div>';
       h += '</div><div class="list-actions">';
       if (status === 'expired') h += '<button class="btn btn-danger" onclick="updateDlcStatus(\'' + d.id + '\',\'discarded\')">🗑️ Jeté</button>';
@@ -130,12 +130,12 @@ function renderDlcTabContent() {
 function renderLotsTabContent() {
   var h = '';
 
-  h += '<div class="card"><div class="card-header"><span style="font-size:18px">📦</span> Lots enregistrés <span class="badge badge-gray" style="margin-left:auto;font-size:12px;padding:4px 12px">' + S.data.lots.length + '</span></div>';
+  h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">📦</span> Lots enregistrés <span class="badge badge-gray v2-badge-lg v2-ml-auto">' + S.data.lots.length + '</span></div>';
   if (S.data.lots.length === 0) {
     h += '<div class="card-body"><div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Aucun lot enregistré</div><div class="empty-text">Enregistrez vos lots via le formulaire de réception.</div></div></div>';
   } else {
     S.data.lots.forEach(function(l) {
-      h += '<div class="list-item"><div class="list-icon" style="background:var(--primary-light)">📦</div><div class="list-content"><div class="list-title">' + esc(l.product_name) + ' — <span style="font-family:monospace;font-weight:800">' + esc(l.lot_number) + '</span></div><div class="list-sub">';
+      h += '<div class="list-item"><div class="list-icon v2-list-icon--primary">📦</div><div class="list-content"><div class="list-title">' + esc(l.product_name) + ' — <span class="v2-font-mono v2-font-800">' + esc(l.lot_number) + '</span></div><div class="list-sub">';
       if (l.supplier_name) h += '🏭 ' + esc(l.supplier_name) + ' · ';
       if (l.dlc_date) h += '📅 DLC: ' + fmtD(l.dlc_date) + ' · ';
       h += '⏰ ' + fmtDT(l.recorded_at) + ' par ' + esc(l.recorded_by_name);

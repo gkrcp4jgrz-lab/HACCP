@@ -176,9 +176,7 @@ function showOcrStatus(context, type, message) {
   var id = context === 'dlc' ? 'ocrStatusDlc' : 'ocrStatusLot';
   var el = document.getElementById(id);
   if (!el) return;
-  var bg = type === 'success' ? 'var(--ok-bg)' : type === 'error' ? 'var(--err-bg)' : type === 'loading' ? 'var(--accent-light)' : 'var(--warn-bg)';
-  var color = type === 'success' ? 'var(--ok)' : type === 'error' ? 'var(--err)' : type === 'loading' ? 'var(--accent-dark)' : 'var(--warn)';
-  el.innerHTML = '<div style="padding:8px 12px;border-radius:var(--radius);background:' + bg + ';color:' + color + ';font-size:12px;font-weight:500">' + (type === 'loading' ? '<span class="loading" style="margin-right:6px"></span>' : '') + message + '</div>';
+  el.innerHTML = '<div class="v2-ocr-status v2-ocr-status--' + type + '">' + (type === 'loading' ? '<span class="loading v2-mr-6"></span>' : '') + message + '</div>';
 }
 
 function clearPhotoDlc() { S.photoDlcData = null; render(); }

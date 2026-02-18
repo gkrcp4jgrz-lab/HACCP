@@ -31,7 +31,7 @@ function renderSettingsEquipment() {
 
   h += '<div class="card"><div class="card-header">Équipements actifs</div>';
   S.siteConfig.equipment.forEach(function(e) {
-    h += '<div class="list-item"><div class="list-icon" style="background:var(--primary-light)">' + e.emoji + '</div><div class="list-content"><div class="list-title">' + esc(e.name) + '</div><div class="list-sub">' + e.temp_min + '°C → ' + e.temp_max + '°C · ' + ({fridge:'Frigo',freezer:'Congélateur',hot:'Chaud',other:'Autre'}[e.type] || e.type) + '</div></div><div class="list-actions"><button class="btn btn-danger btn-sm" onclick="deleteEquipment(\'' + e.id + '\')">🗑️</button></div></div>';
+    h += '<div class="list-item"><div class="list-icon v2-list-icon--primary">' + e.emoji + '</div><div class="list-content"><div class="list-title">' + esc(e.name) + '</div><div class="list-sub">' + e.temp_min + '°C → ' + e.temp_max + '°C · ' + ({fridge:'Frigo',freezer:'Congélateur',hot:'Chaud',other:'Autre'}[e.type] || e.type) + '</div></div><div class="list-actions"><button class="btn btn-danger btn-sm" onclick="deleteEquipment(\'' + e.id + '\')">🗑️</button></div></div>';
   });
   if (S.siteConfig.equipment.length === 0) h += '<div class="card-body"><div class="empty"><div class="empty-title">Aucun équipement</div></div></div>';
   h += '</div>';
@@ -49,7 +49,7 @@ function renderSettingsProducts() {
 
   h += '<div class="card"><div class="card-header">Produits actifs</div>';
   S.siteConfig.products.forEach(function(p) {
-    h += '<div class="list-item"><div class="list-icon" style="background:var(--success-bg)">' + p.emoji + '</div><div class="list-content"><div class="list-title">' + esc(p.name) + '</div><div class="list-sub">' + p.temp_min + '°C → ' + p.temp_max + '°C · ' + ({frigo:'Frigo',congel:'Congélateur',chaud:'Chaud',autre:'Autre'}[p.category] || p.category) + '</div></div><div class="list-actions"><button class="btn btn-danger btn-sm" onclick="deleteProduct(\'' + p.id + '\')">🗑️</button></div></div>';
+    h += '<div class="list-item"><div class="list-icon v2-list-icon--ok">' + p.emoji + '</div><div class="list-content"><div class="list-title">' + esc(p.name) + '</div><div class="list-sub">' + p.temp_min + '°C → ' + p.temp_max + '°C · ' + ({frigo:'Frigo',congel:'Congélateur',chaud:'Chaud',autre:'Autre'}[p.category] || p.category) + '</div></div><div class="list-actions"><button class="btn btn-danger btn-sm" onclick="deleteProduct(\'' + p.id + '\')">🗑️</button></div></div>';
   });
   if (S.siteConfig.products.length === 0) h += '<div class="card-body"><div class="empty"><div class="empty-title">Aucun produit</div></div></div>';
   h += '</div>';
@@ -65,7 +65,7 @@ function renderSettingsSuppliers() {
 
   h += '<div class="card"><div class="card-header">Fournisseurs actifs</div>';
   S.siteConfig.suppliers.forEach(function(s) {
-    h += '<div class="list-item"><div class="list-icon" style="background:var(--warning-bg)">🏭</div><div class="list-content"><div class="list-title">' + esc(s.name) + '</div><div class="list-sub">' + (s.phone ? '📞 ' + esc(s.phone) + ' ' : '') + (s.email ? '✉️ ' + esc(s.email) : '') + '</div></div><div class="list-actions"><button class="btn btn-danger btn-sm" onclick="deleteSupplier(\'' + s.id + '\')">🗑️</button></div></div>';
+    h += '<div class="list-item"><div class="list-icon v2-list-icon--warning">🏭</div><div class="list-content"><div class="list-title">' + esc(s.name) + '</div><div class="list-sub">' + (s.phone ? '📞 ' + esc(s.phone) + ' ' : '') + (s.email ? '✉️ ' + esc(s.email) : '') + '</div></div><div class="list-actions"><button class="btn btn-danger btn-sm" onclick="deleteSupplier(\'' + s.id + '\')">🗑️</button></div></div>';
   });
   if (S.siteConfig.suppliers.length === 0) h += '<div class="card-body"><div class="empty"><div class="empty-title">Aucun fournisseur</div></div></div>';
   h += '</div>';
@@ -96,13 +96,13 @@ function renderSettingsModules() {
     var servicesPerDay = (site && site.services_per_day) || 1;
     h += '<div class="card"><div class="card-header">🌡️ Configuration températures</div><div class="card-body">';
     h += '<div class="form-group"><label class="form-label">Nombre de services par jour</label>';
-    h += '<div style="display:flex;align-items:center;gap:12px">';
+    h += '<div class="v2-flex v2-items-center v2-gap-12">';
     h += '<select class="form-select" style="width:200px" onchange="updateSiteConfig(\'services_per_day\',parseInt(this.value))">';
     for (var i = 1; i <= 4; i++) {
       h += '<option value="' + i + '"' + (servicesPerDay===i?' selected':'') + '>' + i + ' service' + (i>1?'s':'') + ' / jour</option>';
     }
     h += '</select>';
-    h += '<span style="font-size:13px;color:var(--gray)">Chaque service nécessite un relevé complet de tous les équipements et produits</span>';
+    h += '<span class="v2-text-base v2-text-muted">Chaque service nécessite un relevé complet de tous les équipements et produits</span>';
     h += '</div></div>';
     h += '</div></div>';
   }
@@ -124,7 +124,7 @@ function renderSettingsNotifications() {
   h += '<div id="emailConfig" style="' + (emailEnabled ? '' : 'opacity:.5;pointer-events:none') + '">';
   h += '<div class="form-group"><label class="form-label">Destinataire(s)</label><input type="text" class="form-input" id="emailTo" value="' + esc(emailTo) + '" placeholder="gerant@hotel.com, autre@hotel.com" onchange="saveNotifSettings()"></div>';
   h += '<div class="form-group"><label class="form-label">Événements déclencheurs</label>';
-  h += '<div style="display:flex;flex-direction:column;gap:8px">';
+  h += '<div class="v2-flex v2-flex-col v2-gap-8">';
   h += '<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" class="emailEvt" value="temp_validation" ' + (emailEvents.indexOf('temp_validation') >= 0 ? 'checked' : '') + ' onchange="saveNotifSettings()"> Validation d\'un service températures</label>';
   h += '<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" class="emailEvt" value="temp_nonconform" ' + (emailEvents.indexOf('temp_nonconform') >= 0 ? 'checked' : '') + ' onchange="saveNotifSettings()"> Température non conforme détectée</label>';
   h += '<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" class="emailEvt" value="dlc_expired" ' + (emailEvents.indexOf('dlc_expired') >= 0 ? 'checked' : '') + ' onchange="saveNotifSettings()"> DLC expirée</label>';
@@ -136,13 +136,13 @@ function renderSettingsNotifications() {
 
   // Claude Vision API Key
   h += '<div class="card"><div class="card-header">📷 Reconnaissance d\'étiquettes (OCR)</div><div class="card-body">';
-  h += '<p style="font-size:12px;color:var(--muted);margin-bottom:12px">La reconnaissance automatique des étiquettes (DLC, lot, produit) utilise Claude Vision. Une clé API Anthropic est nécessaire.</p>';
+  h += '<p class="v2-text-sm v2-text-muted v2-mb-12">La reconnaissance automatique des étiquettes (DLC, lot, produit) utilise Claude Vision. Une clé API Anthropic est nécessaire.</p>';
   h += '<div class="form-group"><label class="form-label">Clé API Claude</label><input type="password" class="form-input" id="claudeApiKey" value="' + esc(claudeKey) + '" placeholder="sk-ant-..." onchange="saveClaudeKey()"></div>';
   if (claudeKey) {
-    h += '<div style="padding:8px 12px;background:var(--ok-bg);border-radius:var(--radius);font-size:12px;color:var(--ok);margin-bottom:8px">✅ Clé API configurée — La détection automatique est active</div>';
+    h += '<div class="v2-ocr-status v2-ocr-status--success v2-mb-8">✅ Clé API configurée — La détection automatique est active</div>';
     h += '<button type="button" class="btn btn-ghost btn-sm" onclick="clearClaudeKey()">🗑️ Supprimer la clé de cette session</button>';
   }
-  h += '<p style="font-size:11px;color:var(--muted)">Obtenez une clé sur <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a>. Coût : ~0.01€ par photo analysée.</p>';
+  h += '<p class="v2-text-xs v2-text-muted">Obtenez une clé sur <a href="https://console.anthropic.com" target="_blank" class="v2-text-primary">console.anthropic.com</a>. Coût : ~0.01€ par photo analysée.</p>';
   h += '</div></div>';
 
   return h;
@@ -164,7 +164,7 @@ window.saveNotifSettings = function() {
 
   var status = document.getElementById('emailSaveStatus');
   if (status) {
-    status.innerHTML = '<div style="padding:6px 10px;background:var(--ok-bg);border-radius:var(--radius);font-size:12px;color:var(--ok);margin-top:8px">✅ Paramètres sauvegardés</div>';
+    status.innerHTML = '<div class="v2-ocr-status v2-ocr-status--success v2-mt-8">✅ Paramètres sauvegardés</div>';
     setTimeout(function() { if (status) status.innerHTML = ''; }, 2000);
   }
 };

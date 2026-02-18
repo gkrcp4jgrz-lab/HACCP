@@ -9,12 +9,12 @@ function render() {
   if (!S.user) { app.innerHTML = renderAuth(); return; }
 
   if (S.loading) {
-    app.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;background:var(--bg-page)"><div class="loading" style="width:36px;height:36px;border-width:3px"></div><span style="color:var(--muted);font-size:15px;font-weight:600">Chargement...</span></div>';
+    app.innerHTML = '<div class="v2-loading-screen"><div class="loading"></div><span>Chargement...</span></div>';
     return;
   }
 
   if (S.sites.length === 0 && !isSuperAdmin()) {
-    app.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg-page)"><div class="card" style="max-width:500px;margin:20px"><div class="card-body"><div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Aucun site assigné</div><div class="empty-text">Contactez votre administrateur pour être ajouté à un site.</div></div></div></div></div>';
+    app.innerHTML = '<div class="v2-no-sites"><div class="card v2-max-w-500 v2-mb-20"><div class="card-body"><div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Aucun site assigné</div><div class="empty-text">Contactez votre administrateur pour être ajouté à un site.</div></div></div></div></div>';
     return;
   }
 
@@ -29,18 +29,18 @@ function render() {
 
 function renderAuth() {
   return '<div class="auth-wrapper"><div class="auth-card">' +
-    '<div class="auth-logo"><div style="font-size:48px;margin-bottom:12px">🛡️</div><h1>HACCP Pro</h1><p>Sécurité alimentaire professionnelle</p></div>' +
+    '<div class="auth-logo"><div class="auth-logo-icon">🛡️</div><h1>HACCP Pro</h1><p>Sécurité alimentaire professionnelle</p></div>' +
     '<div id="authForm">' + renderLoginForm() + '</div>' +
-    '<p style="text-align:center;font-size:12px;color:var(--muted);margin-top:24px;font-weight:500">Contactez votre administrateur pour obtenir vos identifiants.</p>' +
+    '<p class="auth-footer">Contactez votre administrateur pour obtenir vos identifiants.</p>' +
     '</div></div>';
 }
 
 function renderLoginForm() {
   return '<form onsubmit="handleLogin(event)">' +
-    '<div class="form-group"><label class="form-label">Identifiant</label><input type="text" class="form-input" id="loginId" required placeholder="Ex : JR0001 ou email" autocomplete="username" style="letter-spacing:1px;font-weight:600"></div>' +
+    '<div class="form-group"><label class="form-label">Identifiant</label><input type="text" class="form-input v2-tracking-wide v2-font-600" id="loginId" required placeholder="Ex : JR0001 ou email" autocomplete="username"></div>' +
     '<div class="form-group"><label class="form-label">Mot de passe</label><input type="password" class="form-input" id="loginPass" required placeholder="••••••••" autocomplete="current-password"></div>' +
-    '<div id="loginError" class="form-error" style="display:none"></div>' +
-    '<button type="submit" class="btn btn-primary btn-block btn-lg" id="loginBtn" style="margin-top:8px">Se connecter</button></form>';
+    '<div id="loginError" class="form-error"></div>' +
+    '<button type="submit" class="btn btn-primary btn-block btn-lg v2-mt-8" id="loginBtn">Se connecter</button></form>';
 }
 
 function renderChangePassword() {
@@ -50,11 +50,11 @@ function renderChangePassword() {
     '<p>Votre mot de passe provisoire doit etre change avant de continuer.</p>' +
     '<form onsubmit="handleChangePassword(event)">' +
     '<div class="form-group"><label class="form-label">Nouveau mot de passe</label><input type="password" class="form-input" id="newPass1" required minlength="8" placeholder="8 caracteres minimum" autocomplete="new-password" oninput="updatePwdStrength(this.value)"></div>' +
-    '<div id="pwdStrength" style="font-size:11px;margin-top:4px"></div>' +
+    '<div id="pwdStrength"></div>' +
     '<div class="form-group"><label class="form-label">Confirmer le mot de passe</label><input type="password" class="form-input" id="newPass2" required minlength="8" placeholder="Confirmez votre mot de passe" autocomplete="new-password"></div>' +
-    '<div id="pwdError" class="form-error" style="display:none"></div>' +
-    '<button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top:8px">Valider le nouveau mot de passe</button></form>' +
-    '<div style="margin-top:12px;padding:10px;background:var(--bg-off);border-radius:6px;font-size:11px;color:var(--muted)">Le mot de passe doit contenir : 8+ caracteres, une majuscule, une minuscule, un chiffre</div>' +
+    '<div id="pwdError" class="form-error"></div>' +
+    '<button type="submit" class="btn btn-primary btn-block btn-lg v2-mt-8">Valider le nouveau mot de passe</button></form>' +
+    '<div class="pwd-hint">Le mot de passe doit contenir : 8+ caracteres, une majuscule, une minuscule, un chiffre</div>' +
     '</div></div>'
   );
 }

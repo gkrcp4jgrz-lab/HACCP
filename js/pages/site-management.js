@@ -18,14 +18,14 @@ function renderSiteManagement() {
   h += '<button type="submit" class="btn btn-success btn-lg">✓ Créer le site</button></form></div></div>';
 
   // Sites list with details
-  h += '<div class="card"><div class="card-header">🏢 Tous les sites <span class="badge badge-blue" style="margin-left:auto">' + S.sites.length + '</span></div>';
+  h += '<div class="card"><div class="card-header">🏢 Tous les sites <span class="badge badge-blue v2-ml-auto">' + S.sites.length + '</span></div>';
   if (S.sites.length === 0) {
     h += '<div class="card-body"><div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Aucun site</div></div></div>';
   } else {
     S.sites.forEach(function(s) {
       var typeEmoji = {hotel:'🏨',restaurant:'🍽️',cuisine_centrale:'🏭',autre:'🏢'}[s.type] || '🏢';
-      h += '<div class="list-item" style="flex-wrap:wrap">';
-      h += '<div class="list-icon" style="background:var(--primary-light)">' + typeEmoji + '</div>';
+      h += '<div class="list-item v2-flex-wrap">';
+      h += '<div class="list-icon v2-list-icon--primary">' + typeEmoji + '</div>';
       h += '<div class="list-content"><div class="list-title">' + esc(s.name) + '</div><div class="list-sub">' + (s.address ? esc(s.address) : '') + (s.city ? ', ' + esc(s.city) : '') + (s.responsable ? ' — ' + esc(s.responsable) : '') + '</div></div>';
       h += '<div class="list-actions">';
       h += '<button class="btn btn-primary btn-sm" onclick="openEditSiteModal(\'' + s.id + '\')">✏️ Modifier</button>';
@@ -54,7 +54,7 @@ window.openEditSiteModal = function(siteId) {
   html += '<div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="esEmail" value="' + esc(site.email||'') + '"></div></div>';
   html += '<div class="form-row"><div class="form-group"><label class="form-label">N° Agrément</label><input type="text" class="form-input" id="esAgr" value="' + esc(site.agrement||'') + '"></div>';
   html += '<div class="form-group"><label class="form-label">Responsable</label><input type="text" class="form-input" id="esResp" value="' + esc(site.responsable||'') + '"></div></div>';
-  html += '<button type="submit" class="btn btn-primary btn-lg" style="margin-top:12px">✓ Enregistrer</button></form></div>';
+  html += '<button type="submit" class="btn btn-primary btn-lg v2-mt-12">✓ Enregistrer</button></form></div>';
   openModal(html);
 };
 
@@ -76,7 +76,7 @@ window.openSiteAccessModal = async function(siteId) {
   if (!site) return;
 
   var html = '<div class="modal-header"><div class="modal-title">👥 Accès : ' + esc(site.name) + '</div><button class="modal-close" onclick="closeModal()">✕</button></div>';
-  html += '<div class="modal-body" id="siteAccessBody"><div style="text-align:center;padding:20px"><div class="loading"></div></div></div>';
+  html += '<div class="modal-body" id="siteAccessBody"><div class="v2-loading-inline"><div class="loading"></div></div></div>';
   openModal(html);
 
   // Charger les utilisateurs du site
@@ -86,11 +86,11 @@ window.openSiteAccessModal = async function(siteId) {
   var body = '';
 
   // Utilisateurs actuels du site
-  body += '<h3 style="font-size:15px;font-weight:700;margin-bottom:12px">Membres actuels</h3>';
+  body += '<h3 class="v2-text-lg v2-font-700 v2-mb-12">Membres actuels</h3>';
   if (siteUsers.length === 0) {
-    body += '<p style="color:var(--gray);font-size:13px;margin-bottom:16px">Aucun utilisateur assigné.</p>';
+    body += '<p class="v2-text-base v2-text-muted v2-mb-16">Aucun utilisateur assigné.</p>';
   } else {
-    body += '<table class="data-table" style="margin-bottom:16px"><thead><tr><th>Nom</th><th>Email</th><th>Rôle global</th><th>Rôle site</th><th>Actions</th></tr></thead><tbody>';
+    body += '<table class="data-table v2-mb-16"><thead><tr><th>Nom</th><th>Email</th><th>Rôle global</th><th>Rôle site</th><th>Actions</th></tr></thead><tbody>';
     siteUsers.forEach(function(us) {
       var p = us.profiles;
       if (!p) return;
@@ -111,11 +111,11 @@ window.openSiteAccessModal = async function(siteId) {
   var existingIds = siteUsers.map(function(us){return us.user_id;});
   var available = allUsers.filter(function(u){return existingIds.indexOf(u.id) === -1;});
 
-  body += '<h3 style="font-size:15px;font-weight:700;margin:16px 0 12px">Ajouter un membre</h3>';
+  body += '<h3 class="v2-text-lg v2-font-700 v2-mt-16 v2-mb-12">Ajouter un membre</h3>';
   if (available.length === 0) {
-    body += '<p style="color:var(--gray);font-size:13px">Tous les utilisateurs sont déjà assignés à ce site.</p>';
+    body += '<p class="v2-text-base v2-text-muted">Tous les utilisateurs sont déjà assignés à ce site.</p>';
   } else {
-    body += '<div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">';
+    body += '<div class="v2-flex v2-gap-8 v2-items-end v2-flex-wrap">';
     body += '<select id="addUserSelect" class="form-select" style="flex:1;min-width:200px">';
     available.forEach(function(u) {
       var rl = {super_admin:'👑',manager:'👔',employee:'👷'}[u.role] || '';

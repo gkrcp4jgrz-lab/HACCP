@@ -15,9 +15,9 @@ function renderConsignes() {
   // Consignes urgentes en premier (toutes dates)
   var urgents = S.data.consignes.filter(function(c) { return c.priority === 'urgent'; });
   if (urgents.length > 0) {
-    h += '<div class="card" style="border-left:3px solid var(--danger)"><div class="card-header" style="color:var(--danger)">🔴 Consignes urgentes <span class="badge badge-red" style="margin-left:auto">' + urgents.length + '</span></div>';
+    h += '<div class="card v2-card--danger-left"><div class="card-header v2-text-danger">🔴 Consignes urgentes <span class="badge badge-red v2-ml-auto">' + urgents.length + '</span></div>';
     urgents.forEach(function(c) {
-      h += '<div class="list-item"><div class="list-content"><div class="list-title" style="color:var(--danger)">' + esc(c.message) + '</div><div class="list-sub">Par ' + esc(c.created_by_name) + ' — ' + fmtDT(c.created_at) + '</div></div>';
+      h += '<div class="list-item"><div class="list-content"><div class="list-title v2-text-danger">' + esc(c.message) + '</div><div class="list-sub">Par ' + esc(c.created_by_name) + ' — ' + fmtDT(c.created_at) + '</div></div>';
       h += '<div class="list-actions">';
       if (isManager()) h += '<button class="btn btn-success btn-sm" onclick="markConsigneRead(\'' + c.id + '\')">✓ Traité</button> ';
       if (isManager()) h += '<button class="btn btn-ghost btn-sm" onclick="deleteConsigne(\'' + c.id + '\')">🗑️</button>';
@@ -27,7 +27,7 @@ function renderConsignes() {
   }
 
   // Journal du jour
-  h += '<div class="card"><div class="card-header">📋 Journal du jour — ' + fmtD(todayStr) + ' <span class="badge badge-blue" style="margin-left:auto">' + todayConsignes.length + '</span></div>';
+  h += '<div class="card"><div class="card-header">📋 Journal du jour — ' + fmtD(todayStr) + ' <span class="badge badge-blue v2-ml-auto">' + todayConsignes.length + '</span></div>';
   if (todayConsignes.length === 0) {
     h += '<div class="card-body"><div class="empty"><div class="empty-icon">📋</div><div class="empty-title">Aucune consigne aujourd\'hui</div></div></div>';
   } else {
@@ -44,12 +44,12 @@ function renderConsignes() {
   if (olderConsignes.length > 0) {
     h += '<div class="card"><div class="card-header">📜 Historique</div>';
     olderConsignes.slice(0, 15).forEach(function(c) {
-      var prioStyle = c.priority === 'urgent' ? 'color:var(--danger)' : c.priority === 'high' ? 'color:var(--warning)' : '';
-      h += '<div class="list-item"><div class="list-content"><div class="list-title" style="' + prioStyle + '">' + esc(c.message) + '</div><div class="list-sub">Par ' + esc(c.created_by_name) + ' — ' + fmtDT(c.created_at) + '</div></div>';
+      var prioClass = c.priority === 'urgent' ? ' v2-text-danger' : c.priority === 'high' ? ' v2-text-warning' : '';
+      h += '<div class="list-item"><div class="list-content"><div class="list-title' + prioClass + '">' + esc(c.message) + '</div><div class="list-sub">Par ' + esc(c.created_by_name) + ' — ' + fmtDT(c.created_at) + '</div></div>';
       if (isManager()) h += '<div class="list-actions"><button class="btn btn-ghost btn-sm" onclick="deleteConsigne(\'' + c.id + '\')">🗑️</button></div>';
       h += '</div>';
     });
-    if (olderConsignes.length > 15) h += '<div style="text-align:center;padding:10px"><span style="font-size:12px;color:var(--muted)">' + (olderConsignes.length - 15) + ' consignes plus anciennes...</span></div>';
+    if (olderConsignes.length > 15) h += '<div class="v2-text-center" style="padding:10px"><span class="v2-text-sm v2-text-muted">' + (olderConsignes.length - 15) + ' consignes plus anciennes...</span></div>';
     h += '</div>';
   }
 

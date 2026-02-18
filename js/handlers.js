@@ -8,12 +8,12 @@ window.handleLogin = async function(e) {
   var loginId = ($('loginId').value || '').trim().toUpperCase();
   if (!loginId) return;
   btn.disabled = true; btn.innerHTML = '<span class="loading"></span> Connexion...';
-  err.style.display = 'none';
+  err.classList.remove('show');
   try {
     await doLoginById(loginId, $('loginPass').value);
   } catch(ex) {
     err.textContent = ex.message || 'Erreur de connexion';
-    err.style.display = 'block';
+    err.classList.add('show');
     btn.disabled = false; btn.textContent = 'Se connecter';
   }
 };
@@ -21,15 +21,15 @@ window.handleLogin = async function(e) {
 window.handleChangePassword = async function(e) {
   e.preventDefault();
   var p1 = $('newPass1').value, p2 = $('newPass2').value, err = $('pwdError');
-  if (p1 !== p2) { err.textContent = 'Les mots de passe ne correspondent pas.'; err.style.display = 'block'; return; }
+  if (p1 !== p2) { err.textContent = 'Les mots de passe ne correspondent pas.'; err.classList.add('show'); return; }
   var v = validatePassword(p1);
-  if (!v.valid) { err.textContent = v.message; err.style.display = 'block'; return; }
+  if (!v.valid) { err.textContent = v.message; err.classList.add('show'); return; }
   try {
     await changePassword(p1);
     var overlay = $('pwdOverlay');
     if (overlay) overlay.remove();
   } catch(ex) {
-    err.textContent = ex.message || 'Erreur'; err.style.display = 'block';
+    err.textContent = ex.message || 'Erreur'; err.classList.add('show');
   }
 };
 
@@ -39,7 +39,7 @@ window.updatePwdStrength = function(val) {
   if (!val) { el.innerHTML = ''; return; }
   var v = validatePassword(val);
   var color = v.valid ? 'var(--ok)' : 'var(--err)';
-  el.innerHTML = '<span style="color:' + color + '">' + (v.valid ? '✅ ' : '❌ ') + esc(v.message) + '</span>';
+  el.innerHTML = '<span class="' + (v.valid ? 'v2-pwd-strength--ok' : 'v2-pwd-strength--err') + '">' + (v.valid ? '✅ ' : '❌ ') + esc(v.message) + '</span>';
 };
 
 window.handleTempEquip = async function(e) {
@@ -215,7 +215,7 @@ window.handleAddSupp = async function(e) {
 window.openSignatureModal = function() {
   openModal(
     '<div class="modal-header"><div class="modal-title">Signature</div><button class="modal-close" onclick="closeModal()">x</button></div>' +
-    '<div class="modal-body"><p style="font-size:13px;color:var(--gray);margin-bottom:12px">Signez avec votre doigt ou votre souris :</p><canvas id="sigCanvas" class="sig-canvas"></canvas></div>' +
+    '<div class="modal-body"><p class="v2-text-sm v2-text-muted v2-mb-12">Signez avec votre doigt ou votre souris :</p><canvas id="sigCanvas" class="sig-canvas"></canvas></div>' +
     '<div class="modal-footer"><button class="btn btn-ghost" onclick="clearSignature()">Effacer</button><button class="btn btn-primary btn-lg" onclick="saveSignature()">Confirmer la signature</button></div>'
   );
 };
