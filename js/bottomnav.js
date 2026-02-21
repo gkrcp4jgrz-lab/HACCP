@@ -66,6 +66,7 @@ window.toggleBnavMore = function() {
     var h = '';
     var alertCount = (typeof getAlertCount === 'function') ? getAlertCount() : 0;
 
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     if (isSuperAdmin()) {
       h += bnavMenuItem('notifications', '🔔', 'Notifications' + (alertCount > 0 ? ' (' + alertCount + ')' : ''));
       h += bnavMenuItem('profile', '👤', 'Mon profil');
@@ -81,10 +82,12 @@ window.toggleBnavMore = function() {
       h += '<div class="bnav-menu-section">Compte</div>';
       h += bnavMenuItem('profile', '👤', 'Mon profil');
     } else {
-      // Employé — normally won't see More, but fallback
       h += bnavMenuItem('profile', '👤', 'Mon profil');
       h += bnavMenuItem('notifications', '🔔', 'Notifications');
     }
+    // Dark mode toggle
+    h += '<div class="bnav-menu-section">Apparence</div>';
+    h += '<div class="bnav-menu-item" onclick="closeBnavMore();toggleDarkMode()"><span class="bnav-menu-icon">' + (isDark ? '☀️' : '🌙') + '</span>' + (isDark ? 'Mode clair' : 'Mode sombre') + '</div>';
 
     menu.innerHTML = h;
     menu.style.display = 'block';

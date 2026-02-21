@@ -208,6 +208,33 @@ function loginIdToEmail(loginId) {
 
 // ── PRODUCT & SUPPLIER SUGGESTIONS ──
 
+// ── DARK MODE ──
+function initDarkMode() {
+  var saved = localStorage.getItem('haccp_theme');
+  if (saved === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  } else if (saved === 'light') {
+    document.documentElement.removeAttribute('data-theme');
+  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }
+}
+initDarkMode();
+
+window.toggleDarkMode = function() {
+  var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.body.classList.add('theme-transitioning');
+  if (isDark) {
+    document.documentElement.removeAttribute('data-theme');
+    localStorage.setItem('haccp_theme', 'light');
+  } else {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    localStorage.setItem('haccp_theme', 'dark');
+  }
+  setTimeout(function() { document.body.classList.remove('theme-transitioning'); }, 350);
+  if (S.user) render();
+};
+
 function getProductSuggestions() {
   var names = {};
   S.siteConfig.products.forEach(function(p) { if (p.name) names[p.name] = true; });

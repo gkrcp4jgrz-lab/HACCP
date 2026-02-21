@@ -120,6 +120,7 @@ function renderSidebar() {
     '<div class="sidebar-header"><div class="sidebar-brand"><span>🛡️</span><h2 class="brand-text">HACCP Pro</h2></div></div>' +
     siteSelector +
     '<div class="sidebar-nav">' + navHtml + '</div>' +
+    '<div style="padding:6px 10px"><button class="dark-mode-toggle" onclick="toggleDarkMode()"><span class="nav-icon">' + (document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙') + '</span>' + (document.documentElement.getAttribute('data-theme') === 'dark' ? 'Mode clair' : 'Mode sombre') + '<label class="toggle" style="pointer-events:none;margin-left:auto;transform:scale(.85)"><input type="checkbox" ' + (document.documentElement.getAttribute('data-theme') === 'dark' ? 'checked' : '') + '><span class="toggle-slider"></span></label></button></div>' +
     '<div class="sidebar-user">' +
     '<div class="avatar">' + userInitials() + '</div>' +
     '<div class="user-info"><div class="user-name">' + esc(userName()) + '</div><div class="user-role">' + roleName + '</div></div>' +

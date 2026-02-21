@@ -213,8 +213,8 @@ window.confirmReceive = async function(orderId, photoOnly) {
     closeModal();
     await loadSiteData();
     render();
-    alert('✅ ' + (photoOnly ? 'Photo enregistrée !' : 'Réception confirmée !'));
-  } catch(e) { alert('❌ Erreur: ' + (e.message||e)); }
+    showToast(photoOnly ? 'Photo enregistrée' : 'Réception confirmée', 'success');
+  } catch(e) { showToast('Erreur: ' + (e.message||e), 'error'); }
 };
 
 window.markSupplierOrdered = async function(supplierName) {
@@ -225,7 +225,7 @@ window.markSupplierOrdered = async function(supplierName) {
   }
   await loadSiteData();
   render();
-  alert('✅ ' + toMark.length + ' commande(s) marquée(s) comme commandée(s) !');
+  showToast(toMark.length + ' commande(s) marquée(s) comme commandée(s)', 'success');
 };
 
 window.viewBLPhoto = function(orderId) {
@@ -236,7 +236,7 @@ window.viewBLPhoto = function(orderId) {
       html += '<div class="modal-body v2-text-center"><img src="' + r.data.bl_photo + '" style="max-width:100%;max-height:70vh;border-radius:12px"></div>';
       openModal(html);
     } else {
-      alert('Aucune photo disponible.');
+      showToast('Aucune photo disponible', 'warning');
     }
   });
 };

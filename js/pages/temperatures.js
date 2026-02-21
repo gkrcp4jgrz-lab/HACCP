@@ -10,39 +10,57 @@ function renderTemperatures() {
   var currentService = totalPerService > 0 ? Math.floor(tempCount / totalPerService) + 1 : 1;
   if (currentService > servicesPerDay) currentService = servicesPerDay;
   var serviceProgress = totalPerService > 0 ? tempCount % totalPerService : 0;
-  if (tempCount > 0 && tempCount % totalPerService === 0) serviceProgress = totalPerService; // Service complet
+  if (tempCount > 0 && tempCount % totalPerService === 0) serviceProgress = totalPerService;
   var pct = totalExpected > 0 ? Math.min(100, Math.round(tempCount / totalExpected * 100)) : 0;
   var servicePct = totalPerService > 0 ? Math.min(100, Math.round(serviceProgress / totalPerService * 100)) : 0;
-
-  // Non-conform temperatures today
   var nonConform = S.data.temperatures.filter(function(t) { return !t.is_conform; });
+  var conformCount = tempCount - nonConform.length;
 
-  // Status banner with gradient
-  h += '<div class="card ' + (pct >= 100 ? 'v2-card--success-left' : 'v2-card--primary-left') + '">';
-  h += '<div class="card-body">';
-  h += '<div class="v2-flex v2-justify-between v2-items-center v2-flex-wrap v2-gap-12">';
-  h += '<div><h3 class="v2-text-2xl v2-font-800" style="margin:0">Service ' + currentService + '/' + servicesPerDay + '</h3>';
-  h += '<span class="v2-text-md v2-text-muted v2-font-500">' + serviceProgress + '/' + totalPerService + ' relevés ce service</span></div>';
-  h += '<div class="v2-text-right"><div class="v2-text-5xl v2-font-900" style="color:' + (pct >= 100 ? 'var(--success)' : 'var(--primary)') + ';letter-spacing:-1px">' + tempCount + '/' + totalExpected + '</div>';
-  h += '<span class="v2-text-sm v2-text-muted v2-font-600">Total journée (' + servicesPerDay + ' service' + (servicesPerDay > 1 ? 's' : '') + ')</span></div>';
+  // ── Hero status card with SVG ring ──
+  var ringSize = 90, ringStroke = 7, ringR = (ringSize - ringStroke) / 2, ringC = 2 * Math.PI * ringR;
+  var ringOffset = ringC - (servicePct / 100) * ringC;
+  var ringColor = servicePct >= 100 ? 'var(--af-ok)' : 'var(--af-teal)';
+
+  h += '<div class="card card-accent" style="overflow:visible">';
+  h += '<div class="card-body" style="padding:28px">';
+  h += '<div class="v2-flex v2-justify-between v2-items-center v2-flex-wrap v2-gap-16">';
+
+  // Left: service info
+  h += '<div style="flex:1;min-width:180px">';
+  h += '<div class="v2-text-sm v2-font-700 v2-uppercase" style="letter-spacing:1.5px;color:var(--af-teal)">Service ' + currentService + ' sur ' + servicesPerDay + '</div>';
+  h += '<h3 class="v2-text-4xl v2-font-900 v2-mt-6" style="margin:0;letter-spacing:-.5px">' + serviceProgress + '<span class="v2-text-xl v2-text-muted v2-font-600"> / ' + totalPerService + ' relevés</span></h3>';
+  h += '<div class="v2-mt-12"><div class="v2-flex v2-justify-between v2-mb-6"><span class="v2-text-sm v2-font-600 v2-text-muted">Progression</span><span class="v2-text-sm v2-font-800" style="color:' + (servicePct >= 100 ? 'var(--af-ok)' : 'var(--af-teal)') + '">' + servicePct + '%</span></div>';
+  h += '<div class="progress" style="height:8px"><div class="progress-bar" style="width:' + servicePct + '%;background:' + (servicePct >= 100 ? 'var(--af-ok)' : 'var(--af-teal)') + '"></div></div></div>';
   h += '</div>';
 
-  // Progress bar du service actuel
-  h += '<div class="v2-mt-14"><div class="v2-flex v2-justify-between v2-mb-6"><span class="v2-text-sm v2-font-700">Progression service ' + currentService + '</span><span class="v2-text-sm v2-font-800" style="color:' + (servicePct >= 100 ? 'var(--success)' : 'var(--primary)') + '">' + servicePct + '%</span></div>';
-  h += '<div class="progress" style="height:10px"><div class="progress-bar" style="width:' + servicePct + '%;background:' + (servicePct >= 100 ? 'var(--success)' : 'var(--primary)') + '"></div></div></div>';
+  // Right: SVG progress ring
+  h += '<div style="text-align:center;flex-shrink:0">';
+  h += '<svg width="' + ringSize + '" height="' + ringSize + '" class="progress-ring" style="--ring-circumference:' + ringC + ';--ring-offset:' + ringOffset + '">';
+  h += '<circle class="progress-ring__bg" cx="' + ringSize/2 + '" cy="' + ringSize/2 + '" r="' + ringR + '"/>';
+  h += '<circle class="progress-ring__fill' + (servicePct >= 100 ? ' progress-ring__fill--ok' : '') + '" cx="' + ringSize/2 + '" cy="' + ringSize/2 + '" r="' + ringR + '" stroke-dasharray="' + ringC + '" stroke-dashoffset="' + ringOffset + '" style="stroke:' + ringColor + '"/>';
+  h += '</svg>';
+  h += '<div class="v2-text-sm v2-font-800 v2-mt-4" style="color:' + (pct >= 100 ? 'var(--af-ok)' : 'var(--af-teal)') + '">' + tempCount + '/' + totalExpected + ' total</div>';
+  h += '</div></div>';
+
+  // Stats mini-row
+  h += '<div class="v2-flex v2-gap-12 v2-mt-16" style="flex-wrap:wrap">';
+  h += '<div style="flex:1;min-width:100px;padding:12px 16px;background:var(--af-ok-bg);border-radius:var(--radius-sm);text-align:center"><div class="v2-text-xl v2-font-800" style="color:var(--af-ok)">' + conformCount + '</div><div class="v2-text-xs v2-font-600 v2-text-muted v2-mt-2">Conformes</div></div>';
+  h += '<div style="flex:1;min-width:100px;padding:12px 16px;background:' + (nonConform.length > 0 ? 'var(--af-err-bg)' : 'var(--bg-off)') + ';border-radius:var(--radius-sm);text-align:center"><div class="v2-text-xl v2-font-800" style="color:' + (nonConform.length > 0 ? 'var(--af-err)' : 'var(--ink-muted)') + '">' + nonConform.length + '</div><div class="v2-text-xs v2-font-600 v2-text-muted v2-mt-2">Non conformes</div></div>';
+  h += '<div style="flex:1;min-width:100px;padding:12px 16px;background:var(--af-teal-bg);border-radius:var(--radius-sm);text-align:center"><div class="v2-text-xl v2-font-800" style="color:var(--af-teal)">' + servicesPerDay + '</div><div class="v2-text-xs v2-font-600 v2-text-muted v2-mt-2">Services / jour</div></div>';
+  h += '</div>';
 
   // Non-conform warning
   if (nonConform.length > 0) {
-    h += '<div class="v2-alert-inline v2-alert-inline--danger v2-mt-12">⚠️ <strong>' + nonConform.length + ' relevé' + (nonConform.length > 1 ? 's' : '') + ' non conforme' + (nonConform.length > 1 ? 's' : '') + '</strong> — Action corrective requise</div>';
+    h += '<div class="v2-alert-inline v2-alert-inline--danger v2-mt-14" style="display:flex;align-items:center;gap:10px;padding:14px 18px">⚠️ <div><strong>' + nonConform.length + ' relevé' + (nonConform.length > 1 ? 's' : '') + ' non conforme' + (nonConform.length > 1 ? 's' : '') + '</strong><br><span class="v2-text-sm" style="opacity:.8">Action corrective requise</span></div></div>';
   }
 
   // Validation button
   if (serviceProgress >= totalPerService && totalPerService > 0) {
     var alreadyValidated = S.validatedServices && S.validatedServices.indexOf(currentService) >= 0;
     if (alreadyValidated) {
-      h += '<div class="v2-temp-validated v2-mt-14">✅ Service ' + currentService + ' validé</div>';
+      h += '<div class="v2-temp-validated v2-mt-14" style="display:flex;align-items:center;justify-content:center;gap:10px;font-size:16px;padding:18px">✅ Service ' + currentService + ' validé avec succès</div>';
     } else {
-      h += '<div class="v2-mt-14 v2-text-center"><button class="btn btn-success btn-lg btn-block" onclick="validateService(' + currentService + ',' + nonConform.length + ')" style="font-size:16px;padding:16px 28px">✅ Valider le service ' + currentService + '</button></div>';
+      h += '<div class="v2-mt-14"><button class="btn btn-success btn-lg btn-block" onclick="validateService(' + currentService + ',' + nonConform.length + ')" style="font-size:16px;padding:18px 28px;border-radius:var(--radius)">✅ Valider le service ' + currentService + '</button></div>';
     }
   }
 
@@ -108,7 +126,7 @@ window.validateService = async function(serviceNum, nonConformCount) {
   // Empêcher double validation
   if (!S.validatedServices) S.validatedServices = [];
   if (S.validatedServices.indexOf(serviceNum) >= 0) {
-    alert('✅ Ce service a déjà été validé.');
+    showToast('Ce service a déjà été validé', 'info');
     return;
   }
 
@@ -118,7 +136,7 @@ window.validateService = async function(serviceNum, nonConformCount) {
     }
   }
   if (!S.sigData) {
-    alert('✍️ Veuillez signer avant de valider le service.');
+    showToast('Veuillez signer avant de valider le service', 'warning');
     openSignatureModal();
     return;
   }
@@ -140,6 +158,6 @@ window.validateService = async function(serviceNum, nonConformCount) {
     date: today()
   });
 
-  alert('✅ Service ' + serviceNum + ' validé avec succès !' + (nonConformCount > 0 ? '\n⚠️ ' + nonConformCount + ' non-conformité(s) signalée(s)' : '\n✅ Tous les relevés conformes'));
+  showToast('Service ' + serviceNum + ' validé avec succès' + (nonConformCount > 0 ? ' — ' + nonConformCount + ' non-conformité(s)' : ''), nonConformCount > 0 ? 'warning' : 'success');
   render();
 };

@@ -9,7 +9,7 @@ function renderTeam() {
   var h = '';
 
   // Create employee form
-  h += '<div class="card"><div class="card-header">Ajouter un membre a ' + esc(site.name) + '</div><div class="card-body"><form onsubmit="handleTeamAddUser(event)">';
+  h += '<div class="card card-accent"><div class="card-header"><span class="v2-text-2xl">👤</span> Ajouter un membre à ' + esc(site.name) + '</div><div class="card-body"><form onsubmit="handleTeamAddUser(event)">';
   h += '<div class="form-row"><div class="form-group"><label class="form-label">Nom complet <span class="req">*</span></label><input type="text" class="form-input" id="teamName" required placeholder="Jean Renard" oninput="previewTeamLoginId(this.value)"></div>';
   h += '<div class="form-group"><label class="form-label">Identifiant (auto)</label><div class="v2-login-preview" id="teamLoginPreview">—</div></div></div>';
   h += '<div class="form-row"><div class="form-group"><label class="form-label">Mot de passe provisoire <span class="req">*</span></label><input type="text" class="form-input" id="teamPass" required value="Haccp2026!"></div>';
@@ -18,7 +18,7 @@ function renderTeam() {
   h += '<button type="submit" class="btn btn-primary btn-lg" id="teamAddBtn">Ajouter au site</button></form></div></div>';
 
   // Team list
-  h += '<div class="card"><div class="card-header">Equipe de ' + esc(site.name) + '</div><div class="card-body" id="teamListContainer"><div class="v2-loading-inline"><div class="loading"></div></div></div></div>';
+  h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">👥</span> Équipe de ' + esc(site.name) + '</div><div class="card-body" id="teamListContainer"><div class="v2-loading-inline"><div class="loading" style="width:28px;height:28px;border-width:3px"></div></div></div></div>';
 
   setTimeout(function() { loadAndRenderTeam(); }, 50);
 
@@ -125,12 +125,13 @@ window.handleTeamAddUser = async function(e) {
     // Assign to site
     await assignUserToSite(userId, S.currentSiteId, siteRole);
 
-    alert('Membre ajoute !\nIdentifiant : ' + loginId + '\nMot de passe : ' + pass + '\n\nCommuniquez ces informations a l\'employe.');
+    showToast('Membre ajouté — ID : ' + loginId, 'success', 5000);
+    openModal('<div class="modal-header"><div class="modal-title">✅ Membre ajouté</div><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body"><div class="v2-text-center v2-mb-18"><div style="width:64px;height:64px;background:var(--af-ok-bg);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto">✅</div></div><p class="v2-text-md v2-font-600 v2-mb-14">Communiquez ces informations à l\'employé :</p><div style="padding:16px;background:var(--bg-off);border-radius:var(--radius-sm);margin-bottom:12px"><div class="v2-text-sm v2-text-muted v2-mb-4">Identifiant</div><div class="v2-text-xl v2-font-800 v2-font-mono" style="letter-spacing:2px;color:var(--af-teal)">' + esc(loginId) + '</div></div><div style="padding:16px;background:var(--bg-off);border-radius:var(--radius-sm)"><div class="v2-text-sm v2-text-muted v2-mb-4">Mot de passe</div><div class="v2-text-xl v2-font-800">' + esc(pass) + '</div></div></div><div class="modal-footer"><button class="btn btn-primary btn-lg" onclick="closeModal()">Compris</button></div>');
     $('teamName').value = ''; $('teamPass').value = 'Haccp2026!';
     if ($('teamLoginPreview')) $('teamLoginPreview').textContent = '—';
     loadAndRenderTeam();
   } catch(ex) {
-    alert('Erreur: ' + (ex.message || ex));
+    showToast('Erreur: ' + (ex.message || ex), 'error');
   }
   btn.disabled = false; btn.innerHTML = origText;
 };
