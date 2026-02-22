@@ -227,8 +227,11 @@ async function addConsigne(message, priority) {
 }
 
 async function deleteConsigne(id) {
+  if (!confirm('Supprimer cette consigne ?')) return;
   var r = await sbExec(sb.from('consignes').delete().eq('id', id), 'Suppression consigne');
-if (!r) return; await loadSiteData(); render();
+  if (!r) return;
+  showToast('Consigne supprimée', 'success');
+  await loadSiteData(); render();
 }
 // ── SUPABASE HELPERS (safe) ──
 function notifyError(title, err) {
