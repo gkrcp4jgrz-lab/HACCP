@@ -1,17 +1,35 @@
 {
-  "name": "HACCP Pro",
+  "name": "HACCP Pro — Sécurité Alimentaire",
   "short_name": "HACCP Pro",
-  "description": "Gestion de la securite alimentaire professionnelle",
+  "description": "Application professionnelle de gestion HACCP : températures, DLC, traçabilité, commandes et rapports conformes CE 852/2004.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#1e1e2e",
+  "background_color": "#F1F5F9",
+  "theme_color": "#0D9488",
   "orientation": "portrait-primary",
+  "lang": "fr-FR",
+  "categories": ["business", "food", "productivity"],
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>",
+      "src": "/icon.svg",
       "sizes": "any",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Températures",
+      "short_name": "Temp",
+      "url": "/?page=temperatures",
+      "icons": [{"src": "/icon.svg", "sizes": "any"}]
+    },
+    {
+      "name": "DLC & Traçabilité",
+      "short_name": "DLC",
+      "url": "/?page=dlc",
+      "icons": [{"src": "/icon.svg", "sizes": "any"}]
     }
   ]
 }

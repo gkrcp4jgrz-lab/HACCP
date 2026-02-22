@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0D9488"/>
+      <stop offset="100%" stop-color="#14B8A6"/>
+    </linearGradient>
+    <linearGradient id="shield" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F0FDFA"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <path d="M256 80c0 0-120 40-150 60-10 6.7-10 20-10 40 0 80 30 160 160 220 130-60 160-140 160-220 0-20 0-33.3-10-40C376 120 256 80 256 80z" fill="url(#shield)" opacity="0.95"/>
+  <path d="M230 300l-50-50c-6-6-6-16 0-22s16-6 22 0l28 28 78-78c6-6 16-6 22 0s6 16 0 22L252 300c-6 6-16 6-22 0z" fill="#0D9488"/>
+  <text x="256" y="440" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="52" font-weight="800" fill="#FFFFFF" letter-spacing="4">HACCP</text>
+</svg>

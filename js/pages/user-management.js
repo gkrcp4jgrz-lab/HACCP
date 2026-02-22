@@ -96,10 +96,10 @@ window.changeGlobalRole = async function(userId, newRole) {
 };
 
 window.removeSiteAccess = async function(userId, siteId) {
-  if (!confirm('Retirer l\'acces a ce site ?')) return;
+  if (!(await appConfirm('Retirer l\'accès', 'Retirer l\'accès de cet utilisateur à ce site ?', {danger:true,icon:'👤',confirmLabel:'Retirer'}))) return;
   try {
     await removeUserFromSite(userId, siteId);
-    showToast('Acces retire', 'success');
+    showToast('Accès retiré', 'success');
     loadAndDisplayUsersDetailed();
   } catch(e) { showToast('Erreur: ' + (e.message||e), 'error'); }
 };

@@ -405,19 +405,19 @@ window.handleNewReport = async function(e) {
     };
 
     var r = await sb.from('incident_reports').insert(rec);
-    if (r.error) { alert('Erreur: ' + r.error.message); return; }
+    if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
 
-    alert('✅ Signalement envoyé !');
+    showToast('Signalement envoyé !', 'success');
     $('reportTitle').value = '';
     $('reportDesc').value = '';
     loadAndRenderReports();
   } catch(ex) {
-    alert('❌ Erreur: ' + (ex.message || ex));
+    showToast('Erreur: ' + (ex.message || ex), 'error');
   }
 };
 
 window.resolveReport = async function(id) {
-  if (!confirm('Marquer ce signalement comme résolu ?')) return;
+  if (!(await appConfirm('Résoudre le signalement', 'Marquer ce signalement comme résolu ?', {icon:'✅',confirmLabel:'Marquer résolu'}))) return;
   try {
     await sb.from('incident_reports').update({
       status: 'resolved',
@@ -428,7 +428,7 @@ window.resolveReport = async function(id) {
     await loadAndRenderReports();
     render();
   } catch(e) {
-    alert('Erreur: ' + (e.message || e));
+    showToast('Erreur: ' + (e.message || e), 'error');
   }
 };
 
@@ -437,6 +437,6 @@ window.updateReportStatus = async function(id, status) {
     await sb.from('incident_reports').update({ status: status }).eq('id', id);
     loadAndRenderReports();
   } catch(e) {
-    alert('Erreur: ' + (e.message || e));
+    showToast('Erreur: ' + (e.message || e), 'error');
   }
 };

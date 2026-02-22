@@ -36,7 +36,7 @@ function clearClaudeKey() {
   S.claudeApiKey = '';
   var el = document.getElementById('claudeApiKey');
   if (el) el.value = '';
-  alert('Clé Claude supprimée de ce navigateur.');
+  showToast('Clé Claude supprimée de ce navigateur', 'success');
 }
 
 async function runPhotoOCR(dataUrl, context) {
@@ -176,7 +176,8 @@ function showOcrStatus(context, type, message) {
   var id = context === 'dlc' ? 'ocrStatusDlc' : 'ocrStatusLot';
   var el = document.getElementById(id);
   if (!el) return;
-  el.innerHTML = '<div class="v2-ocr-status v2-ocr-status--' + type + '">' + (type === 'loading' ? '<span class="loading v2-mr-6"></span>' : '') + message + '</div>';
+  var safeType = esc(type);
+  el.innerHTML = '<div class="v2-ocr-status v2-ocr-status--' + safeType + '">' + (type === 'loading' ? '<span class="loading v2-mr-6"></span>' : '') + esc(message) + '</div>';
 }
 
 function clearPhotoDlc() { S.photoDlcData = null; render(); }
@@ -241,7 +242,62 @@ function openModal(html) {
 
 function closeModal() {
   $('modalOverlay').classList.remove('show');
+  // Clean up any pending confirm/prompt resolve
+  if (window._modalResolve) { window._modalResolve(null); window._modalResolve = null; }
 }
+
+// ── Apple-style Confirm Modal (returns Promise<boolean>) ──
+function appConfirm(title, message, opts) {
+  opts = opts || {};
+  var confirmLabel = opts.confirmLabel || 'Confirmer';
+  var cancelLabel = opts.cancelLabel || 'Annuler';
+  var danger = opts.danger || false;
+  var icon = opts.icon || (danger ? '⚠️' : '✓');
+  var btnClass = danger ? 'btn-danger' : 'btn-primary';
+
+  return new Promise(function(resolve) {
+    window._modalResolve = resolve;
+    var h = '<div class="modal-header"><div class="modal-title">' + esc(title) + '</div></div>';
+    h += '<div class="modal-body" style="text-align:center;padding:28px 24px">';
+    h += '<div style="width:56px;height:56px;border-radius:50%;background:' + (danger ? 'var(--af-err-bg)' : 'var(--af-teal-bg)') + ';display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 16px">' + icon + '</div>';
+    h += '<p style="font-size:15px;line-height:1.6;color:var(--ink);font-weight:500;margin:0">' + message + '</p>';
+    h += '</div>';
+    h += '<div class="modal-footer" style="justify-content:center;gap:12px;padding:18px 24px">';
+    h += '<button class="btn btn-ghost btn-lg" style="min-width:120px" onclick="window._modalResolve(false);window._modalResolve=null;closeModal()">' + esc(cancelLabel) + '</button>';
+    h += '<button class="btn ' + btnClass + ' btn-lg" style="min-width:120px" onclick="window._modalResolve(true);window._modalResolve=null;closeModal()">' + esc(confirmLabel) + '</button>';
+    h += '</div>';
+    openModal(h);
+  });
+}
+
+// ── Apple-style Prompt Modal (returns Promise<string|null>) ──
+function appPrompt(title, message, defaultVal, opts) {
+  opts = opts || {};
+  var placeholder = opts.placeholder || '';
+  var inputType = opts.inputType || 'text';
+  var confirmLabel = opts.confirmLabel || 'Valider';
+  var multiline = opts.multiline || false;
+
+  return new Promise(function(resolve) {
+    window._modalResolve = resolve;
+    var h = '<div class="modal-header"><div class="modal-title">' + esc(title) + '</div><button class="modal-close" onclick="window._modalResolve(null);window._modalResolve=null;closeModal()">✕</button></div>';
+    h += '<div class="modal-body">';
+    if (message) h += '<p style="font-size:14px;line-height:1.6;color:var(--ink-muted);margin:0 0 16px;font-weight:500">' + message + '</p>';
+    if (multiline) {
+      h += '<textarea class="form-textarea" id="_appPromptInput" rows="3" placeholder="' + esc(placeholder) + '" style="font-size:15px">' + esc(defaultVal || '') + '</textarea>';
+    } else {
+      h += '<input type="' + inputType + '" class="form-input" id="_appPromptInput" value="' + esc(defaultVal || '') + '" placeholder="' + esc(placeholder) + '" style="font-size:15px">';
+    }
+    h += '</div>';
+    h += '<div class="modal-footer"><button class="btn btn-ghost" onclick="window._modalResolve(null);window._modalResolve=null;closeModal()">Annuler</button>';
+    h += '<button class="btn btn-primary btn-lg" onclick="var v=document.getElementById(\'_appPromptInput\').value;window._modalResolve(v);window._modalResolve=null;closeModal()">' + esc(confirmLabel) + '</button></div>';
+    openModal(h);
+    setTimeout(function() { var el = document.getElementById('_appPromptInput'); if (el) { el.focus(); el.select(); } }, 150);
+  });
+}
+
+window.appConfirm = appConfirm;
+window.appPrompt = appPrompt;
 
 // =====================================================================
 // SIDEBAR & NAVIGATION
@@ -335,7 +391,7 @@ function openPdfWindow(html) {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    alert('Le rapport a été téléchargé. Ouvrez-le pour imprimer.');
+    showToast('Le rapport a été téléchargé. Ouvrez-le pour imprimer.', 'info');
   } else {
     setTimeout(function() { try { w.print(); } catch(e) {} }, 500);
   }
@@ -514,7 +570,7 @@ async function generateIncidentPDF() {
     html += '</body></html>';
     openPdfWindow(html);
   } catch(e) {
-    alert('Erreur lors de la génération : ' + (e.message || e));
+    showToast('Erreur lors de la génération : ' + (e.message || e), 'error');
   }
 }
 

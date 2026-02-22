@@ -131,7 +131,7 @@ window.validateService = async function(serviceNum, nonConformCount) {
   }
 
   if (nonConformCount > 0) {
-    if (!confirm('⚠️ ATTENTION : ' + nonConformCount + ' relevé(s) non conforme(s) détecté(s) !\n\nÊtes-vous sûr de vouloir valider le service ' + serviceNum + ' malgré ces anomalies ?\n\nUne action corrective devrait être documentée.')) {
+    if (!(await appConfirm('Anomalies détectées', '<strong>' + nonConformCount + ' relevé(s) non conforme(s)</strong> détecté(s).<br><br>Êtes-vous sûr de vouloir valider le service ' + serviceNum + ' malgré ces anomalies ?<br><small>Une action corrective devrait être documentée.</small>', {danger:true,icon:'⚠️',confirmLabel:'Valider malgré tout'}))) {
       return;
     }
   }
@@ -141,7 +141,7 @@ window.validateService = async function(serviceNum, nonConformCount) {
     return;
   }
 
-  if (!confirm('Confirmer la validation du service ' + serviceNum + ' ?\n\nRelevés : ' + S.data.temperatures.length + '\nSignature : ✓')) {
+  if (!(await appConfirm('Validation du service', 'Confirmer la validation du service ' + serviceNum + ' ?<br><br>Relevés : <strong>' + S.data.temperatures.length + '</strong><br>Signature : ✅', {icon:'✅',confirmLabel:'Valider le service'}))) {
     return;
   }
 

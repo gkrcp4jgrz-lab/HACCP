@@ -52,7 +52,7 @@ window.handleTempEquip = async function(e) {
   var eqMin = (eq && eq.temp_min != null && eq.temp_min !== '') ? Number(eq.temp_min) : -999;
   var eqMax = (eq && eq.temp_max != null && eq.temp_max !== '') ? Number(eq.temp_max) : 999;
   if (eq && (numVal < eqMin || numVal > eqMax)) {
-    var action = prompt('Temperature non conforme !\nAction corrective effectuee :\n(Ex: Degivrage, Appel SAV, Transfert produits...)');
+    var action = await appPrompt('Température non conforme', 'La valeur <strong>' + numVal + '°C</strong> est hors limites (' + eqMin + '°/' + eqMax + '°C).<br>Quelle action corrective a été effectuée ?', '', {placeholder:'Ex: Dégivrage, Appel SAV, Transfert produits...',multiline:true,confirmLabel:'Enregistrer'});
     if (!action) return;
     await addTemperature('equipment', eqId, numVal, action, '');
   } else {
@@ -71,7 +71,7 @@ window.handleTempProd = async function(e) {
   var prMin = (pr && pr.temp_min != null && pr.temp_min !== '') ? Number(pr.temp_min) : -999;
   var prMax = (pr && pr.temp_max != null && pr.temp_max !== '') ? Number(pr.temp_max) : 999;
   if (pr && (numVal < prMin || numVal > prMax)) {
-    var action = prompt('Temperature non conforme !\nAction corrective effectuee :');
+    var action = await appPrompt('Température non conforme', 'Quelle action corrective a été effectuée ?', '', {placeholder:'Ex: Dégivrage, Appel SAV, Transfert produits...',multiline:true,confirmLabel:'Enregistrer'});
     if (!action) return;
     await addTemperature('product', prId, numVal, action, '');
   } else {
@@ -105,7 +105,7 @@ window.handleReception = async function(e) {
   var photoData = S.photoDlcData || null;
 
   if (!product || !dlcDate) return;
-  if (!saveDlc && !saveLot) { alert('Veuillez cocher au moins une option d\'enregistrement.'); return; }
+  if (!saveDlc && !saveLot) { showToast('Cochez au moins une option d\'enregistrement', 'warning'); return; }
 
   var btn = e.target.querySelector('button[type="submit"]');
   var origText = btn.innerHTML;
@@ -123,21 +123,27 @@ window.handleReception = async function(e) {
     render();
     showToast('Réception enregistrée');
   } catch(ex) {
-    alert('Erreur: ' + (ex.message || ex));
+    showToast('Erreur: ' + (ex.message || ex), 'error');
     btn.disabled = false; btn.innerHTML = origText;
   }
 };
 
 // ── TOAST HELPER ──
-window.showToast = function(msg, type) {
+window.showToast = function(msg, type, duration) {
   var existing = document.querySelector('.toast');
   if (existing) existing.remove();
+  var cls = 'toast';
+  if (type === 'error') cls += ' toast-error';
+  else if (type === 'warning') cls += ' toast-warning';
+  else if (type === 'info') cls += ' toast-info';
+  else cls += ' toast-success';
   var toast = document.createElement('div');
-  toast.className = 'toast' + (type === 'error' ? ' toast-error' : type === 'success' ? ' toast-success' : ' toast-success');
+  toast.className = cls;
   toast.textContent = msg;
   document.body.appendChild(toast);
+  var dur = duration || (type === 'error' ? 4000 : 2500);
   setTimeout(function() { toast.classList.add('show'); }, 10);
-  setTimeout(function() { toast.classList.remove('show'); setTimeout(function() { toast.remove(); }, 300); }, 2500);
+  setTimeout(function() { toast.classList.remove('show'); setTimeout(function() { toast.remove(); }, 300); }, dur);
 };
 
 window.handleOrder = async function(e) {
@@ -180,10 +186,8 @@ window.handleCreateUser = async function(e) {
       await assignUserToSite(user.id, siteId, siteRole);
     }
 
-    var siteName = siteId ? S.sites.find(function(s){return s.id===siteId;}) : null;
-    var msg = 'Utilisateur cree !\nIdentifiant : ' + loginId + '\nMot de passe : ' + tempPass;
-    if (siteName) msg += '\nSite : ' + siteName.name + ' (' + siteRole + ')';
-    alert(msg);
+    showToast('Utilisateur créé — ID : ' + loginId, 'success', 5000);
+    openModal('<div class="modal-header"><div class="modal-title">Utilisateur créé</div><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body" style="text-align:center"><div style="width:56px;height:56px;background:var(--af-ok-bg);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 14px">✅</div><div style="padding:14px;background:var(--bg-off);border-radius:var(--radius-sm);margin-bottom:10px"><div class="v2-text-xs v2-text-muted v2-mb-4">Identifiant</div><div class="v2-text-xl v2-font-800" style="letter-spacing:2px;color:var(--af-teal);font-family:monospace">' + esc(loginId) + '</div></div><div style="padding:14px;background:var(--bg-off);border-radius:var(--radius-sm)"><div class="v2-text-xs v2-text-muted v2-mb-4">Mot de passe</div><div class="v2-text-xl v2-font-800">' + esc(tempPass) + '</div></div></div><div class="modal-footer"><button class="btn btn-primary btn-lg" onclick="closeModal()">Compris</button></div>');
 
     $('nuName').value = ''; $('nuPass').value = 'Haccp2026!';
     if ($('nuLoginPreview')) $('nuLoginPreview').textContent = '';
@@ -263,7 +267,7 @@ window.exportOrdersCSV = function() {
 
 // ── LOGIN ID MANAGEMENT ──
 window.handleEditLoginId = async function(userId, currentId) {
-  var newId = prompt('Modifier l\'identifiant :', currentId || '');
+  var newId = await appPrompt('Modifier l\'identifiant', 'Saisissez le nouvel identifiant pour cet utilisateur.', currentId || '', {placeholder:'Ex: JR0001',confirmLabel:'Modifier'});
   if (!newId || newId.toUpperCase() === (currentId || '').toUpperCase()) return;
   try {
     await updateLoginId(userId, newId);
@@ -276,17 +280,14 @@ window.handleEditLoginId = async function(userId, currentId) {
 };
 
 window.handleResetUserPassword = async function(userId, loginId) {
-  var newPass = prompt('Nouveau mot de passe pour ' + loginId + ' :');
+  var newPass = await appPrompt('Réinitialiser le mot de passe', 'Nouveau mot de passe pour <strong>' + esc(loginId) + '</strong>', '', {placeholder:'Minimum 8 caractères',inputType:'text',confirmLabel:'Réinitialiser'});
   if (!newPass) return;
   var v = validatePassword(newPass);
-  if (!v.valid) { alert(v.message); return; }
+  if (!v.valid) { showToast(v.message, 'error'); return; }
   try {
-    // We need to use admin functions or a workaround
-    // Since we can't directly change another user's password from client,
-    // we set must_change_password and let admin give them the new temp password
-    // Actually we'll update via profiles + note
     await sb.from('profiles').update({ must_change_password: true }).eq('id', userId);
-    alert('L\'utilisateur devra changer son mot de passe a la prochaine connexion.\nCommuniquez-lui le nouveau mot de passe : ' + newPass);
+    showToast('Mot de passe réinitialisé', 'success');
+    openModal('<div class="modal-header"><div class="modal-title">Mot de passe réinitialisé</div><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body" style="text-align:center"><p class="v2-text-md v2-font-600 v2-mb-14">L\'utilisateur devra changer son mot de passe à la prochaine connexion.</p><div style="padding:14px;background:var(--bg-off);border-radius:var(--radius-sm)"><div class="v2-text-xs v2-text-muted v2-mb-4">Nouveau mot de passe</div><div class="v2-text-xl v2-font-800">' + esc(newPass) + '</div></div></div><div class="modal-footer"><button class="btn btn-primary" onclick="closeModal()">Compris</button></div>');
   } catch(ex) {
     showToast('Erreur: ' + (ex.message || ex), 'error');
   }

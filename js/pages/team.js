@@ -144,7 +144,7 @@ window.handleTeamRoleChange = async function(userId, newRole) {
 };
 
 window.handleTeamRemove = async function(userId) {
-  if (!confirm('Retirer cet utilisateur du site ? Il ne pourra plus y acceder.')) return;
+  if (!(await appConfirm('Retirer du site', 'Retirer cet utilisateur du site ?<br>Il ne pourra plus y accéder.', {danger:true,icon:'👤',confirmLabel:'Retirer'}))) return;
   try {
     await removeUserFromSite(userId, S.currentSiteId);
     showToast('Utilisateur retire du site', 'success');

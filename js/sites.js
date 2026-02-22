@@ -4,13 +4,13 @@
 
 async function createSite(name, type, address, city, phone, email, agrement, responsable) {
   var r = await sb.rpc('create_site_with_defaults', { p_name: name, p_address: address || '', p_type: type || 'hotel' });
-  if (r.error) { alert('Erreur: ' + r.error.message); return; }
+  if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
   var siteId = r.data;
   await sb.from('sites').update({ city:city||'', phone:phone||'', email:email||'', agrement:agrement||'', responsable:responsable||'' }).eq('id', siteId);
   await loadSites();
   S.currentSiteId = siteId;
   await loadSiteConfig(); await loadSiteData(); render();
-  alert('Site créé avec succès !');
+  showToast('Site créé avec succès', 'success');
 }
 
 async function updateSite(siteId, data) {
@@ -29,8 +29,8 @@ window.updateSiteConfig = async function(key, value) {
 };
 
 async function deleteSite(siteId) {
-  if (!confirm('ATTENTION : Supprimer ce site supprimera TOUTES ses données. Continuer ?')) return;
-  if (!confirm('Êtes-vous vraiment sûr ?')) return;
+  if (!(await appConfirm('Supprimer le site', 'ATTENTION : Supprimer ce site supprimera <strong>TOUTES</strong> ses données définitivement.', {danger:true,icon:'🗑️',confirmLabel:'Supprimer le site'}))) return;
+  if (!(await appConfirm('Confirmation finale', 'Êtes-vous vraiment sûr ? Cette action est irréversible.', {danger:true,icon:'⚠️',confirmLabel:'Oui, supprimer'}))) return;
   await sb.from('sites').delete().eq('id', siteId);
   await loadSites();
   if (S.currentSiteId === siteId) {
@@ -54,7 +54,7 @@ async function updateEquipment(id, data) {
 }
 
 async function deleteEquipment(id) {
-  if (!confirm('Désactiver cet équipement ?')) return;
+  if (!(await appConfirm('Désactiver', 'Désactiver cet équipement ?', {danger:true,icon:'❄️',confirmLabel:'Désactiver'}))) return;
   await sb.from('site_equipment').update({active:false}).eq('id', id);
   await loadSiteConfig(); render();
 }
@@ -66,7 +66,7 @@ async function addProduct(name, category, tempMin, tempMax, emoji) {
 }
 
 async function deleteProduct(id) {
-  if (!confirm('Désactiver ce produit ?')) return;
+  if (!(await appConfirm('Désactiver', 'Désactiver ce produit ?', {danger:true,icon:'🍽️',confirmLabel:'Désactiver'}))) return;
   await sb.from('site_products').update({active:false}).eq('id', id);
   await loadSiteConfig(); render();
 }
@@ -77,7 +77,7 @@ async function addSupplier(name, phone, email) {
 }
 
 async function deleteSupplier(id) {
-  if (!confirm('Désactiver ce fournisseur ?')) return;
+  if (!(await appConfirm('Désactiver', 'Désactiver ce fournisseur ?', {danger:true,icon:'🏭',confirmLabel:'Désactiver'}))) return;
   await sb.from('site_suppliers').update({active:false}).eq('id', id);
   await loadSiteConfig(); render();
 }

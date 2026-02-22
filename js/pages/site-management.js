@@ -67,7 +67,7 @@ window.handleUpdateSite = async function(e, siteId) {
     agrement: $('esAgr').value, responsable: $('esResp').value
   });
   closeModal();
-  alert('✅ Site mis à jour !');
+  showToast('Site mis à jour !', 'success');
 };
 
 // Modal : Gérer les accès d'un site
@@ -133,17 +133,17 @@ window.openSiteAccessModal = async function(siteId) {
 window.changeSiteRole = async function(userId, siteId, newRole) {
   try {
     await assignUserToSite(userId, siteId, newRole);
-    alert('✅ Rôle modifié !');
-  } catch(e) { alert('❌ Erreur: ' + (e.message||e)); }
+    showToast('Rôle modifié !', 'success');
+  } catch(e) { showToast('Erreur: ' + (e.message||e), 'error'); }
 };
 
 window.removeSiteAccess = async function(userId, siteId) {
-  if (!confirm('Retirer cet utilisateur du site ?')) return;
+  if (!(await appConfirm('Retirer l\'accès', 'Retirer cet utilisateur du site ?', {danger:true,icon:'👤',confirmLabel:'Retirer'}))) return;
   try {
     await removeUserFromSite(userId, siteId);
-    alert('✅ Utilisateur retiré du site');
+    showToast('Utilisateur retiré du site', 'success');
     openSiteAccessModal(siteId); // Recharger
-  } catch(e) { alert('❌ Erreur: ' + (e.message||e)); }
+  } catch(e) { showToast('Erreur: ' + (e.message||e), 'error'); }
 };
 
 window.addSiteAccess = async function(siteId) {
@@ -152,7 +152,7 @@ window.addSiteAccess = async function(siteId) {
   if (!userId) return;
   try {
     await assignUserToSite(userId, siteId, role);
-    alert('✅ Utilisateur ajouté au site !');
+    showToast('Utilisateur ajouté au site !', 'success');
     openSiteAccessModal(siteId); // Recharger
-  } catch(e) { alert('❌ Erreur: ' + (e.message||e)); }
+  } catch(e) { showToast('Erreur: ' + (e.message||e), 'error'); }
 };

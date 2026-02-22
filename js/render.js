@@ -136,7 +136,7 @@ function renderMainContent() {
     lots:'DLC & Traçabilité', orders:'Commandes', consignes:'Consignes',
     reports:'Rapports PDF', settings:'Paramètres du site', sites:'Gestion des sites',
     admin:'Gestion utilisateurs', profile:'Mon profil', team:'Personnel',
-    notifications:'Notifications'
+    notifications:'Notifications', legal:'Mentions légales', about:'À propos'
   };
 
   var content = '';
@@ -154,6 +154,8 @@ function renderMainContent() {
     case 'profile': content = renderProfile(); break;
     case 'team': content = renderTeam(); break;
     case 'notifications': content = renderNotifications(); break;
+    case 'legal': content = renderLegal(); break;
+    case 'about': content = renderAbout(); break;
     default: content = renderDashboard();
   }
 

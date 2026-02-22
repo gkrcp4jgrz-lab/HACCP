@@ -218,7 +218,7 @@ window.confirmReceive = async function(orderId, photoOnly) {
 };
 
 window.markSupplierOrdered = async function(supplierName) {
-  if (!confirm('Marquer toutes les commandes de ' + supplierName + ' comme commandées ?')) return;
+  if (!(await appConfirm('Commandes passées', 'Marquer toutes les commandes de <strong>' + esc(supplierName) + '</strong> comme commandées ?', {icon:'📞',confirmLabel:'Tout commandé'}))) return;
   var toMark = S.data.orders.filter(function(o) { return o.status === 'to_order' && (o.supplier_name || '— Sans fournisseur —') === supplierName; });
   for (var i = 0; i < toMark.length; i++) {
     await sb.from('orders').update({ status: 'ordered' }).eq('id', toMark[i].id);

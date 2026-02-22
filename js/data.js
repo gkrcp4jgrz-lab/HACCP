@@ -106,7 +106,7 @@ async function addTemperature(type, refId, value, corrAction, corrNote) {
     signature_data: S.sigData || null
   };
   var r = await sb.from('temperatures').insert(rec);
-  if (r.error) { alert('Erreur: ' + r.error.message); return; }
+  if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
 
   // Email si non conforme
   if (!conform) {
@@ -155,12 +155,12 @@ async function addDlc(productName, dlcDate, lotNumber, notes) {
     notes: notes || '', recorded_by: S.user.id, recorded_by_name: userName()
   };
   var r = await sb.from('dlcs').insert(rec);
-  if (r.error) { alert('Erreur: ' + r.error.message); return; }
+  if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
   S.photoDlcData = null; await loadSiteData(); render();
 }
 
 async function deleteDlc(id) {
-  if (!confirm('Supprimer ce contrôle DLC ?')) return;
+  if (!(await appConfirm('Supprimer', 'Supprimer ce contrôle DLC ?', {danger:true,icon:'🗑️',confirmLabel:'Supprimer'}))) return;
   var r = await sbExec(sb.from('dlcs').delete().eq('id', id), 'Suppression DLC');
 if (!r) return; await loadSiteData(); render();
 }
@@ -179,12 +179,12 @@ async function addLot(productName, lotNumber, supplierName, dlcDate, notes) {
     recorded_by: S.user.id, recorded_by_name: userName()
   };
   var r = await sb.from('lots').insert(rec);
-  if (r.error) { alert('Erreur: ' + r.error.message); return; }
+  if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
   S.photoLotData = null; await loadSiteData(); render();
 }
 
 async function deleteLot(id) {
-  if (!confirm('Supprimer ce lot ?')) return;
+  if (!(await appConfirm('Supprimer', 'Supprimer ce lot ?', {danger:true,icon:'🗑️',confirmLabel:'Supprimer'}))) return;
   var r = await sbExec(sb.from('lots').delete().eq('id', id), 'Suppression lot');
 if (!r) return; await loadSiteData(); render();
 }
@@ -198,7 +198,7 @@ async function addOrder(productName, qty, unit, supplierName, notes) {
     status: 'to_order', ordered_by: S.user.id, ordered_by_name: userName()
   };
   var r = await sb.from('orders').insert(rec);
-  if (r.error) { alert('Erreur: ' + r.error.message); return; }
+  if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
   await loadSiteData(); render();
 }
 
@@ -210,7 +210,7 @@ if (!r) return; await loadSiteData(); render();
 }
 
 async function deleteOrder(id) {
-  if (!confirm('Supprimer cette commande ?')) return;
+  if (!(await appConfirm('Supprimer', 'Supprimer cette commande ?', {danger:true,icon:'🗑️',confirmLabel:'Supprimer'}))) return;
   var r = await sbExec(sb.from('orders').delete().eq('id', id), 'Suppression commande');
 if (!r) return; await loadSiteData(); render();
 }
@@ -222,12 +222,12 @@ async function addConsigne(message, priority) {
     created_by: S.user.id, created_by_name: userName()
   };
   var r = await sb.from('consignes').insert(rec);
-  if (r.error) { alert('Erreur: ' + r.error.message); return; }
+  if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
   await loadSiteData(); render();
 }
 
 async function deleteConsigne(id) {
-  if (!confirm('Supprimer cette consigne ?')) return;
+  if (!(await appConfirm('Supprimer', 'Supprimer cette consigne ?', {danger:true,icon:'🗑️',confirmLabel:'Supprimer'}))) return;
   var r = await sbExec(sb.from('consignes').delete().eq('id', id), 'Suppression consigne');
   if (!r) return;
   showToast('Consigne supprimée', 'success');
@@ -237,7 +237,7 @@ async function deleteConsigne(id) {
 function notifyError(title, err) {
   console.error(title, err);
   var msg = (err && err.message) ? err.message : String(err || '');
-  alert((title || 'Erreur') + (msg ? (' : ' + msg) : ''));
+  showToast((title || 'Erreur') + (msg ? (' : ' + msg) : ''), 'error');
 }
 
 // sbExec: exécute une requête supabase et gère l'erreur proprement
