@@ -115,17 +115,19 @@ function renderSidebar() {
     '<div class="site-selector"><select onchange="switchSite(this.value)">' + siteOpts + '</select></div>' : '';
 
   var roleName = S.profile ? ({super_admin:'Super Admin',manager:'Gérant',employee:'Employé'}[S.profile.role] || 'Utilisateur') : '';
+  var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
 
   return '<nav class="sidebar' + (S.sidebarOpen?' open':'') + '">' +
     '<div class="sidebar-header"><div class="sidebar-brand"><span>🛡️</span><h2 class="brand-text">HACCP Pro</h2></div></div>' +
     siteSelector +
     '<div class="sidebar-nav">' + navHtml + '</div>' +
-    '<div style="padding:6px 10px"><button class="dark-mode-toggle" onclick="toggleDarkMode()"><span class="nav-icon">' + (document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙') + '</span>' + (document.documentElement.getAttribute('data-theme') === 'dark' ? 'Mode clair' : 'Mode sombre') + '<label class="toggle" style="pointer-events:none;margin-left:auto;transform:scale(.85)"><input type="checkbox" ' + (document.documentElement.getAttribute('data-theme') === 'dark' ? 'checked' : '') + '><span class="toggle-slider"></span></label></button></div>' +
     '<div class="sidebar-user">' +
     '<div class="avatar">' + userInitials() + '</div>' +
     '<div class="user-info"><div class="user-name">' + esc(userName()) + '</div><div class="user-role">' + roleName + '</div></div>' +
-    '<button class="btn btn-ghost btn-sm" onclick="doLogout()" title="Déconnexion">🚪</button>' +
-    '</div></nav>';
+    '<div class="sidebar-user-actions">' +
+    '<button class="sidebar-action-btn" onclick="toggleDarkMode()" title="' + (isDark ? 'Mode clair' : 'Mode sombre') + '">' + (isDark ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>' : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>') + '</button>' +
+    '<button class="sidebar-action-btn sidebar-logout-btn" onclick="doLogout()" title="Déconnexion"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>' +
+    '</div></div></nav>';
 }
 
 // ── MAIN CONTENT ROUTER ──

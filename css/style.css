@@ -320,8 +320,11 @@ img{max-width:100%;height:auto}
 .sidebar-user .user-info{flex:1;min-width:0}
 .sidebar-user .user-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--sidebar-text-bright)}
 .sidebar-user .user-role{font-size:11px;color:var(--sidebar-text);font-weight:500;margin-top:2px}
-.sidebar-user .btn-ghost{color:var(--sidebar-text);border-color:var(--sidebar-border);background:transparent;box-shadow:none}
-.sidebar-user .btn-ghost:hover{background:var(--sidebar-hover);color:var(--af-err);border-color:var(--af-err)}
+.sidebar-user-actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.sidebar-action-btn{width:34px;height:34px;border-radius:var(--radius-sm);border:none;background:rgba(255,255,255,.06);color:var(--sidebar-text);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s var(--ease-apple)}
+.sidebar-action-btn:hover{background:rgba(255,255,255,.12);color:var(--sidebar-text-bright)}
+.sidebar-action-btn svg{flex-shrink:0}
+.sidebar-logout-btn:hover{background:rgba(239,68,68,.15);color:#f87171}
 
 /* ══════════════════════════════════════════
    MAIN CONTENT — Header 64px blanc
@@ -1089,10 +1092,7 @@ img{max-width:100%;height:auto}
 
 /* Dark auth (no change needed - already dark) */
 
-/* Dark mode toggle button */
-.dark-mode-toggle{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:var(--radius-sm);cursor:pointer;font-size:14px;font-weight:500;color:rgba(255,255,255,.55);transition:all .25s var(--ease-apple);margin-bottom:3px;border:none;background:none;width:100%;text-align:left}
-.dark-mode-toggle:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.9)}
-.dark-mode-toggle .toggle{pointer-events:none;margin-left:auto;transform:scale(.85)}
+/* Dark mode toggle (integrated in sidebar-user-actions) */
 
 /* Smooth theme transition */
 body,body *{transition-property:background-color,border-color,color,box-shadow;transition-duration:0s}
