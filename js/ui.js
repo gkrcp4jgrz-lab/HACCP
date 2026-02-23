@@ -419,15 +419,22 @@ function openPdfWindow(html) {
 
 // ── RAPPORT TEMPÉRATURES ──
 
-function generateTempPDF() {
+async function generateTempPDF() {
   var dateStr = $('rptTempDate') ? $('rptTempDate').value : today();
   var site = currentSite();
   var siteName = site ? site.name : 'Site';
 
-  // Filtrer les températures par date
-  var temps = S.data.temperatures.filter(function(t) {
-    return t.recorded_at && t.recorded_at.startsWith(dateStr);
-  });
+  // Charger les températures depuis la DB pour la date sélectionnée
+  var temps;
+  if (dateStr === today()) {
+    temps = S.data.temperatures;
+  } else {
+    showToast('Chargement des données...', 'info');
+    var dayStart = new Date(dateStr + 'T00:00:00').toISOString();
+    var dayEnd = new Date(dateStr + 'T23:59:59').toISOString();
+    var r = await sb.from('temperatures').select('*').eq('site_id', S.currentSiteId).gte('recorded_at', dayStart).lte('recorded_at', dayEnd).order('recorded_at', {ascending: false});
+    temps = r.data || [];
+  }
 
   var conform = temps.filter(function(t) { return t.is_conform; }).length;
   var nonConform = temps.length - conform;
@@ -601,11 +608,22 @@ async function generateFullPDF() {
   var site = currentSite();
   var siteName = site ? site.name : 'Site';
 
+  // Charger les températures depuis la DB pour la date sélectionnée
+  var temps;
+  if (dateStr === today()) {
+    temps = S.data.temperatures;
+  } else {
+    showToast('Chargement des données...', 'info');
+    var dayStart = new Date(dateStr + 'T00:00:00').toISOString();
+    var dayEnd = new Date(dateStr + 'T23:59:59').toISOString();
+    var r = await sb.from('temperatures').select('*').eq('site_id', S.currentSiteId).gte('recorded_at', dayStart).lte('recorded_at', dayEnd).order('recorded_at', {ascending: false});
+    temps = r.data || [];
+  }
+
   var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Synthèse HACCP — ' + siteName + '</title><style>' + pdfStyles() + '</style></head><body>';
   html += pdfHeader('Synthèse HACCP Complète', siteName + ' — ' + fmtD(dateStr));
 
   // ── 1. TEMPÉRATURES ──
-  var temps = S.data.temperatures.filter(function(t) { return t.recorded_at && t.recorded_at.startsWith(dateStr); });
   var conform = temps.filter(function(t) { return t.is_conform; }).length;
   var totalExpected = S.siteConfig.equipment.length + S.siteConfig.products.length;
 

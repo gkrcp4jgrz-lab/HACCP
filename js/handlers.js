@@ -336,9 +336,10 @@ window.dashMarkReceived = async function(id) {
 };
 window.markConsigneRead = async function(id) {
   try {
-    await sb.from('consignes').update({ priority: 'normal' }).eq('id', id);
+    await sb.from('consignes').update({ is_read: true }).eq('id', id);
     await loadSiteData();
     render();
+    showToast('Consigne marquée comme traitée', 'success');
   } catch(e) { showToast('Erreur: ' + (e.message||e), 'error'); }
 };
 window.closeModal = closeModal;

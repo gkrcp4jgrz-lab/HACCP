@@ -23,8 +23,9 @@ function renderConsignes() {
   var todayConsignes = allConsignes.filter(function(c) { return c.created_at && c.created_at.startsWith(todayStr); });
   var olderConsignes = allConsignes.filter(function(c) { return !c.created_at || !c.created_at.startsWith(todayStr); });
 
-  // Consignes urgentes en premier (toutes dates)
-  var urgents = allConsignes.filter(function(c) { return c.priority === 'urgent'; });
+  // Consignes urgentes non traitées en premier (toutes dates)
+  var urgents = allConsignes.filter(function(c) { return c.priority === 'urgent' && !c.is_read; });
+  var treatedUrgents = allConsignes.filter(function(c) { return c.priority === 'urgent' && c.is_read; });
   if (urgents.length > 0) {
     h += '<div class="card v2-card--danger-left"><div class="card-header v2-text-danger">🔴 Consignes urgentes <span class="badge badge-red v2-ml-auto">' + urgents.length + '</span></div>';
     urgents.forEach(function(c) {
@@ -37,6 +38,16 @@ function renderConsignes() {
     });
     h += '</div>';
   }
+  if (treatedUrgents.length > 0) {
+    h += '<div class="card"><div class="card-header" style="color:var(--af-ok)">✅ Consignes urgentes traitées <span class="badge badge-green v2-ml-auto">' + treatedUrgents.length + '</span></div>';
+    treatedUrgents.forEach(function(c) {
+      var canDelete = isManager() || (S.user && c.created_by === S.user.id);
+      h += '<div class="list-item" style="opacity:.6"><div class="list-content"><div class="list-title" style="text-decoration:line-through">' + esc(c.message) + '</div><div class="list-sub">Traité — Par ' + esc(c.created_by_name) + ' — ' + fmtDT(c.created_at) + '</div></div>';
+      if (canDelete) h += '<div class="list-actions"><button class="btn btn-ghost btn-sm" onclick="deleteConsigne(\'' + c.id + '\')">🗑️</button></div>';
+      h += '</div>';
+    });
+    h += '</div>';
+  }
 
   // Journal du jour
   h += '<div class="card"><div class="card-header">📋 Journal du jour — ' + fmtD(todayStr) + ' <span class="badge badge-blue v2-ml-auto">' + todayConsignes.length + '</span></div>';
@@ -46,9 +57,13 @@ function renderConsignes() {
     todayConsignes.filter(function(c) { return c.priority !== 'urgent'; }).forEach(function(c) {
       var canDelete = isManager() || (S.user && c.created_by === S.user.id);
       var prioIcon = c.priority === 'high' ? '🟡 ' : '';
-      h += '<div class="list-item"><div class="list-content"><div class="list-title">' + prioIcon + esc(c.message) + '</div><div class="list-sub">Par ' + esc(c.created_by_name) + ' — ' + fmtDT(c.created_at) + '</div></div>';
-      if (canDelete) h += '<div class="list-actions"><button class="btn btn-ghost btn-sm" onclick="deleteConsigne(\'' + c.id + '\')">🗑️</button></div>';
-      h += '</div>';
+      var readStyle = c.is_read ? ' style="opacity:.6"' : '';
+      var readStrike = c.is_read ? ' style="text-decoration:line-through"' : '';
+      h += '<div class="list-item"' + readStyle + '><div class="list-content"><div class="list-title"' + readStrike + '>' + prioIcon + (c.is_read ? '✅ ' : '') + esc(c.message) + '</div><div class="list-sub">Par ' + esc(c.created_by_name) + ' — ' + fmtDT(c.created_at) + '</div></div>';
+      h += '<div class="list-actions">';
+      if (!c.is_read && isManager()) h += '<button class="btn btn-success btn-sm" onclick="markConsigneRead(\'' + c.id + '\')">✓ Traité</button> ';
+      if (canDelete) h += '<button class="btn btn-ghost btn-sm" onclick="deleteConsigne(\'' + c.id + '\')">🗑️</button>';
+      h += '</div></div>';
     });
   }
   h += '</div>';
