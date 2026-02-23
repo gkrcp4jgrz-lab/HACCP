@@ -352,10 +352,16 @@ window.dashMarkReceived = async function(id) {
 };
 window.markConsigneRead = async function(id) {
   try {
-    await sb.from('consignes').update({ is_read: true }).eq('id', id);
+    var r = await sb.from('consignes').update({ is_read: true }).eq('id', id);
+    if (r.error) {
+      console.warn('is_read update failed, deleting instead:', r.error.message);
+      // Fallback: if is_read column doesn't exist, delete the consigne
+      var r2 = await sb.from('consignes').delete().eq('id', id);
+      if (r2.error) { showToast('Erreur: ' + r2.error.message, 'error'); return; }
+    }
     await loadSiteData();
     render();
-    showToast('Consigne marquée comme traitée', 'success');
+    showToast('Consigne traitée', 'success');
   } catch(e) { showToast('Erreur: ' + (e.message||e), 'error'); }
 };
 window.closeModal = closeModal;

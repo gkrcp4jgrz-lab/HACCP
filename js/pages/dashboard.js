@@ -17,8 +17,8 @@ function renderDashboard() {
   var dlcExpired = S.data.dlcs.filter(function(d) { return daysUntil(d.dlc_date) < 0 && d.status !== 'consumed' && d.status !== 'discarded'; });
   var ordersToOrder = S.data.orders.filter(function(o) { return o.status === 'to_order'; });
   var ordersOrdered = S.data.orders.filter(function(o) { return o.status === 'ordered'; });
-  var urgentConsignes = S.data.consignes.filter(function(c) { return c.priority === 'urgent' && !c.is_read; });
-  var normalConsignes = S.data.consignes.filter(function(c) { return c.priority !== 'urgent' && !c.is_read; }).slice(0, 5);
+  var urgentConsignes = S.data.consignes.filter(function(c) { return c.priority === 'urgent' && c.is_read !== true; });
+  var normalConsignes = S.data.consignes.filter(function(c) { return c.priority !== 'urgent' && c.is_read !== true; }).slice(0, 5);
 
   var h = '';
 
