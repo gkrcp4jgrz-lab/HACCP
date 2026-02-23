@@ -67,20 +67,44 @@ function renderConsignes() {
   }
   h += '</div>';
 
-  // Historique (jours précédents) — masqué par défaut
+  // Historique (jours précédents) — groupé par jour, menu déroulant
   if (olderConsignes.length > 0) {
-    h += '<div class="card"><div class="card-header v2-clickable" onclick="S._showConsigneHistory=!S._showConsigneHistory;render()" style="cursor:pointer">📜 Historique <span class="v2-text-sm v2-text-muted v2-font-500" style="margin-left:8px">' + (S._showConsigneHistory ? '▼' : '▶') + ' ' + olderConsignes.length + ' consigne(s)</span></div>';
-    if (S._showConsigneHistory) {
-      olderConsignes.slice(0, 15).forEach(function(c) {
-        var canDelete = isManager() || (S.user && c.created_by === S.user.id);
-        var prioClass = c.priority === 'urgent' ? ' v2-text-danger' : c.priority === 'high' ? ' v2-text-warning' : '';
-        h += '<div class="list-item"><div class="list-content"><div class="list-title' + prioClass + '">' + esc(c.message) + '</div><div class="list-sub">Par ' + esc(c.created_by_name) + ' — ' + fmtDT(c.created_at) + '</div></div>';
-        if (canDelete) h += '<div class="list-actions"><button class="btn btn-ghost btn-sm" onclick="deleteConsigne(\'' + c.id + '\')">🗑️</button></div>';
-        h += '</div>';
-      });
-      if (olderConsignes.length > 15) h += '<div class="v2-text-center" style="padding:10px"><span class="v2-text-sm v2-text-muted">' + (olderConsignes.length - 15) + ' consignes plus anciennes...</span></div>';
-    }
-    h += '</div>';
+    // Grouper par date
+    var byDay = {};
+    olderConsignes.forEach(function(c) {
+      var day = c.created_at ? c.created_at.substring(0, 10) : 'inconnu';
+      if (!byDay[day]) byDay[day] = [];
+      byDay[day].push(c);
+    });
+    var days = Object.keys(byDay).sort().reverse();
+
+    h += '<div class="card"><div class="card-header">📜 Historique <span class="badge badge-blue v2-badge-lg v2-ml-auto">' + olderConsignes.length + '</span></div>';
+    h += '<div class="card-body" style="padding:0">';
+
+    days.forEach(function(day) {
+      var items = byDay[day];
+      var stateKey = '_consHist_' + day;
+      var isOpen = S[stateKey];
+
+      h += '<div style="border-bottom:1px solid var(--border)">';
+      h += '<div onclick="S._consHist_' + day.replace(/-/g,'') + '=!S._consHist_' + day.replace(/-/g,'') + ';render()" style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;cursor:pointer;background:var(--bg-off);transition:background var(--transition-fast)">';
+      h += '<div style="display:flex;align-items:center;gap:10px"><span class="v2-text-md v2-font-700">📅 ' + fmtD(day) + '</span><span class="badge badge-blue">' + items.length + '</span></div>';
+      h += '<span style="font-size:12px;color:var(--ink-muted)">' + (S['_consHist_' + day.replace(/-/g,'')] ? '▼' : '▶') + '</span>';
+      h += '</div>';
+
+      if (S['_consHist_' + day.replace(/-/g,'')]) {
+        items.forEach(function(c) {
+          var canDelete = isManager() || (S.user && c.created_by === S.user.id);
+          var prioIcon = c.priority === 'urgent' ? '🔴 ' : c.priority === 'high' ? '🟡 ' : '';
+          h += '<div class="list-item" style="padding-left:28px"><div class="list-content"><div class="list-title">' + prioIcon + esc(c.message) + '</div><div class="list-sub">Par ' + esc(c.created_by_name) + ' — ' + fmtDT(c.created_at).split(' ').pop() + '</div></div>';
+          if (canDelete) h += '<div class="list-actions"><button class="btn btn-ghost btn-sm" onclick="deleteConsigne(\'' + c.id + '\')">🗑️</button></div>';
+          h += '</div>';
+        });
+      }
+      h += '</div>';
+    });
+
+    h += '</div></div>';
   }
 
   return h;
