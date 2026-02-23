@@ -57,7 +57,7 @@ function renderReceptionForm() {
   // Photo zone
   h += '<div class="form-group"><label class="form-label">📸 Photo de l\'étiquette</label>';
   if (S.photoDlcData) {
-    h += '<div style="text-align:center;padding:14px;border:2px solid var(--success);border-radius:var(--radius);background:var(--success-bg)"><img src="' + S.photoDlcData + '" class="photo-preview"><br><button type="button" class="btn btn-ghost" onclick="clearPhotoDlc()">✕ Supprimer la photo</button></div>';
+    h += '<div style="text-align:center;padding:14px;border:2px solid var(--success);border-radius:var(--radius);background:var(--success-bg)"><img src="' + S.photoDlcData + '" alt="Photo du produit" class="photo-preview"><br><button type="button" class="btn btn-ghost" onclick="clearPhotoDlc()">✕ Supprimer la photo</button></div>';
   } else {
     h += '<label class="photo-box" for="photoDlcInput"><div class="photo-icon">📷</div><div class="photo-text">Prendre une photo de l\'étiquette</div><div class="photo-hint">DLC et N° de lot détectés automatiquement</div></label>';
     h += '<input type="file" id="photoDlcInput" accept="image/*" capture="environment" onchange="handlePhotoFor(\'photoDlcInput\',\'dlc\')" style="display:none">';

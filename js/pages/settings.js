@@ -172,7 +172,15 @@ window.saveNotifSettings = function() {
 window.saveClaudeKey = function() {
   var key = document.getElementById('claudeApiKey').value.trim();
   sessionStorage.setItem('haccp_claude_key', key);
-localStorage.removeItem('haccp_claude_key'); // nettoie l'ancienne valeur si elle existe
+  localStorage.removeItem('haccp_claude_key');
   S.claudeApiKey = key;
   render();
+};
+
+window.clearClaudeKey = function() {
+  sessionStorage.removeItem('haccp_claude_key');
+  localStorage.removeItem('haccp_claude_key');
+  S.claudeApiKey = '';
+  render();
+  showToast('Clé API supprimée', 'success');
 };

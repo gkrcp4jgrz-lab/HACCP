@@ -54,13 +54,14 @@ window.handleTempEquip = async function(e) {
   var eqMax = (eq && eq.temp_max != null && eq.temp_max !== '') ? Number(eq.temp_max) : 999;
   if (eq && (numVal < eqMin || numVal > eqMax)) {
     var action = await appPrompt('Température non conforme', 'La valeur <strong>' + numVal + '°C</strong> est hors limites (' + eqMin + '°/' + eqMax + '°C).<br>Quelle action corrective a été effectuée ?', '', {placeholder:'Ex: Dégivrage, Appel SAV, Transfert produits...',multiline:true,confirmLabel:'Enregistrer'});
-    if (!action) return;
+    if (!action) { showToast('Enregistrement annulé', 'info'); return; }
     if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading"></span>'; }
     await addTemperature('equipment', eqId, numVal, action, '');
   } else {
     if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading"></span>'; }
     await addTemperature('equipment', eqId, numVal, null, null);
   }
+  $('tempEqVal').value = '';
   if (btn) { btn.disabled = false; btn.innerHTML = '✓ Enregistrer la température'; }
 };
 
@@ -76,13 +77,14 @@ window.handleTempProd = async function(e) {
   var prMax = (pr && pr.temp_max != null && pr.temp_max !== '') ? Number(pr.temp_max) : 999;
   if (pr && (numVal < prMin || numVal > prMax)) {
     var action = await appPrompt('Température non conforme', 'Quelle action corrective a été effectuée ?', '', {placeholder:'Ex: Dégivrage, Appel SAV, Transfert produits...',multiline:true,confirmLabel:'Enregistrer'});
-    if (!action) return;
+    if (!action) { showToast('Enregistrement annulé', 'info'); return; }
     if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading"></span>'; }
     await addTemperature('product', prId, numVal, action, '');
   } else {
     if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading"></span>'; }
     await addTemperature('product', prId, numVal, null, null);
   }
+  $('tempPrVal').value = '';
   if (btn) { btn.disabled = false; btn.innerHTML = '✓ Enregistrer la température'; }
 };
 
@@ -132,8 +134,8 @@ window.handleReception = async function(e) {
     }
     S.photoDlcData = null;
     await loadSiteData();
+    showToast('Réception enregistrée', 'success');
     render();
-    showToast('Réception enregistrée');
   } catch(ex) {
     showToast('Erreur: ' + (ex.message || ex), 'error');
     btn.disabled = false; btn.innerHTML = origText;
@@ -143,17 +145,20 @@ window.handleReception = async function(e) {
 
 window.handleOrder = async function(e) {
   e.preventDefault();
+  if (!$('ordSupp').value) { showToast('Sélectionnez un fournisseur', 'warning'); return; }
   var btn = e.target.querySelector('button[type="submit"]');
-  withLoading(btn, function() {
-    return addOrder($('ordProd').value, $('ordQty').value, $('ordUnit').value, $('ordSupp').value, $('ordNotes').value);
+  withLoading(btn, async function() {
+    await addOrder($('ordProd').value, $('ordQty').value, $('ordUnit').value, $('ordSupp').value, $('ordNotes').value);
+    $('ordProd').value = ''; $('ordQty').value = '1'; $('ordNotes').value = '';
   });
 };
 
 window.handleConsigne = async function(e) {
   e.preventDefault();
   var btn = e.target.querySelector('button[type="submit"]');
-  withLoading(btn, function() {
-    return addConsigne($('conMsg').value, $('conPrio').value);
+  withLoading(btn, async function() {
+    await addConsigne($('conMsg').value, $('conPrio').value);
+    $('conMsg').value = ''; if ($('conPrio')) $('conPrio').value = 'normal';
   });
 };
 

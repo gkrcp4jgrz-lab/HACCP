@@ -99,7 +99,7 @@ function renderTemperatures() {
   // Signature
   h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">✍️</span> Signature</div><div class="card-body">';
   if (S.sigData) {
-    h += '<div class="v2-signature-preview"><img src="' + S.sigData + '" style="max-width:200px;max-height:60px;border:1px solid var(--gray-border);border-radius:8px"><button class="btn btn-ghost" onclick="S.sigData=null;render()">✕ Effacer</button></div>';
+    h += '<div class="v2-signature-preview"><img src="' + S.sigData + '" alt="Signature" style="max-width:200px;max-height:60px;border:1px solid var(--gray-border);border-radius:8px"><button class="btn btn-ghost" onclick="S.sigData=null;render()">✕ Effacer</button></div>';
   } else {
     h += '<button class="btn btn-ghost btn-lg btn-block" onclick="openSignatureModal()" style="padding:18px">✍️ Signer les relevés</button>';
   }

@@ -179,7 +179,7 @@ window.openReceiveModal = function(orderId, productName, photoOnly) {
   html += '<div class="form-group"><label class="form-label">📸 Photo du BL ou de la facture <span class="v2-text-sm v2-text-muted v2-font-500">(recommandé)</span></label>';
   html += '<label class="photo-box" for="blPhotoInput" id="blPhotoPreviewBox"><div class="photo-icon">📷</div><div class="photo-text">Prendre une photo du bon de livraison</div><div class="photo-hint">Servira de preuve de réception</div></label>';
   html += '<input type="file" id="blPhotoInput" accept="image/*" capture="environment" onchange="previewBLPhoto()" style="display:none">';
-  html += '<div id="blPhotoPreview" style="display:none;text-align:center;padding:14px;border:2px solid var(--success);border-radius:12px;background:var(--success-bg)"><img id="blPhotoImg" class="photo-preview" style="max-width:300px"><br><button type="button" class="btn btn-ghost" onclick="clearBLPhoto()">✕ Supprimer</button></div>';
+  html += '<div id="blPhotoPreview" style="display:none;text-align:center;padding:14px;border:2px solid var(--success);border-radius:12px;background:var(--success-bg)"><img id="blPhotoImg" alt="Photo du bon de livraison" class="photo-preview" style="max-width:300px"><br><button type="button" class="btn btn-ghost" onclick="clearBLPhoto()">✕ Supprimer</button></div>';
   html += '</div>';
   html += '<div class="form-group"><label class="form-label">Notes de réception</label><input type="text" class="form-input" id="receiveNotes" placeholder="Ex: Tout conforme, manque 2 cartons..."></div>';
   html += '</div>';
@@ -240,14 +240,14 @@ window.markSupplierOrdered = async function(supplierName) {
 };
 
 window.viewBLPhoto = function(orderId) {
-  // Load the order's BL photo
   sb.from('orders').select('bl_photo,product_name').eq('id', orderId).single().then(function(r) {
+    if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
     if (r.data && r.data.bl_photo) {
       var html = '<div class="modal-header"><div class="modal-title">📸 BL : ' + esc(r.data.product_name) + '</div><button class="modal-close" onclick="closeModal()">✕</button></div>';
-      html += '<div class="modal-body v2-text-center"><img src="' + r.data.bl_photo + '" style="max-width:100%;max-height:70vh;border-radius:12px"></div>';
+      html += '<div class="modal-body v2-text-center"><img src="' + r.data.bl_photo + '" alt="Bon de livraison ' + esc(r.data.product_name) + '" style="max-width:100%;max-height:70vh;border-radius:12px"></div>';
       openModal(html);
     } else {
       showToast('Aucune photo disponible', 'warning');
     }
-  });
+  }).catch(function(e) { showToast('Erreur: ' + (e.message||e), 'error'); });
 };
