@@ -122,7 +122,7 @@ window.openSiteAccessModal = async function(siteId) {
       body += '<option value="' + u.id + '">' + rl + ' ' + esc(u.full_name||u.email) + ' (' + esc(u.email) + ')</option>';
     });
     body += '</select>';
-    body += '<select id="addUserRole" class="form-select" style="width:140px"><option value="employee">Employé</option><option value="manager">Gérant</option><option value="admin">Admin</option></select>';
+    body += '<select id="addUserRole" class="form-select" style="max-width:140px;width:100%"><option value="employee">Employé</option><option value="manager">Gérant</option><option value="admin">Admin</option></select>';
     body += '<button class="btn btn-success btn-sm" onclick="addSiteAccess(\'' + siteId + '\')">+ Ajouter</button>';
     body += '</div>';
   }

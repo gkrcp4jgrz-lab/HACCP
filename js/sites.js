@@ -44,7 +44,9 @@ async function deleteSite(siteId) {
 
 async function addEquipment(name, type, tempMin, tempMax, emoji) {
   var maxSort = S.siteConfig.equipment.reduce(function(m,e){return Math.max(m,e.sort_order||0);},0);
-  await sb.from('site_equipment').insert({ site_id:S.currentSiteId, name:name, type:type, temp_min:tempMin, temp_max:tempMax, emoji:emoji||'❄️', sort_order:maxSort+1 });
+  var r = await sb.from('site_equipment').insert({ site_id:S.currentSiteId, name:name, type:type, temp_min:tempMin, temp_max:tempMax, emoji:emoji||'❄️', sort_order:maxSort+1 });
+  if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
+  showToast('Équipement ajouté', 'success');
   await loadSiteConfig(); render();
 }
 
@@ -56,29 +58,36 @@ async function updateEquipment(id, data) {
 async function deleteEquipment(id) {
   if (!(await appConfirm('Désactiver', 'Désactiver cet équipement ?', {danger:true,icon:'❄️',confirmLabel:'Désactiver'}))) return;
   await sb.from('site_equipment').update({active:false}).eq('id', id);
+  showToast('Équipement désactivé', 'success');
   await loadSiteConfig(); render();
 }
 
 async function addProduct(name, category, tempMin, tempMax, emoji) {
   var maxSort = S.siteConfig.products.reduce(function(m,p){return Math.max(m,p.sort_order||0);},0);
-  await sb.from('site_products').insert({ site_id:S.currentSiteId, name:name, category:category, temp_min:tempMin, temp_max:tempMax, emoji:emoji||'📦', sort_order:maxSort+1 });
+  var r = await sb.from('site_products').insert({ site_id:S.currentSiteId, name:name, category:category, temp_min:tempMin, temp_max:tempMax, emoji:emoji||'📦', sort_order:maxSort+1 });
+  if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
+  showToast('Produit ajouté', 'success');
   await loadSiteConfig(); render();
 }
 
 async function deleteProduct(id) {
   if (!(await appConfirm('Désactiver', 'Désactiver ce produit ?', {danger:true,icon:'🍽️',confirmLabel:'Désactiver'}))) return;
   await sb.from('site_products').update({active:false}).eq('id', id);
+  showToast('Produit désactivé', 'success');
   await loadSiteConfig(); render();
 }
 
 async function addSupplier(name, phone, email) {
-  await sb.from('site_suppliers').insert({ site_id:S.currentSiteId, name:name, phone:phone||'', email:email||'' });
+  var r = await sb.from('site_suppliers').insert({ site_id:S.currentSiteId, name:name, phone:phone||'', email:email||'' });
+  if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
+  showToast('Fournisseur ajouté', 'success');
   await loadSiteConfig(); render();
 }
 
 async function deleteSupplier(id) {
   if (!(await appConfirm('Désactiver', 'Désactiver ce fournisseur ?', {danger:true,icon:'🏭',confirmLabel:'Désactiver'}))) return;
   await sb.from('site_suppliers').update({active:false}).eq('id', id);
+  showToast('Fournisseur désactivé', 'success');
   await loadSiteConfig(); render();
 }
 

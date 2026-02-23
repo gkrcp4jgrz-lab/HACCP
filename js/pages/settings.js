@@ -79,7 +79,7 @@ function renderSettingsModules() {
     {key:'lots',label:'📦 Traçabilité',desc:'Enregistrement des numéros de lots'},
     {key:'orders',label:'🛒 Commandes',desc:'Gestion des commandes fournisseurs'},
     {key:'consignes',label:'💬 Consignes',desc:'Communication inter-équipes'},
-    {key:'viennoiseries',label:'🥐 Viennoiseries',desc:'Calculateur petit-déjeuner'}
+    {key:'incidents',label:'🚨 Signalements',desc:'Signalement et suivi des incidents'}
   ];
 
   var h = '<div class="card"><div class="card-header">📦 Modules actifs pour ce site</div><div class="card-body">';
@@ -97,7 +97,7 @@ function renderSettingsModules() {
     h += '<div class="card"><div class="card-header">🌡️ Configuration températures</div><div class="card-body">';
     h += '<div class="form-group"><label class="form-label">Nombre de services par jour</label>';
     h += '<div class="v2-flex v2-items-center v2-gap-12">';
-    h += '<select class="form-select" style="width:200px" onchange="updateSiteConfig(\'services_per_day\',parseInt(this.value))">';
+    h += '<select class="form-select" style="max-width:200px;width:100%" onchange="updateSiteConfig(\'services_per_day\',parseInt(this.value))">';
     for (var i = 1; i <= 4; i++) {
       h += '<option value="' + i + '"' + (servicesPerDay===i?' selected':'') + '>' + i + ' service' + (i>1?'s':'') + ' / jour</option>';
     }

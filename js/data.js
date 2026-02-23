@@ -107,6 +107,7 @@ async function addTemperature(type, refId, value, corrAction, corrNote) {
   };
   var r = await sb.from('temperatures').insert(rec);
   if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
+  showToast('Température enregistrée' + (conform ? '' : ' (non conforme)'), conform ? 'success' : 'warning');
 
   // Email si non conforme
   if (!conform) {
@@ -156,18 +157,23 @@ async function addDlc(productName, dlcDate, lotNumber, notes) {
   };
   var r = await sb.from('dlcs').insert(rec);
   if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
+  showToast('DLC enregistrée', 'success');
   S.photoDlcData = null; await loadSiteData(); render();
 }
 
 async function deleteDlc(id) {
   if (!(await appConfirm('Supprimer', 'Supprimer ce contrôle DLC ?', {danger:true,icon:'🗑️',confirmLabel:'Supprimer'}))) return;
   var r = await sbExec(sb.from('dlcs').delete().eq('id', id), 'Suppression DLC');
-if (!r) return; await loadSiteData(); render();
+  if (!r) return;
+  showToast('DLC supprimée', 'success');
+  await loadSiteData(); render();
 }
 
 async function updateDlcStatus(id, status) {
   var r = await sbExec(sb.from('dlcs').update({ status: status }).eq('id', id), 'Mise à jour DLC');
-if (!r) return; await loadSiteData(); render();
+  if (!r) return;
+  showToast(status === 'consumed' ? 'Produit marqué utilisé' : 'Produit marqué jeté', 'success');
+  await loadSiteData(); render();
 }
 
 // -- Lots --
@@ -180,13 +186,16 @@ async function addLot(productName, lotNumber, supplierName, dlcDate, notes) {
   };
   var r = await sb.from('lots').insert(rec);
   if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
+  showToast('Lot enregistré', 'success');
   S.photoLotData = null; await loadSiteData(); render();
 }
 
 async function deleteLot(id) {
   if (!(await appConfirm('Supprimer', 'Supprimer ce lot ?', {danger:true,icon:'🗑️',confirmLabel:'Supprimer'}))) return;
   var r = await sbExec(sb.from('lots').delete().eq('id', id), 'Suppression lot');
-if (!r) return; await loadSiteData(); render();
+  if (!r) return;
+  showToast('Lot supprimé', 'success');
+  await loadSiteData(); render();
 }
 
 // -- Orders --
@@ -199,20 +208,27 @@ async function addOrder(productName, qty, unit, supplierName, notes) {
   };
   var r = await sb.from('orders').insert(rec);
   if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
+  showToast('Commande ajoutée', 'success');
   await loadSiteData(); render();
 }
 
 async function updateOrderStatus(id, status) {
   var upd = { status: status };
   if (status === 'received') upd.received_at = new Date().toISOString();
+  if (status === 'ordered') upd.ordered_at = new Date().toISOString();
   var r = await sbExec(sb.from('orders').update(upd).eq('id', id), 'Mise à jour commande');
-if (!r) return; await loadSiteData(); render();
+  if (!r) return;
+  var labels = {ordered:'Commande passée', received:'Commande reçue', to_order:'Remis en attente'};
+  showToast(labels[status] || 'Statut mis à jour', 'success');
+  await loadSiteData(); render();
 }
 
 async function deleteOrder(id) {
   if (!(await appConfirm('Supprimer', 'Supprimer cette commande ?', {danger:true,icon:'🗑️',confirmLabel:'Supprimer'}))) return;
   var r = await sbExec(sb.from('orders').delete().eq('id', id), 'Suppression commande');
-if (!r) return; await loadSiteData(); render();
+  if (!r) return;
+  showToast('Commande supprimée', 'success');
+  await loadSiteData(); render();
 }
 
 // -- Consignes --
@@ -223,6 +239,7 @@ async function addConsigne(message, priority) {
   };
   var r = await sb.from('consignes').insert(rec);
   if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
+  showToast('Consigne publiée', 'success');
   await loadSiteData(); render();
 }
 

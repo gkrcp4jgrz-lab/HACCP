@@ -103,7 +103,7 @@ function renderOrdersActive() {
 function renderOrdersHistory() {
   var h = '';
   h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">📋</span> Commandes reçues</div>';
-  h += '<div class="card-body" style="padding:10px 18px;border-bottom:1px solid var(--border)"><input type="text" class="form-input" id="orderHistorySearch" placeholder="Rechercher produit ou fournisseur..." oninput="S._orderSearch=this.value;loadAndRenderOrderHistory()" value="' + esc(S._orderSearch || '') + '"></div>';
+  h += '<div class="card-body" style="padding:10px 18px;border-bottom:1px solid var(--border)"><input type="text" class="form-input" id="orderHistorySearch" placeholder="Rechercher produit ou fournisseur..." oninput="S._orderSearch=this.value;clearTimeout(S._orderSearchTimer);S._orderSearchTimer=setTimeout(loadAndRenderOrderHistory,400)" value="' + esc(S._orderSearch || '') + '"></div>';
   h += '<div class="card-body" id="orderHistoryContainer"><div class="v2-loading-inline"><div class="loading" style="width:28px;height:28px;border-width:3px"></div></div></div></div>';
   setTimeout(function() { loadAndRenderOrderHistory(); }, 50);
   return h;

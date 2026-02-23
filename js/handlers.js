@@ -44,52 +44,64 @@ window.updatePwdStrength = function(val) {
 
 window.handleTempEquip = async function(e) {
   e.preventDefault();
+  var btn = e.target.querySelector('button[type="submit"]');
   var eqId = $('tempEq').value, val = $('tempEqVal').value;
   if (!eqId || !val) return;
   var numVal = sanitizeNumeric(val);
-  if (numVal === null) { showToast('Valeur de temperature invalide', 'error'); return; }
+  if (numVal === null || numVal < -50 || numVal > 200) { showToast('Temperature invalide (-50 a 200°C)', 'error'); return; }
   var eq = S.siteConfig.equipment.find(function(e){return e.id===eqId;});
   var eqMin = (eq && eq.temp_min != null && eq.temp_min !== '') ? Number(eq.temp_min) : -999;
   var eqMax = (eq && eq.temp_max != null && eq.temp_max !== '') ? Number(eq.temp_max) : 999;
   if (eq && (numVal < eqMin || numVal > eqMax)) {
     var action = await appPrompt('Température non conforme', 'La valeur <strong>' + numVal + '°C</strong> est hors limites (' + eqMin + '°/' + eqMax + '°C).<br>Quelle action corrective a été effectuée ?', '', {placeholder:'Ex: Dégivrage, Appel SAV, Transfert produits...',multiline:true,confirmLabel:'Enregistrer'});
     if (!action) return;
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading"></span>'; }
     await addTemperature('equipment', eqId, numVal, action, '');
   } else {
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading"></span>'; }
     await addTemperature('equipment', eqId, numVal, null, null);
   }
-  $('tempEq').value = ''; $('tempEqVal').value = '';
+  if (btn) { btn.disabled = false; btn.innerHTML = '✓ Enregistrer la température'; }
 };
 
 window.handleTempProd = async function(e) {
   e.preventDefault();
+  var btn = e.target.querySelector('button[type="submit"]');
   var prId = $('tempPr').value, val = $('tempPrVal').value;
   if (!prId || !val) return;
   var numVal = sanitizeNumeric(val);
-  if (numVal === null) { showToast('Valeur de temperature invalide', 'error'); return; }
+  if (numVal === null || numVal < -50 || numVal > 200) { showToast('Temperature invalide (-50 a 200°C)', 'error'); return; }
   var pr = S.siteConfig.products.find(function(p){return p.id===prId;});
   var prMin = (pr && pr.temp_min != null && pr.temp_min !== '') ? Number(pr.temp_min) : -999;
   var prMax = (pr && pr.temp_max != null && pr.temp_max !== '') ? Number(pr.temp_max) : 999;
   if (pr && (numVal < prMin || numVal > prMax)) {
     var action = await appPrompt('Température non conforme', 'Quelle action corrective a été effectuée ?', '', {placeholder:'Ex: Dégivrage, Appel SAV, Transfert produits...',multiline:true,confirmLabel:'Enregistrer'});
     if (!action) return;
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading"></span>'; }
     await addTemperature('product', prId, numVal, action, '');
   } else {
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading"></span>'; }
     await addTemperature('product', prId, numVal, null, null);
   }
-  $('tempPr').value = ''; $('tempPrVal').value = '';
+  if (btn) { btn.disabled = false; btn.innerHTML = '✓ Enregistrer la température'; }
 };
 
 window.handleDlc = async function(e) {
   e.preventDefault();
-  await addDlc($('dlcProd').value, $('dlcDate').value, $('dlcLot').value, $('dlcNotes').value);
-  $('dlcProd').value = ''; $('dlcDate').value = ''; $('dlcLot').value = ''; $('dlcNotes').value = '';
+  var btn = e.target.querySelector('button[type="submit"]');
+  withLoading(btn, async function() {
+    await addDlc($('dlcProd').value, $('dlcDate').value, $('dlcLot').value, $('dlcNotes').value);
+    $('dlcProd').value = ''; $('dlcDate').value = ''; $('dlcLot').value = ''; $('dlcNotes').value = '';
+  });
 };
 
 window.handleLot = async function(e) {
   e.preventDefault();
-  await addLot($('lotProd').value, $('lotNum').value, $('lotSupp').value, $('lotDlc').value, $('lotNotes').value);
-  $('lotProd').value = ''; $('lotNum').value = ''; $('lotSupp').value = ''; $('lotDlc').value = ''; $('lotNotes').value = '';
+  var btn = e.target.querySelector('button[type="submit"]');
+  withLoading(btn, async function() {
+    await addLot($('lotProd').value, $('lotNum').value, $('lotSupp').value, $('lotDlc').value, $('lotNotes').value);
+    $('lotProd').value = ''; $('lotNum').value = ''; $('lotSupp').value = ''; $('lotDlc').value = ''; $('lotNotes').value = '';
+  });
 };
 
 // ── UNIFIED RECEPTION HANDLER ──
@@ -128,39 +140,29 @@ window.handleReception = async function(e) {
   }
 };
 
-// ── TOAST HELPER ──
-window.showToast = function(msg, type, duration) {
-  var existing = document.querySelector('.toast');
-  if (existing) existing.remove();
-  var cls = 'toast';
-  if (type === 'error') cls += ' toast-error';
-  else if (type === 'warning') cls += ' toast-warning';
-  else if (type === 'info') cls += ' toast-info';
-  else cls += ' toast-success';
-  var toast = document.createElement('div');
-  toast.className = cls;
-  toast.textContent = msg;
-  document.body.appendChild(toast);
-  var dur = duration || (type === 'error' ? 4000 : 2500);
-  setTimeout(function() { toast.classList.add('show'); }, 10);
-  setTimeout(function() { toast.classList.remove('show'); setTimeout(function() { toast.remove(); }, 300); }, dur);
-};
 
 window.handleOrder = async function(e) {
   e.preventDefault();
-  await addOrder($('ordProd').value, $('ordQty').value, $('ordUnit').value, $('ordSupp').value, $('ordNotes').value);
-  $('ordProd').value = ''; $('ordQty').value = '1'; $('ordNotes').value = '';
+  var btn = e.target.querySelector('button[type="submit"]');
+  withLoading(btn, function() {
+    return addOrder($('ordProd').value, $('ordQty').value, $('ordUnit').value, $('ordSupp').value, $('ordNotes').value);
+  });
 };
 
 window.handleConsigne = async function(e) {
   e.preventDefault();
-  await addConsigne($('conMsg').value, $('conPrio').value);
-  $('conMsg').value = '';
+  var btn = e.target.querySelector('button[type="submit"]');
+  withLoading(btn, function() {
+    return addConsigne($('conMsg').value, $('conPrio').value);
+  });
 };
 
 window.handleCreateSite = async function(e) {
   e.preventDefault();
-  await createSite($('sName').value, $('sType').value, $('sAddr').value, $('sCity').value, $('sPhone').value, $('sEmail').value, $('sAgr').value, $('sResp').value);
+  var btn = e.target.querySelector('button[type="submit"]');
+  withLoading(btn, function() {
+    return createSite($('sName').value, $('sType').value, $('sAddr').value, $('sCity').value, $('sPhone').value, $('sEmail').value, $('sAgr').value, $('sResp').value);
+  });
   $('sName').value = ''; $('sAddr').value = ''; $('sCity').value = ''; $('sPhone').value = ''; $('sEmail').value = ''; $('sAgr').value = ''; $('sResp').value = '';
 };
 
@@ -200,20 +202,29 @@ window.handleCreateUser = async function(e) {
 
 window.handleAddEquip = async function(e) {
   e.preventDefault();
-  await addEquipment($('eqName').value, $('eqType').value, parseFloat($('eqMin').value), parseFloat($('eqMax').value), $('eqEmoji').value);
-  $('eqName').value = '';
+  var btn = e.target.querySelector('button[type="submit"]');
+  withLoading(btn, async function() {
+    await addEquipment($('eqName').value, $('eqType').value, parseFloat($('eqMin').value), parseFloat($('eqMax').value), $('eqEmoji').value);
+    $('eqName').value = '';
+  });
 };
 
 window.handleAddProd = async function(e) {
   e.preventDefault();
-  await addProduct($('prName').value, $('prCat').value, parseFloat($('prMin').value), parseFloat($('prMax').value), $('prEmoji').value);
-  $('prName').value = '';
+  var btn = e.target.querySelector('button[type="submit"]');
+  withLoading(btn, async function() {
+    await addProduct($('prName').value, $('prCat').value, parseFloat($('prMin').value), parseFloat($('prMax').value), $('prEmoji').value);
+    $('prName').value = '';
+  });
 };
 
 window.handleAddSupp = async function(e) {
   e.preventDefault();
-  await addSupplier($('spName').value, $('spPhone').value, $('spEmail').value);
-  $('spName').value = ''; $('spPhone').value = ''; $('spEmail').value = '';
+  var btn = e.target.querySelector('button[type="submit"]');
+  withLoading(btn, async function() {
+    await addSupplier($('spName').value, $('spPhone').value, $('spEmail').value);
+    $('spName').value = ''; $('spPhone').value = ''; $('spEmail').value = '';
+  });
 };
 
 window.openSignatureModal = function() {

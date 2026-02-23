@@ -134,7 +134,7 @@ function buildAlerts() {
   });
 
   // 3. Consignes urgentes non lues (CRITIQUE)
-  var urgentCons = S.data.consignes.filter(function(c) { return c.priority === 'urgent'; });
+  var urgentCons = S.data.consignes.filter(function(c) { return c.priority === 'urgent' && !c.is_read; });
   urgentCons.forEach(function(c) {
     alerts.push({
       level: 'critical', icon: '💬', category: 'consigne',

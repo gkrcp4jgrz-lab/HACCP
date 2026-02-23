@@ -74,16 +74,17 @@ function renderProfile() {
 
 window.handleUpdateProfile = async function(e) {
   e.preventDefault();
-  try {
+  var btn = e.target.querySelector('button[type="submit"]');
+  withLoading(btn, async function() {
     var updates = { full_name: $('profName').value };
-    var phone = $('profPhone').value;
-    if (phone !== undefined) updates.phone = phone;
+    var phone = $('profPhone') ? $('profPhone').value : '';
+    updates.phone = phone || '';
     await sb.from('profiles').update(updates).eq('id', S.user.id);
     S.profile.full_name = updates.full_name;
-    if (updates.phone) S.profile.phone = updates.phone;
-    showToast('Profil mis a jour !', 'success');
+    S.profile.phone = updates.phone;
+    showToast('Profil mis à jour', 'success');
     render();
-  } catch(ex) { showToast('Erreur: ' + (ex.message||ex), 'error'); }
+  });
 };
 
 window.handleProfilePassword = async function(e) {
@@ -95,13 +96,13 @@ window.handleProfilePassword = async function(e) {
     err.classList.add('show');
     return;
   }
-  try {
+  var v = validatePassword(p1);
+  if (!v.valid) { err.textContent = v.message; err.classList.add('show'); return; }
+  var btn = e.target.querySelector('button[type="submit"]');
+  withLoading(btn, async function() {
     await changePassword(p1);
-    showToast('Mot de passe modifie !', 'success');
+    showToast('Mot de passe modifié', 'success');
     $('profPass1').value = ''; $('profPass2').value = '';
     err.classList.remove('show');
-  } catch(ex) {
-    err.textContent = ex.message || 'Erreur';
-    err.classList.add('show');
-  }
+  });
 };
