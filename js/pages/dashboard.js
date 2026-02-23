@@ -164,7 +164,9 @@ function renderDashboardTimeline(tempCount, totalExpected, dlcExpired, dlcWarnin
     if (dlcExpired.length > 0) {
       h += '<div class="v2-mt-6">';
       dlcExpired.slice(0, 3).forEach(function(d) {
-        h += '<div class="v2-tl-alert v2-tl-alert--danger">❌ <strong>' + esc(d.product_name) + '</strong> — expirée depuis ' + Math.abs(daysUntil(d.dlc_date)) + 'j</div>';
+        h += '<div class="v2-tl-alert v2-tl-alert--danger v2-tl-alert--actions">❌ <strong>' + esc(d.product_name) + '</strong> — expirée depuis ' + Math.abs(daysUntil(d.dlc_date)) + 'j';
+        h += '<span class="v2-tl-alert-btns"><button class="btn btn-danger btn-sm" onclick="event.stopPropagation();updateDlcStatus(\'' + d.id + '\',\'discarded\')">Jeter</button>';
+        h += '<button class="btn btn-success btn-sm" onclick="event.stopPropagation();updateDlcStatus(\'' + d.id + '\',\'consumed\')">Utilisé</button></span></div>';
       });
       if (dlcExpired.length > 3) h += '<div class="tl-card-sub">+ ' + (dlcExpired.length - 3) + ' autre(s)...</div>';
       h += '</div>';
@@ -173,7 +175,8 @@ function renderDashboardTimeline(tempCount, totalExpected, dlcExpired, dlcWarnin
       h += '<div class="v2-mt-6">';
       dlcWarnings.slice(0, 3).forEach(function(d) {
         var days = daysUntil(d.dlc_date);
-        h += '<div class="v2-tl-alert v2-tl-alert--warning">⚠️ <strong>' + esc(d.product_name) + '</strong> — ' + (days === 0 ? 'expire aujourd\'hui' : days + 'j restant(s)') + '</div>';
+        h += '<div class="v2-tl-alert v2-tl-alert--warning v2-tl-alert--actions">⚠️ <strong>' + esc(d.product_name) + '</strong> — ' + (days === 0 ? 'expire aujourd\'hui' : days + 'j restant(s)');
+        h += '<span class="v2-tl-alert-btns"><button class="btn btn-success btn-sm" onclick="event.stopPropagation();updateDlcStatus(\'' + d.id + '\',\'consumed\')">✓ Utilisé</button></span></div>';
       });
       if (dlcWarnings.length > 3) h += '<div class="tl-card-sub">+ ' + (dlcWarnings.length - 3) + ' autre(s)...</div>';
       h += '</div>';
@@ -203,7 +206,8 @@ function renderDashboardTimeline(tempCount, totalExpected, dlcExpired, dlcWarnin
 
     if (urgentConsignes.length > 0) {
       urgentConsignes.slice(0, 2).forEach(function(c) {
-        h += '<div class="v2-tl-alert v2-tl-alert--danger">🚨 ' + esc(c.message.substring(0, 80)) + (c.message.length > 80 ? '...' : '') + '</div>';
+        h += '<div class="v2-tl-alert v2-tl-alert--danger v2-tl-alert--actions">🚨 ' + esc(c.message.substring(0, 80)) + (c.message.length > 80 ? '...' : '');
+        h += '<span class="v2-tl-alert-btns"><button class="btn btn-success btn-sm" onclick="event.stopPropagation();markConsigneRead(\'' + c.id + '\')">✓ Traité</button></span></div>';
       });
     } else if (allConsignes.length > 0) {
       h += '<div class="tl-card-sub">' + allConsignes.length + ' consigne(s) active(s)</div>';
@@ -403,10 +407,14 @@ async function loadAndRenderMultiDashboard() {
     h += '<div class="card-header v2-card-header--danger">🚨 Alertes à traiter <span class="badge badge-red v2-badge-lg v2-ml-auto">' + (totalUrgent + totalDlcExp) + '</span></div>';
     h += '<div class="card-body v2-p-0">';
     allUrgentConsignes.forEach(function(c) {
-      h += '<div class="list-item"><div class="list-icon v2-list-icon--danger">💬</div><div class="list-content"><div class="list-title v2-text-danger">' + esc(c.message.substring(0, 80)) + (c.message.length > 80 ? '...' : '') + '</div><div class="list-sub">📍 ' + esc(c._siteName || '') + ' — ' + esc(c.created_by_name || '') + '</div></div></div>';
+      h += '<div class="list-item"><div class="list-icon v2-list-icon--danger">💬</div><div class="list-content"><div class="list-title v2-text-danger">' + esc(c.message.substring(0, 80)) + (c.message.length > 80 ? '...' : '') + '</div><div class="list-sub">📍 ' + esc(c._siteName || '') + ' — ' + esc(c.created_by_name || '') + '</div></div>';
+      h += '<div class="list-actions"><button class="btn btn-success btn-sm" onclick="event.stopPropagation();markConsigneRead(\'' + c.id + '\');_multiSiteCache=null;">✓ Traité</button></div>';
+      h += '</div>';
     });
     if (totalDlcExp > 0) {
-      h += '<div class="list-item"><div class="list-icon v2-list-icon--danger">📅</div><div class="list-content"><div class="list-title v2-text-danger">' + totalDlcExp + ' DLC expirée(s)</div><div class="list-sub">Vérifiez chaque site</div></div></div>';
+      h += '<div class="list-item"><div class="list-icon v2-list-icon--danger">📅</div><div class="list-content"><div class="list-title v2-text-danger">' + totalDlcExp + ' DLC expirée(s)</div><div class="list-sub">Vérifiez chaque site</div></div>';
+      h += '<div class="list-actions"><button class="btn btn-ghost btn-sm" onclick="navigate(\'dlc\')">Voir →</button></div>';
+      h += '</div>';
     }
     h += '</div></div>';
   }

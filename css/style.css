@@ -811,6 +811,9 @@ img{max-width:100%;height:auto}
 
 /* Timeline alert items */
 .v2-tl-alert{padding:6px 10px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;margin-top:6px}
+.v2-tl-alert--actions{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.v2-tl-alert-btns{display:flex;gap:6px;flex-shrink:0;margin-left:auto}
+.v2-tl-alert-btns .btn-sm{font-size:11px;min-height:28px;padding:4px 10px}
 .v2-tl-alert--danger{background:rgba(239,68,68,.06);color:var(--af-err-dark)}
 .v2-tl-alert--warning{background:rgba(245,158,11,.06);color:var(--af-warn-dark)}
 
