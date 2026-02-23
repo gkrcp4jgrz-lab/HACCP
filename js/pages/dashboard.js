@@ -17,8 +17,8 @@ function renderDashboard() {
   var dlcExpired = S.data.dlcs.filter(function(d) { return daysUntil(d.dlc_date) < 0 && d.status !== 'consumed' && d.status !== 'discarded'; });
   var ordersToOrder = S.data.orders.filter(function(o) { return o.status === 'to_order'; });
   var ordersOrdered = S.data.orders.filter(function(o) { return o.status === 'ordered'; });
-  var urgentConsignes = S.data.consignes.filter(function(c) { return c.priority === 'urgent'; });
-  var normalConsignes = S.data.consignes.filter(function(c) { return c.priority !== 'urgent'; }).slice(0, 5);
+  var urgentConsignes = S.data.consignes.filter(function(c) { return c.priority === 'urgent' && !c.is_read; });
+  var normalConsignes = S.data.consignes.filter(function(c) { return c.priority !== 'urgent' && !c.is_read; }).slice(0, 5);
 
   var h = '';
 
@@ -74,20 +74,7 @@ function renderDashboard() {
   h += '<div class="stat-value">' + ordersToOrder.length + '</div><div class="stat-label">À commander</div></div>';
   h += '</div>';
 
-  // ── 4. PROGRESS BAR ──
-  if (totalExpected > 0) {
-    var pct = Math.min(100, Math.round(tempCount / totalExpected * 100));
-    h += '<div class="card"><div class="card-body">';
-    h += '<div class="v2-flex v2-justify-between v2-items-center v2-mb-10">';
-    h += '<div><strong class="v2-text-lg v2-font-800">Progression relevés du jour</strong></div>';
-    h += '<div class="v2-flex v2-items-center v2-gap-8"><span class="v2-font-800 v2-text-2xl ' + (pct >= 100 ? 'v2-text-ok' : 'v2-text-primary') + '">' + pct + '%</span>';
-    if (pct >= 100) h += '<span class="v2-text-2xl">✅</span>';
-    h += '</div></div>';
-    h += '<div class="progress v2-progress-lg"><div class="progress-bar" style="width:' + pct + '%;background:' + (pct >= 100 ? 'var(--success)' : 'var(--primary)') + '"></div></div>';
-    h += '</div></div>';
-  }
-
-  // ── 5. ALERTS (Urgent consignes + DLC expired combined) ──
+  // ── 4. ALERTS (Urgent consignes + DLC expired combined) ──
   var totalAlerts = urgentConsignes.length + dlcExpired.length;
   if (totalAlerts > 0) {
     h += '<div class="card v2-card--danger-left"><div class="card-header v2-card-header--danger">🚨 Alertes <span class="badge badge-red v2-badge-lg v2-ml-auto">' + totalAlerts + '</span></div><div class="card-body v2-p-0">';
@@ -113,74 +100,7 @@ function renderDashboard() {
     h += '</div></div>';
   }
 
-  // DLC warnings (non-expired)
-  if (dlcWarnings.length > 0) {
-    h += '<div class="card v2-card--warning-left"><div class="card-header v2-card-header--warning">⚠️ DLC à surveiller <span class="badge badge-yellow v2-badge-lg v2-ml-auto">' + dlcWarnings.length + '</span></div><div class="card-body v2-p-0">';
-    dlcWarnings.forEach(function(d) {
-      var days = daysUntil(d.dlc_date);
-      h += '<div class="list-item">';
-      h += '<div class="list-content"><div class="list-title v2-text-warning v2-text-md">' + esc(d.product_name) + ' <span class="badge badge-yellow">J-' + days + '</span></div>';
-      h += '<div class="list-sub">DLC : ' + fmtD(d.dlc_date) + (d.lot_number ? ' · Lot : ' + esc(d.lot_number) : '') + '</div></div>';
-      h += '<div class="list-actions"><button class="btn btn-success" onclick="updateDlcStatus(\'' + d.id + '\',\'consumed\')">✓ Utilisé</button></div>';
-      h += '</div>';
-    });
-    h += '</div></div>';
-  }
-
-  // ── 6. SHOPPING LIST ──
-  if (ordersToOrder.length > 0) {
-    var bySupplier = {};
-    ordersToOrder.forEach(function(o) {
-      var key = o.supplier_name || '— Sans fournisseur —';
-      if (!bySupplier[key]) bySupplier[key] = [];
-      bySupplier[key].push(o);
-    });
-
-    h += '<div class="card v2-card--warning-left"><div class="card-header v2-card-header--warning">🛒 Liste des courses <span class="badge badge-yellow v2-badge-lg v2-ml-auto">' + ordersToOrder.length + ' article' + (ordersToOrder.length > 1 ? 's' : '') + '</span></div><div class="card-body">';
-
-    Object.keys(bySupplier).forEach(function(supplier) {
-      h += '<div class="v2-supplier-group">';
-      h += '<h4 class="v2-supplier-group__title"><span class="v2-text-3xl">🏭</span> ' + esc(supplier) + '</h4>';
-      bySupplier[supplier].forEach(function(o) {
-        h += '<div class="list-item v2-py-8">';
-        h += '<div class="list-content"><div class="list-title">' + esc(o.product_name) + '</div>';
-        h += '<div class="list-sub">' + (o.quantity || 1) + ' ' + (o.unit || 'unité') + (o.notes ? ' · ' + esc(o.notes) : '') + '</div></div>';
-        h += '<div class="list-actions"><button class="btn btn-success" onclick="dashMarkOrdered(\'' + o.id + '\')">✓ Commandé</button></div>';
-        h += '</div>';
-      });
-      h += '</div>';
-    });
-
-    h += '</div></div>';
-  }
-
-  // ── CONSIGNES RÉCENTES ──
-  if (normalConsignes.length > 0) {
-    h += '<div class="card"><div class="card-header">💬 Dernières consignes</div><div class="card-body">';
-    normalConsignes.forEach(function(c) {
-      var prioClass = c.priority === 'high' ? ' v2-text-warning' : '';
-      h += '<div class="list-item v2-list-item--bordered">';
-      h += '<div class="list-content"><div class="list-title' + prioClass + '">' + esc(c.message) + '</div>';
-      h += '<div class="list-sub">' + esc(c.created_by_name) + ' · ' + fmtDT(c.created_at) + '</div></div></div>';
-    });
-    h += '<div class="v2-text-center v2-pt-12"><button class="btn btn-ghost" onclick="navigate(\'consignes\')">Voir toutes les consignes →</button></div>';
-    h += '</div></div>';
-  }
-
-  // ── COMMANDES EN COURS DE LIVRAISON ──
-  if (ordersOrdered.length > 0) {
-    h += '<div class="card"><div class="card-header">📦 En attente de livraison <span class="badge badge-blue v2-badge-lg v2-ml-auto">' + ordersOrdered.length + '</span></div><div class="card-body">';
-    ordersOrdered.forEach(function(o) {
-      h += '<div class="list-item v2-py-8">';
-      h += '<div class="list-content"><div class="list-title">' + esc(o.product_name) + '</div>';
-      h += '<div class="list-sub">' + (o.supplier_name ? '🏭 ' + esc(o.supplier_name) + ' · ' : '') + (o.quantity || 1) + ' ' + (o.unit || 'unité') + ' · Commandé le ' + fmtD(o.ordered_at) + '</div></div>';
-      h += '<div class="list-actions"><button class="btn btn-primary" onclick="dashMarkReceived(\'' + o.id + '\')">✓ Reçu</button></div>';
-      h += '</div>';
-    });
-    h += '</div></div>';
-  }
-
-  // ── 7. TIMELINE : MA JOURNÉE ──
+  // ── 5. TIMELINE : MA JOURNÉE ──
   h += renderDashboardTimeline(tempCount, totalExpected, dlcExpired, dlcWarnings, ordersToOrder, ordersOrdered, urgentConsignes);
 
   return h;
@@ -383,7 +303,7 @@ async function loadMultiSiteStats() {
       var pr = await sb.from('site_products').select('id', { count: 'exact', head: true }).eq('site_id', sid).eq('active', true);
       var d = await sb.from('dlcs').select('id, dlc_date, status').eq('site_id', sid).not('status', 'in', '("consumed","discarded")');
       var o = await sb.from('orders').select('id', { count: 'exact', head: true }).eq('site_id', sid).eq('status', 'to_order');
-      var c = await sb.from('consignes').select('*').eq('site_id', sid).eq('priority', 'urgent');
+      var c = await sb.from('consignes').select('*').eq('site_id', sid).eq('priority', 'urgent').eq('is_read', false);
 
       var dlcData = d.data || [];
       var dlcWarnings = dlcData.filter(function(x) { var days = daysUntil(x.dlc_date); return days <= 2 && days >= 0; }).length;
