@@ -68,17 +68,17 @@ window.toggleBnavMore = function() {
 
     var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     if (isSuperAdmin()) {
-      h += bnavMenuItem('notifications', '🔔', 'Notifications' + (alertCount > 0 ? ' (' + alertCount + ')' : ''));
-      h += bnavMenuItem('profile', '👤', 'Mon profil');
-      h += '<div class="bnav-menu-section">Outils</div>';
       h += bnavMenuItem('reports', '📄', 'Rapports PDF');
-    } else if (isManager()) {
-      h += bnavMenuItem('orders', '🛒', 'Commandes');
       h += bnavMenuItem('notifications', '🔔', 'Notifications' + (alertCount > 0 ? ' (' + alertCount + ')' : ''));
+      h += '<div class="bnav-menu-section">Compte</div>';
+      h += bnavMenuItem('profile', '👤', 'Mon profil');
+    } else if (isManager()) {
+      h += bnavMenuItem('settings', '⚙️', 'Paramètres site');
+      h += bnavMenuItem('orders', '🛒', 'Commandes');
       h += bnavMenuItem('reports', '📄', 'Rapports PDF');
       h += '<div class="bnav-menu-section">Administration</div>';
       h += bnavMenuItem('team', '👥', 'Personnel');
-      h += bnavMenuItem('settings', '⚙️', 'Paramètres site');
+      h += bnavMenuItem('notifications', '🔔', 'Notifications' + (alertCount > 0 ? ' (' + alertCount + ')' : ''));
       h += '<div class="bnav-menu-section">Compte</div>';
       h += bnavMenuItem('profile', '👤', 'Mon profil');
     } else {
