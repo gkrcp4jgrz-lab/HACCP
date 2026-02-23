@@ -109,12 +109,12 @@ function renderOrdersHistory() {
   return h;
 }
 
-async function loadOrderHistory() {
+window.loadOrderHistory = async function() {
   S.ordersTab = 'history';
   render();
-}
+};
 
-async function loadAndRenderOrderHistory() {
+window.loadAndRenderOrderHistory = async function() {
   var container = $('orderHistoryContainer');
   if (!container) return;
 
