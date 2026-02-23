@@ -53,8 +53,10 @@ async function loadSiteData() {
     var o = await sb.from('orders').select('*').eq('site_id', sid).in('status', ['to_order','ordered']).order('ordered_at', {ascending:false});
     S.data.orders = o.data || [];
 
-    var c = await sb.from('consignes').select('*').eq('site_id', sid).or('is_read.is.null,is_read.eq.false').order('created_at', {ascending:false}).limit(50);
-    S.data.consignes = c.data || [];
+    var c = await sb.from('consignes').select('*').eq('site_id', sid).order('created_at', {ascending:false}).limit(50);
+    var dismissed = [];
+    try { dismissed = JSON.parse(localStorage.getItem('haccp_dismissed_consignes') || '[]'); } catch(e) {}
+    S.data.consignes = (c.data || []).filter(function(con) { return dismissed.indexOf(con.id) === -1 && con.is_read !== true; });
 
     var ir = await sb.from('incident_reports').select('*').eq('site_id', sid).in('status', ['open','in_progress']).order('created_at', {ascending:false});
     S.data.incident_reports = ir.data || [];

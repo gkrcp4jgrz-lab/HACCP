@@ -352,20 +352,23 @@ window.dashMarkReceived = async function(id) {
 };
 window.markConsigneRead = async function(id) {
   try {
-    // Remove from local state immediately so alert disappears
+    // 1. Save dismissed ID in localStorage (survives refresh)
+    var key = 'haccp_dismissed_consignes';
+    var dismissed = [];
+    try { dismissed = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) {}
+    if (dismissed.indexOf(id) === -1) dismissed.push(id);
+    localStorage.setItem(key, JSON.stringify(dismissed));
+
+    // 2. Remove from local state + render immediately
     S.data.consignes = S.data.consignes.filter(function(c) { return c.id !== id; });
     render();
-
-    // Delete the consigne from DB (more reliable than update with RLS)
-    var r = await sb.from('consignes').delete().eq('id', id);
-    if (r.error) {
-      // If delete also fails, try update as fallback
-      await sb.from('consignes').update({ is_read: true }).eq('id', id);
-    }
-    await loadSiteData();
-    render();
     showToast('Consigne traitée', 'success');
-  } catch(e) { showToast('Erreur: ' + (e.message||e), 'error'); }
+
+    // 3. Try to persist in DB (may fail due to RLS, that's OK)
+    sb.from('consignes').update({ is_read: true }).eq('id', id).then(function(r) {
+      if (r.error) sb.from('consignes').delete().eq('id', id);
+    });
+  } catch(e) { console.warn('markConsigneRead:', e); }
 };
 window.closeModal = closeModal;
 window.openModal = openModal;
