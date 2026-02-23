@@ -352,11 +352,15 @@ window.dashMarkReceived = async function(id) {
 };
 window.markConsigneRead = async function(id) {
   try {
-    var r = await sb.from('consignes').update({ is_read: true }).eq('id', id);
+    // Remove from local state immediately so alert disappears
+    S.data.consignes = S.data.consignes.filter(function(c) { return c.id !== id; });
+    render();
+
+    // Delete the consigne from DB (more reliable than update with RLS)
+    var r = await sb.from('consignes').delete().eq('id', id);
     if (r.error) {
-      // Fallback: delete if update fails
-      var r2 = await sb.from('consignes').delete().eq('id', id);
-      if (r2.error) { showToast('Erreur: ' + r2.error.message, 'error'); return; }
+      // If delete also fails, try update as fallback
+      await sb.from('consignes').update({ is_read: true }).eq('id', id);
     }
     await loadSiteData();
     render();
