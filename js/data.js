@@ -53,8 +53,10 @@ async function loadSiteData() {
     var o = await sb.from('orders').select('*').eq('site_id', sid).in('status', ['to_order','ordered']).order('ordered_at', {ascending:false});
     S.data.orders = o.data || [];
 
-    var c = await sb.from('consignes').select('*').eq('site_id', sid).order('created_at', {ascending:false}).limit(20);
+    var c = await sb.from('consignes').select('*').eq('site_id', sid).order('created_at', {ascending:false}).limit(50);
     S.data.consignes = c.data || [];
+    // Debug: log is_read values
+    if (S.data.consignes.length > 0) console.log('[HACCP] Consignes loaded:', S.data.consignes.length, 'is_read values:', S.data.consignes.map(function(c){return c.id.substring(0,8)+':'+c.is_read;}));
 
     var ir = await sb.from('incident_reports').select('*').eq('site_id', sid).in('status', ['open','in_progress']).order('created_at', {ascending:false});
     S.data.incident_reports = ir.data || [];

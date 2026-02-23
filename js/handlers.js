@@ -352,17 +352,22 @@ window.dashMarkReceived = async function(id) {
 };
 window.markConsigneRead = async function(id) {
   try {
+    console.log('[HACCP] markConsigneRead called for id:', id);
     var r = await sb.from('consignes').update({ is_read: true }).eq('id', id);
+    console.log('[HACCP] update result:', JSON.stringify(r));
     if (r.error) {
-      console.warn('is_read update failed, deleting instead:', r.error.message);
-      // Fallback: if is_read column doesn't exist, delete the consigne
+      console.warn('[HACCP] is_read update failed:', r.error.message);
       var r2 = await sb.from('consignes').delete().eq('id', id);
+      console.log('[HACCP] delete fallback result:', JSON.stringify(r2));
       if (r2.error) { showToast('Erreur: ' + r2.error.message, 'error'); return; }
     }
     await loadSiteData();
     render();
     showToast('Consigne traitée', 'success');
-  } catch(e) { showToast('Erreur: ' + (e.message||e), 'error'); }
+  } catch(e) {
+    console.error('[HACCP] markConsigneRead error:', e);
+    showToast('Erreur: ' + (e.message||e), 'error');
+  }
 };
 window.closeModal = closeModal;
 window.openModal = openModal;
