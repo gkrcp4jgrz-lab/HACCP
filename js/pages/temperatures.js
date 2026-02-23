@@ -16,6 +16,15 @@ function renderTemperatures() {
   var nonConform = S.data.temperatures.filter(function(t) { return !t.is_conform; });
   var conformCount = tempCount - nonConform.length;
 
+  // Load validated services from localStorage
+  if (!S.validatedServices) {
+    try {
+      var key = 'haccp_validated_' + S.currentSiteId + '_' + today();
+      var saved = localStorage.getItem(key);
+      S.validatedServices = saved ? JSON.parse(saved) : [];
+    } catch(e) { S.validatedServices = []; }
+  }
+
   // ── Hero status card with SVG ring ──
   var ringSize = 90, ringStroke = 7, ringR = (ringSize - ringStroke) / 2, ringC = 2 * Math.PI * ringR;
   var ringOffset = ringC - (servicePct / 100) * ringC;
@@ -96,12 +105,23 @@ function renderTemperatures() {
   }
   h += '</div></div>';
 
-  // Today's records
+  // Filter bar
+  if (!S.tempFilter) S.tempFilter = 'all';
   h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">📋</span> Relevés du jour <span class="badge badge-blue v2-badge-lg v2-ml-auto">' + tempCount + '/' + totalExpected + '</span></div>';
-  if (S.data.temperatures.length === 0) {
+  h += '<div class="card-body" style="padding:10px 18px"><div class="v2-flex v2-gap-8 v2-flex-wrap">';
+  h += '<button class="btn btn-sm ' + (S.tempFilter === 'all' ? 'btn-primary' : 'btn-ghost') + '" onclick="S.tempFilter=\'all\';render()">Tous (' + tempCount + ')</button>';
+  h += '<button class="btn btn-sm ' + (S.tempFilter === 'conform' ? 'btn-success' : 'btn-ghost') + '" onclick="S.tempFilter=\'conform\';render()">Conformes (' + conformCount + ')</button>';
+  h += '<button class="btn btn-sm ' + (S.tempFilter === 'nonconform' ? 'btn-danger' : 'btn-ghost') + '" onclick="S.tempFilter=\'nonconform\';render()">Non conformes (' + nonConform.length + ')</button>';
+  h += '</div></div>';
+
+  var filteredTemps = S.data.temperatures;
+  if (S.tempFilter === 'conform') filteredTemps = S.data.temperatures.filter(function(t) { return t.is_conform; });
+  else if (S.tempFilter === 'nonconform') filteredTemps = nonConform;
+
+  if (filteredTemps.length === 0) {
     h += '<div class="card-body"><div class="empty"><div class="empty-icon">🌡️</div><div class="empty-title">Aucun relevé aujourd\'hui</div><div class="empty-text">Commencez par enregistrer vos températures ci-dessus.</div></div></div>';
   } else {
-    S.data.temperatures.forEach(function(t) {
+    filteredTemps.forEach(function(t) {
       var refName = '', emoji = '';
       if (t.record_type === 'equipment') {
         var eq = S.siteConfig.equipment.find(function(e){return e.id===t.equipment_id;});
@@ -145,8 +165,12 @@ window.validateService = async function(serviceNum, nonConformCount) {
     return;
   }
 
-  // Marquer le service comme validé
+  // Marquer le service comme validé + persister en localStorage
   S.validatedServices.push(serviceNum);
+  try {
+    var lsKey = 'haccp_validated_' + S.currentSiteId + '_' + today();
+    localStorage.setItem(lsKey, JSON.stringify(S.validatedServices));
+  } catch(e) {}
 
   // Envoi email si configuré
   triggerEmailNotification('temp_validation', {

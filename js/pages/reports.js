@@ -54,6 +54,12 @@ function renderReports() {
   });
   h += '</div></div></div>';
 
+  // ── Export Backup complet ──
+  h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">💾</span> Sauvegarde complète</div><div class="card-body">';
+  h += '<p class="v2-text-sm v2-text-muted v2-mb-14">Exportez toutes les données du site (températures, DLC, lots, commandes) dans un seul fichier CSV.</p>';
+  h += '<button class="btn btn-primary btn-lg btn-block" onclick="exportFullBackup()">💾 Exporter la sauvegarde complète</button>';
+  h += '</div></div>';
+
   // ── Rappel réglementaire ──
   h += '<div class="card"><div class="card-body v2-flex v2-items-start v2-gap-14">';
   h += '<div style="width:44px;height:44px;background:var(--af-info-bg);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">📌</div>';

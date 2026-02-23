@@ -7,13 +7,24 @@ function renderConsignes() {
   h += '<div class="v2-flex v2-items-end v2-gap-12"><div class="form-group" style="flex:1"><label class="form-label">Priorité</label><select class="form-select" id="conPrio"><option value="normal">🟢 Normal</option><option value="high">🟡 Important</option><option value="urgent">🔴 Urgent</option></select></div>';
   h += '<button type="submit" class="btn btn-primary btn-lg" style="margin-bottom:22px">✓ Publier</button></div></form></div></div>';
 
+  // Search bar
+  h += '<div class="card" style="margin-bottom:0;border-bottom:0;border-radius:var(--radius) var(--radius) 0 0"><div class="card-body" style="padding:10px 18px"><input type="text" class="form-input" id="consigneSearch" placeholder="Rechercher une consigne..." oninput="S._consigneSearch=this.value;render()" value="' + esc(S._consigneSearch || '') + '"></div></div>';
+
   // Journal du jour
   var todayStr = today();
-  var todayConsignes = S.data.consignes.filter(function(c) { return c.created_at && c.created_at.startsWith(todayStr); });
-  var olderConsignes = S.data.consignes.filter(function(c) { return !c.created_at || !c.created_at.startsWith(todayStr); });
+  var searchQ = (S._consigneSearch || '').toLowerCase();
+  var allConsignes = S.data.consignes;
+  if (searchQ) {
+    allConsignes = allConsignes.filter(function(c) {
+      return (c.message && c.message.toLowerCase().indexOf(searchQ) >= 0) ||
+             (c.created_by_name && c.created_by_name.toLowerCase().indexOf(searchQ) >= 0);
+    });
+  }
+  var todayConsignes = allConsignes.filter(function(c) { return c.created_at && c.created_at.startsWith(todayStr); });
+  var olderConsignes = allConsignes.filter(function(c) { return !c.created_at || !c.created_at.startsWith(todayStr); });
 
   // Consignes urgentes en premier (toutes dates)
-  var urgents = S.data.consignes.filter(function(c) { return c.priority === 'urgent'; });
+  var urgents = allConsignes.filter(function(c) { return c.priority === 'urgent'; });
   if (urgents.length > 0) {
     h += '<div class="card v2-card--danger-left"><div class="card-header v2-text-danger">🔴 Consignes urgentes <span class="badge badge-red v2-ml-auto">' + urgents.length + '</span></div>';
     urgents.forEach(function(c) {

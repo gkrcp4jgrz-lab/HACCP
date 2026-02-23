@@ -127,6 +127,7 @@ function showToast(message, type, duration) {
   var icons = { success: '✅', error: '❌', warning: '⚠️', info: '💡' };
   var toast = document.createElement('div');
   toast.className = 'toast toast-' + type;
+  toast.setAttribute('role', 'alert');
   toast.innerHTML = '<span>' + (icons[type] || '') + ' ' + esc(message) + '</span>';
   container.appendChild(toast);
   setTimeout(function() { toast.classList.add('show'); }, 10);
@@ -143,6 +144,21 @@ function validatePassword(pass) {
   if (!/[a-z]/.test(pass)) return { valid: false, message: 'Au moins une minuscule requise' };
   if (!/[0-9]/.test(pass)) return { valid: false, message: 'Au moins un chiffre requis' };
   return { valid: true, message: 'Mot de passe fort' };
+}
+
+// ── ANTI DOUBLE-CLICK ──
+function withLoading(btnOrId, asyncFn) {
+  var btn = typeof btnOrId === 'string' ? $(btnOrId) : btnOrId;
+  if (!btn || btn.disabled) return;
+  var orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading"></span> ' + (btn.textContent || '').trim().substring(0, 15) + '...';
+  asyncFn().then(function() {
+    btn.disabled = false; btn.innerHTML = orig;
+  }).catch(function(e) {
+    btn.disabled = false; btn.innerHTML = orig;
+    showToast(e.message || 'Erreur', 'error');
+  });
 }
 
 // ── INPUT SANITIZATION ──

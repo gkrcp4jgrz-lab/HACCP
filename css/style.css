@@ -105,7 +105,7 @@ img{max-width:100%;height:auto}
   /* ── Layout ── */
   --sidebar-w:260px;
   --header-h:64px;
-  --bottomnav-h:64px;
+  --bottomnav-h:68px;
   --page-pad:28px;
   --card-pad:24px;
   --input-h:48px;
@@ -1177,10 +1177,18 @@ body.theme-transitioning,body.theme-transitioning *{transition-duration:.3s !imp
    PRINT
    ══════════════════════════════════════════ */
 @media print{
-  .sidebar,.main-header,.burger,.sidebar-backdrop,.bottom-nav,.bnav-more-menu,.bnav-more-backdrop,.toast-container,.offline-banner{display:none!important}
+  .sidebar,.main-header,.burger,.sidebar-backdrop,.bottom-nav,.bnav-more-menu,.bnav-more-backdrop,.toast-container,.offline-banner,.modal-overlay,.btn,.tabs,.form-input,.form-select,.form-textarea,.photo-box{display:none!important}
   .main-content{margin-left:0!important}
   .main-body{padding:0!important}
-  .card{box-shadow:none!important;border:1px solid #ddd!important}
+  body{background:#fff!important;color:#000!important;font-size:12pt!important}
+  .card{box-shadow:none!important;border:1px solid #ccc!important;break-inside:avoid;page-break-inside:avoid;margin-bottom:12pt!important}
+  .card-header{background:#f5f5f5!important;color:#000!important;border-bottom:1px solid #ccc!important}
+  .list-item{border-bottom:1px solid #eee!important}
+  .badge{border:1px solid #999!important;color:#000!important;background:#eee!important}
+  .progress{border:1px solid #ccc!important}
+  .progress-bar{background:#333!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  a[href]:after{content:none!important}
+  @page{margin:1.5cm}
 }
 
 /* ══════════════════════════════════════════

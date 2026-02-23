@@ -102,7 +102,9 @@ function renderOrdersActive() {
 
 function renderOrdersHistory() {
   var h = '';
-  h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">📋</span> Commandes reçues</div><div class="card-body" id="orderHistoryContainer"><div class="v2-loading-inline"><div class="loading" style="width:28px;height:28px;border-width:3px"></div></div></div></div>';
+  h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">📋</span> Commandes reçues</div>';
+  h += '<div class="card-body" style="padding:10px 18px;border-bottom:1px solid var(--border)"><input type="text" class="form-input" id="orderHistorySearch" placeholder="Rechercher produit ou fournisseur..." oninput="S._orderSearch=this.value;loadAndRenderOrderHistory()" value="' + esc(S._orderSearch || '') + '"></div>';
+  h += '<div class="card-body" id="orderHistoryContainer"><div class="v2-loading-inline"><div class="loading" style="width:28px;height:28px;border-width:3px"></div></div></div></div>';
   setTimeout(function() { loadAndRenderOrderHistory(); }, 50);
   return h;
 }
@@ -118,6 +120,15 @@ async function loadAndRenderOrderHistory() {
 
   var r = await sb.from('orders').select('*').eq('site_id', S.currentSiteId).eq('status', 'received').order('received_at', {ascending:false}).limit(50);
   var received = r.data || [];
+
+  // Filter by search query
+  var searchQ = (S._orderSearch || '').toLowerCase();
+  if (searchQ) {
+    received = received.filter(function(o) {
+      return (o.product_name && o.product_name.toLowerCase().indexOf(searchQ) >= 0) ||
+             (o.supplier_name && o.supplier_name.toLowerCase().indexOf(searchQ) >= 0);
+    });
+  }
 
   if (received.length === 0) {
     container.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-title">Aucune commande reçue</div></div>';

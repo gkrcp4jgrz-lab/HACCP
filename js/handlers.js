@@ -265,6 +265,34 @@ window.exportOrdersCSV = function() {
   exportCSV('commandes-' + today() + '.csv', headers, rows);
 };
 
+// ── FULL BACKUP EXPORT ──
+window.exportFullBackup = function() {
+  var headers = ['Type', 'Produit', 'Valeur', 'Conforme', 'Date DLC', 'N Lot', 'Fournisseur', 'Statut', 'Quantite', 'Unite', 'Notes', 'Operateur', 'Date'];
+  var rows = [];
+  S.data.temperatures.forEach(function(t) {
+    var refName = '';
+    if (t.record_type === 'equipment') {
+      var eq = S.siteConfig.equipment.find(function(e) { return e.id === t.equipment_id; });
+      refName = eq ? eq.name : '';
+    } else {
+      var pr = S.siteConfig.products.find(function(p) { return p.id === t.product_id; });
+      refName = pr ? pr.name : '';
+    }
+    rows.push(['Temperature', refName, t.value + ' C', t.is_conform ? 'Oui' : 'Non', '', '', '', '', '', '', t.corrective_action || '', t.recorded_by_name || '', fmtDT(t.recorded_at)]);
+  });
+  S.data.dlcs.forEach(function(d) {
+    rows.push(['DLC', d.product_name, '', '', fmtD(d.dlc_date), d.lot_number || '', '', d.status || 'actif', '', '', '', d.recorded_by_name || '', fmtDT(d.recorded_at)]);
+  });
+  S.data.lots.forEach(function(l) {
+    rows.push(['Lot', l.product_name, '', '', l.dlc_date ? fmtD(l.dlc_date) : '', l.lot_number, l.supplier_name || '', '', '', '', '', l.recorded_by_name || '', fmtDT(l.recorded_at)]);
+  });
+  S.data.orders.forEach(function(o) {
+    rows.push(['Commande', o.product_name, '', '', '', '', o.supplier_name || '', o.status, o.quantity, o.unit || '', '', o.ordered_by_name || '', fmtDT(o.ordered_at)]);
+  });
+  var siteName = currentSite() ? currentSite().name.replace(/[^a-zA-Z0-9]/g, '_') : 'site';
+  exportCSV('backup-' + siteName + '-' + today() + '.csv', headers, rows);
+};
+
 // ── LOGIN ID MANAGEMENT ──
 window.handleEditLoginId = async function(userId, currentId) {
   var newId = await appPrompt('Modifier l\'identifiant', 'Saisissez le nouvel identifiant pour cet utilisateur.', currentId || '', {placeholder:'Ex: JR0001',confirmLabel:'Modifier'});

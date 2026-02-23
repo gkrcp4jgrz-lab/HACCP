@@ -246,6 +246,14 @@ function closeModal() {
   if (window._modalResolve) { window._modalResolve(null); window._modalResolve = null; }
 }
 
+// Fermer modals avec Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    var overlay = $('modalOverlay');
+    if (overlay && overlay.classList.contains('show')) closeModal();
+  }
+});
+
 // ── Apple-style Confirm Modal (returns Promise<boolean>) ──
 function appConfirm(title, message, opts) {
   opts = opts || {};
@@ -311,7 +319,7 @@ function toggleSidebar() {
   if (bd) bd.classList.toggle('show', S.sidebarOpen);
 }
 
-function navigate(page) {
+function navigate(page, skipHistory) {
   S.page = page;
   S.filter = 'all';
   S.sidebarOpen = false;
@@ -319,9 +327,21 @@ function navigate(page) {
   var bd = $('sidebarBackdrop');
   if (sidebar) sidebar.classList.remove('open');
   if (bd) bd.classList.remove('show');
+  if (!skipHistory) {
+    try { history.pushState({ page: page }, '', '#' + page); } catch(e) {}
+  }
   render();
   window.scrollTo(0, 0);
 }
+
+window.addEventListener('popstate', function(e) {
+  if (e.state && e.state.page) {
+    navigate(e.state.page, true);
+  } else {
+    var hash = location.hash.replace('#', '');
+    if (hash) navigate(hash, true);
+  }
+});
 
 // =====================================================================
 // PDF GENERATION — SYSTÈME COMPLET

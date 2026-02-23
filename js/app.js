@@ -19,6 +19,11 @@
       renderChangePassword();
     } else {
       await initApp();
+      // Restore page from URL hash
+      var hash = location.hash.replace('#', '');
+      if (hash && hash !== S.page) {
+        navigate(hash, true);
+      }
     }
   } else {
     S.loading = false;
