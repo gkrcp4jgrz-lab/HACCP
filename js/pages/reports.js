@@ -5,11 +5,11 @@ function renderReports() {
 
   // ── Hero: Synthèse HACCP ──
   h += '<div class="card card-accent">';
-  h += '<div class="card-body" style="padding:28px">';
-  h += '<div class="v2-flex v2-items-center v2-gap-16 v2-mb-18">';
-  h += '<div style="width:56px;height:56px;background:var(--af-gradient);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;box-shadow:var(--shadow-teal)">🛡️</div>';
-  h += '<div><h3 class="v2-text-2xl v2-font-800" style="margin:0;letter-spacing:-.3px">Synthèse HACCP</h3>';
-  h += '<p class="v2-text-sm v2-text-muted v2-font-500 v2-mt-4">Rapport complet pour <strong class="v2-text-teal">' + siteName + '</strong></p></div></div>';
+  h += '<div class="card-body" style="padding:20px">';
+  h += '<div class="v2-flex v2-items-center v2-gap-14 v2-mb-16">';
+  h += '<div style="width:48px;height:48px;background:var(--af-gradient);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;box-shadow:var(--shadow-teal)">🛡️</div>';
+  h += '<div style="min-width:0"><h3 class="v2-text-2xl v2-font-800" style="margin:0;letter-spacing:-.3px">Synthèse HACCP</h3>';
+  h += '<p class="v2-text-sm v2-text-muted v2-font-500 v2-mt-4">Rapport pour <strong class="v2-text-teal">' + siteName + '</strong></p></div></div>';
   h += '<div class="form-row">';
   h += '<div class="form-group"><label class="form-label">Date du rapport</label><input type="date" class="form-input" id="rptFullDate" value="' + today() + '"></div>';
   h += '<div class="form-group v2-flex v2-items-end"><button class="btn btn-primary btn-lg btn-block" onclick="generateFullPDF()">🛡️ Générer la synthèse</button></div>';
@@ -23,19 +23,19 @@ function renderReports() {
     {icon:'📅',label:'DLC & Traçabilité',desc:'Contrôles DLC et lots',action:'generateDlcPDF()',color:'var(--af-warn-bg)'},
     {icon:'⚠️',label:'Signalements',desc:'Incidents & alertes',action:'generateIncidentPDF()',color:'var(--af-err-bg)'}
   ];
-  h += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px">';
+  h += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px">';
   reports.forEach(function(r) {
-    h += '<button class="v2-clickable" onclick="' + r.action + '" style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:22px 14px;border-radius:var(--radius);background:var(--bg);border:1px solid rgba(0,0,0,.06);cursor:pointer;box-shadow:var(--shadow-card);transition:all .3s var(--ease-apple)">';
-    h += '<div style="width:44px;height:44px;background:' + r.color + ';border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px">' + r.icon + '</div>';
-    h += '<div class="v2-text-sm v2-font-700" style="color:var(--ink)">' + r.label + '</div>';
-    h += '<div class="v2-text-xs v2-text-muted">' + r.desc + '</div>';
+    h += '<button class="v2-clickable" onclick="' + r.action + '" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 8px;border-radius:var(--radius);background:var(--bg);border:1px solid rgba(0,0,0,.06);cursor:pointer;box-shadow:var(--shadow-card);transition:all .3s var(--ease-apple)">';
+    h += '<div style="width:40px;height:40px;background:' + r.color + ';border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px">' + r.icon + '</div>';
+    h += '<div class="v2-text-sm v2-font-700" style="color:var(--ink);text-align:center">' + r.label + '</div>';
+    h += '<div class="v2-text-xs v2-text-muted" style="text-align:center">' + r.desc + '</div>';
     h += '</button>';
   });
   h += '</div>';
 
-  h += '<div class="v2-flex v2-gap-12 v2-flex-wrap">';
-  h += '<div class="form-group" style="flex:1;min-width:140px"><label class="form-label">Période signalements</label><div class="v2-flex v2-items-center v2-gap-8"><input type="number" class="form-input" id="rptIncidentPeriod" value="30" min="1" max="365" style="width:100px"><span class="v2-text-sm v2-text-muted">jours</span></div></div>';
-  h += '<div class="form-group" style="flex:1;min-width:140px"><label class="form-label">Date températures</label><input type="date" class="form-input" id="rptTempDate" value="' + today() + '"></div>';
+  h += '<div class="form-row">';
+  h += '<div class="form-group"><label class="form-label">Période signalements</label><div class="v2-flex v2-items-center v2-gap-8"><input type="number" class="form-input" id="rptIncidentPeriod" value="30" min="1" max="365" style="max-width:100px;width:100%"><span class="v2-text-sm v2-text-muted">jours</span></div></div>';
+  h += '<div class="form-group"><label class="form-label">Date températures</label><input type="date" class="form-input" id="rptTempDate" value="' + today() + '"></div>';
   h += '</div>';
   h += '</div></div>';
 
