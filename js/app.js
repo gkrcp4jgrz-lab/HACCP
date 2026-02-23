@@ -77,13 +77,24 @@ initApp = async function() {
 // ── SERVICE WORKER ──
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('/sw.js').then(function(reg) {
-      // Auto-update check
+    // Force clear ALL caches first
+    if (caches) {
+      caches.keys().then(function(names) {
+        names.forEach(function(name) { caches.delete(name); });
+      });
+    }
+    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+      registrations.forEach(function(reg) { reg.unregister(); });
+    }).then(function() {
+      return navigator.serviceWorker.register('/sw.js');
+    }).then(function(reg) {
+      reg.update();
       reg.addEventListener('updatefound', function() {
         var newSW = reg.installing;
         newSW.addEventListener('statechange', function() {
           if (newSW.state === 'activated') {
-            showToast('Mise à jour installée', 'info');
+            showToast('Mise à jour installée — rechargement...', 'info');
+            setTimeout(function() { location.reload(); }, 1500);
           }
         });
       });

@@ -79,18 +79,18 @@ self.addEventListener('fetch', function(e) {
     return;
   }
 
-  // Static assets: cache-first
+  // Static assets: network-first (ensures updates are visible immediately)
   e.respondWith(
-    caches.match(e.request).then(function(cached) {
-      if (cached) return cached;
-      return fetch(e.request).then(function(resp) {
-        if (resp.ok && url.origin === self.location.origin) {
-          var clone = resp.clone();
-          caches.open(CACHE_NAME).then(function(cache) { cache.put(e.request, clone); });
-        }
-        return resp;
-      }).catch(function() {
-        // Offline fallback for navigation
+    fetch(e.request).then(function(resp) {
+      if (resp.ok && url.origin === self.location.origin) {
+        var clone = resp.clone();
+        caches.open(CACHE_NAME).then(function(cache) { cache.put(e.request, clone); });
+      }
+      return resp;
+    }).catch(function() {
+      // Offline fallback: serve from cache
+      return caches.match(e.request).then(function(cached) {
+        if (cached) return cached;
         if (e.request.mode === 'navigate') {
           return caches.match('/index.html');
         }
