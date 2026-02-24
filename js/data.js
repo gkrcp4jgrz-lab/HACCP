@@ -21,17 +21,16 @@ async function loadSites() {
 async function loadSiteConfig() {
   if (!S.currentSiteId) return;
   try {
-    var eq = await sb.from('site_equipment').select('*').eq('site_id', S.currentSiteId).eq('active', true).order('sort_order');
-    S.siteConfig.equipment = eq.data || [];
-
-    var pr = await sb.from('site_products').select('*').eq('site_id', S.currentSiteId).eq('active', true).order('sort_order');
-    S.siteConfig.products = pr.data || [];
-
-    var su = await sb.from('site_suppliers').select('*').eq('site_id', S.currentSiteId).eq('active', true).order('name');
-    S.siteConfig.suppliers = su.data || [];
-
-    var mo = await sb.from('site_modules').select('*').eq('site_id', S.currentSiteId);
-    S.siteConfig.modules = mo.data || [];
+    var results = await Promise.all([
+      sb.from('site_equipment').select('*').eq('site_id', S.currentSiteId).eq('active', true).order('sort_order'),
+      sb.from('site_products').select('*').eq('site_id', S.currentSiteId).eq('active', true).order('sort_order'),
+      sb.from('site_suppliers').select('*').eq('site_id', S.currentSiteId).eq('active', true).order('name'),
+      sb.from('site_modules').select('*').eq('site_id', S.currentSiteId)
+    ]);
+    S.siteConfig.equipment = results[0].data || [];
+    S.siteConfig.products = results[1].data || [];
+    S.siteConfig.suppliers = results[2].data || [];
+    S.siteConfig.modules = results[3].data || [];
   } catch(e) { console.error('Load config error:', e); }
 }
 
@@ -41,32 +40,33 @@ async function loadSiteData() {
   var todayStr = today();
   var localMidnightISO = new Date(todayStr + 'T00:00:00').toISOString();
   try {
-    var t = await sb.from('temperatures').select('*').eq('site_id', sid).gte('recorded_at', localMidnightISO).order('recorded_at', {ascending:false});
-    S.data.temperatures = t.data || [];
+    var results = await Promise.all([
+      sb.from('temperatures').select('*').eq('site_id', sid).gte('recorded_at', localMidnightISO).order('recorded_at', {ascending:false}),
+      sb.from('dlcs').select('*').eq('site_id', sid).not('status', 'in', '("consumed","discarded")').order('dlc_date').limit(500),
+      sb.from('lots').select('*').eq('site_id', sid).order('recorded_at', {ascending:false}).limit(50),
+      sb.from('orders').select('*').eq('site_id', sid).in('status', ['to_order','ordered']).order('ordered_at', {ascending:false}),
+      sb.from('consignes').select('*').eq('site_id', sid).order('created_at', {ascending:false}).limit(50),
+      sb.from('incident_reports').select('*').eq('site_id', sid).in('status', ['open','in_progress']).order('created_at', {ascending:false})
+    ]);
+    S.data.temperatures = results[0].data || [];
+    S.data.dlcs = results[1].data || [];
+    S.data.lots = results[2].data || [];
+    S.data.orders = results[3].data || [];
 
-    var d = await sb.from('dlcs').select('*').eq('site_id', sid).order('dlc_date');
-    S.data.dlcs = d.data || [];
-
-    var l = await sb.from('lots').select('*').eq('site_id', sid).order('recorded_at', {ascending:false}).limit(50);
-    S.data.lots = l.data || [];
-
-    var o = await sb.from('orders').select('*').eq('site_id', sid).in('status', ['to_order','ordered']).order('ordered_at', {ascending:false});
-    S.data.orders = o.data || [];
-
-    var c = await sb.from('consignes').select('*').eq('site_id', sid).order('created_at', {ascending:false}).limit(50);
     var dismissed = [];
-    try { dismissed = JSON.parse(localStorage.getItem('haccp_dismissed_consignes') || '[]'); } catch(e) {}
-    S.data.consignes = (c.data || []).filter(function(con) { return dismissed.indexOf(con.id) === -1 && con.is_read !== true; });
+    var dismissKey = 'haccp_dismissed_consignes_' + sid;
+    try { dismissed = JSON.parse(localStorage.getItem(dismissKey) || '[]'); } catch(e) {}
+    // Also read legacy global key for backward compat
+    try { var legacy = JSON.parse(localStorage.getItem('haccp_dismissed_consignes') || '[]'); dismissed = dismissed.concat(legacy); } catch(e) {}
+    S.data.consignes = (results[4].data || []).filter(function(con) { return dismissed.indexOf(con.id) === -1 && con.is_read !== true; });
 
-    var ir = await sb.from('incident_reports').select('*').eq('site_id', sid).in('status', ['open','in_progress']).order('created_at', {ascending:false});
-    S.data.incident_reports = ir.data || [];
+    S.data.incident_reports = results[5].data || [];
   } catch(e) { console.error('Load data error:', e); }
 }
 
 async function switchSite(siteId) {
   S.currentSiteId = siteId;
-  await loadSiteConfig();
-  await loadSiteData();
+  await Promise.all([loadSiteConfig(), loadSiteData()]);
   render();
 }
 
@@ -77,8 +77,7 @@ async function initApp() {
   S.claudeApiKey = sessionStorage.getItem('haccp_claude_key') || '';
   await loadSites();
   if (S.currentSiteId) {
-    await loadSiteConfig();
-    await loadSiteData();
+    await Promise.all([loadSiteConfig(), loadSiteData()]);
   }
   S.loading = false;
   S.page = 'dashboard';

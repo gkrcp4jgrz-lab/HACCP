@@ -297,38 +297,40 @@ async function loadMultiSiteStats() {
   var todayStr = today();
   var stats = [];
 
-  for (var i = 0; i < S.sites.length; i++) {
-    var site = S.sites[i];
+  var localMidnightISO = new Date(todayStr + 'T00:00:00').toISOString();
+
+  stats = await Promise.all(S.sites.map(async function(site) {
     var sid = site.id;
-
     try {
-      var t = await sb.from('temperatures').select('id', { count: 'exact', head: true }).eq('site_id', sid).gte('recorded_at', todayStr + 'T00:00:00');
-      var eq = await sb.from('site_equipment').select('id', { count: 'exact', head: true }).eq('site_id', sid).eq('active', true);
-      var pr = await sb.from('site_products').select('id', { count: 'exact', head: true }).eq('site_id', sid).eq('active', true);
-      var d = await sb.from('dlcs').select('id, dlc_date, status').eq('site_id', sid).not('status', 'in', '("consumed","discarded")');
-      var o = await sb.from('orders').select('id', { count: 'exact', head: true }).eq('site_id', sid).eq('status', 'to_order');
-      var c = await sb.from('consignes').select('*').eq('site_id', sid).eq('priority', 'urgent').eq('is_read', false);
+      var results = await Promise.all([
+        sb.from('temperatures').select('id', { count: 'exact', head: true }).eq('site_id', sid).gte('recorded_at', localMidnightISO),
+        sb.from('site_equipment').select('id', { count: 'exact', head: true }).eq('site_id', sid).eq('active', true),
+        sb.from('site_products').select('id', { count: 'exact', head: true }).eq('site_id', sid).eq('active', true),
+        sb.from('dlcs').select('id, dlc_date, status').eq('site_id', sid).not('status', 'in', '("consumed","discarded")'),
+        sb.from('orders').select('id', { count: 'exact', head: true }).eq('site_id', sid).eq('status', 'to_order'),
+        sb.from('consignes').select('*').eq('site_id', sid).eq('priority', 'urgent').eq('is_read', false)
+      ]);
 
-      var dlcData = d.data || [];
+      var dlcData = results[3].data || [];
       var dlcWarnings = dlcData.filter(function(x) { var days = daysUntil(x.dlc_date); return days <= 2 && days >= 0; }).length;
       var dlcExpired = dlcData.filter(function(x) { return daysUntil(x.dlc_date) < 0; }).length;
-      var urgentList = c.data || [];
+      var urgentList = results[5].data || [];
 
-      stats.push({
+      return {
         site: site,
-        tempCount: t.count || 0,
-        totalExpected: (eq.count || 0) + (pr.count || 0),
+        tempCount: results[0].count || 0,
+        totalExpected: (results[1].count || 0) + (results[2].count || 0),
         dlcWarnings: dlcWarnings,
         dlcExpired: dlcExpired,
-        ordersOpen: o.count || 0,
+        ordersOpen: results[4].count || 0,
         urgentConsignes: urgentList.length,
         urgentConsignesList: urgentList
-      });
+      };
     } catch (e) {
       console.error('Stats error for site', site.name, e);
-      stats.push({ site: site, tempCount: 0, totalExpected: 0, dlcWarnings: 0, dlcExpired: 0, ordersOpen: 0, urgentConsignes: 0 });
+      return { site: site, tempCount: 0, totalExpected: 0, dlcWarnings: 0, dlcExpired: 0, ordersOpen: 0, urgentConsignes: 0 };
     }
-  }
+  }));
 
   _multiSiteCache = stats;
   _multiSiteCacheTime = now;

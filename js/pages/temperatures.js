@@ -10,18 +10,28 @@ function renderTemperatures() {
   var currentService = totalPerService > 0 ? Math.floor(tempCount / totalPerService) + 1 : 1;
   if (currentService > servicesPerDay) currentService = servicesPerDay;
   var serviceProgress = totalPerService > 0 ? tempCount % totalPerService : 0;
-  if (tempCount > 0 && tempCount % totalPerService === 0) serviceProgress = totalPerService;
+  if (tempCount > 0 && totalPerService > 0 && tempCount % totalPerService === 0) serviceProgress = totalPerService;
   var pct = totalExpected > 0 ? Math.min(100, Math.round(tempCount / totalExpected * 100)) : 0;
   var servicePct = totalPerService > 0 ? Math.min(100, Math.round(serviceProgress / totalPerService * 100)) : 0;
   var nonConform = S.data.temperatures.filter(function(t) { return !t.is_conform; });
   var conformCount = tempCount - nonConform.length;
 
-  // Load validated services from localStorage
+  // Load validated services from localStorage + purge old keys
   if (!S.validatedServices) {
     try {
-      var key = 'haccp_validated_' + S.currentSiteId + '_' + today();
-      var saved = localStorage.getItem(key);
+      var lsPrefix = 'haccp_validated_';
+      var todayKey = lsPrefix + S.currentSiteId + '_' + today();
+      var saved = localStorage.getItem(todayKey);
       S.validatedServices = saved ? JSON.parse(saved) : [];
+      // Purge keys older than 3 days
+      for (var k = 0; k < localStorage.length; k++) {
+        var lk = localStorage.key(k);
+        if (lk && lk.indexOf(lsPrefix) === 0 && lk !== todayKey) {
+          var parts = lk.split('_');
+          var dateStr = parts[parts.length - 1];
+          if (dateStr && daysUntil(dateStr) < -3) localStorage.removeItem(lk);
+        }
+      }
     } catch(e) { S.validatedServices = []; }
   }
 
@@ -81,7 +91,9 @@ function renderTemperatures() {
   S.siteConfig.equipment.forEach(function(e) {
     // Check if already recorded this service
     var alreadyDone = S.data.temperatures.some(function(t) { return t.equipment_id === e.id && t.record_type === 'equipment'; });
-    h += '<option value="' + e.id + '">' + (alreadyDone ? '✅ ' : '') + e.emoji + ' ' + esc(e.name) + ' (' + e.temp_min + '°/' + e.temp_max + '°C)</option>';
+    var minLabel = (e.temp_min != null && e.temp_min !== '') ? e.temp_min : '—';
+    var maxLabel = (e.temp_max != null && e.temp_max !== '') ? e.temp_max : '—';
+    h += '<option value="' + e.id + '">' + (alreadyDone ? '✅ ' : '') + e.emoji + ' ' + esc(e.name) + ' (' + minLabel + '°/' + maxLabel + '°C)</option>';
   });
   h += '</select></div><div class="form-group"><label class="form-label">Température °C <span class="req">*</span></label><input type="number" step="0.1" class="form-input" id="tempEqVal" required placeholder="Ex: 3.5"></div></div>';
   h += '<button type="submit" class="btn btn-primary btn-lg v2-mt-4">✓ Enregistrer la température</button></form></div></div>';

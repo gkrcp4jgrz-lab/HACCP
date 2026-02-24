@@ -115,7 +115,7 @@ function renderSettingsNotifications() {
   // Load saved settings
   var emailEnabled = localStorage.getItem('haccp_email_enabled') === 'true';
   var emailTo = localStorage.getItem('haccp_email_to') || '';
-  var emailEvents = JSON.parse(localStorage.getItem('haccp_email_events') || '["temp_validation","dlc_expired","incident"]');
+  var emailEvents; try { emailEvents = JSON.parse(localStorage.getItem('haccp_email_events') || '["temp_validation","dlc_expired","incident"]'); } catch(e) { emailEvents = ['temp_validation','dlc_expired','incident']; }
   var claudeKey = sessionStorage.getItem('haccp_claude_key') || '';
 
   // Email notifications

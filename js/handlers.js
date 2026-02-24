@@ -52,16 +52,18 @@ window.handleTempEquip = async function(e) {
   var eq = S.siteConfig.equipment.find(function(e){return e.id===eqId;});
   var eqMin = (eq && eq.temp_min != null && eq.temp_min !== '') ? Number(eq.temp_min) : -999;
   var eqMax = (eq && eq.temp_max != null && eq.temp_max !== '') ? Number(eq.temp_max) : 999;
+  var action = null;
   if (eq && (numVal < eqMin || numVal > eqMax)) {
-    var action = await appPrompt('Température non conforme', 'La valeur <strong>' + numVal + '°C</strong> est hors limites (' + eqMin + '°/' + eqMax + '°C).<br>Quelle action corrective a été effectuée ?', '', {placeholder:'Ex: Dégivrage, Appel SAV, Transfert produits...',multiline:true,confirmLabel:'Enregistrer'});
+    action = await appPrompt('Température non conforme', 'La valeur <strong>' + numVal + '°C</strong> est hors limites (' + eqMin + '°/' + eqMax + '°C).<br>Quelle action corrective a été effectuée ?', '', {placeholder:'Ex: Dégivrage, Appel SAV, Transfert produits...',multiline:true,confirmLabel:'Enregistrer'});
     if (!action) { showToast('Enregistrement annulé', 'info'); return; }
-    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading"></span>'; }
-    await addTemperature('equipment', eqId, numVal, action, '');
-  } else {
-    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading"></span>'; }
-    await addTemperature('equipment', eqId, numVal, null, null);
   }
-  $('tempEqVal').value = '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading"></span>'; }
+  try {
+    await addTemperature('equipment', eqId, numVal, action, '');
+    if ($('tempEqVal')) $('tempEqVal').value = '';
+  } catch(ex) {
+    showToast('Erreur: ' + (ex.message || ex), 'error');
+  }
   if (btn) { btn.disabled = false; btn.innerHTML = '✓ Enregistrer la température'; }
 };
 
@@ -75,16 +77,18 @@ window.handleTempProd = async function(e) {
   var pr = S.siteConfig.products.find(function(p){return p.id===prId;});
   var prMin = (pr && pr.temp_min != null && pr.temp_min !== '') ? Number(pr.temp_min) : -999;
   var prMax = (pr && pr.temp_max != null && pr.temp_max !== '') ? Number(pr.temp_max) : 999;
+  var action = null;
   if (pr && (numVal < prMin || numVal > prMax)) {
-    var action = await appPrompt('Température non conforme', 'Quelle action corrective a été effectuée ?', '', {placeholder:'Ex: Dégivrage, Appel SAV, Transfert produits...',multiline:true,confirmLabel:'Enregistrer'});
+    action = await appPrompt('Température non conforme', 'Quelle action corrective a été effectuée ?', '', {placeholder:'Ex: Dégivrage, Appel SAV, Transfert produits...',multiline:true,confirmLabel:'Enregistrer'});
     if (!action) { showToast('Enregistrement annulé', 'info'); return; }
-    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading"></span>'; }
-    await addTemperature('product', prId, numVal, action, '');
-  } else {
-    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading"></span>'; }
-    await addTemperature('product', prId, numVal, null, null);
   }
-  $('tempPrVal').value = '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading"></span>'; }
+  try {
+    await addTemperature('product', prId, numVal, action, '');
+    if ($('tempPrVal')) $('tempPrVal').value = '';
+  } catch(ex) {
+    showToast('Erreur: ' + (ex.message || ex), 'error');
+  }
   if (btn) { btn.disabled = false; btn.innerHTML = '✓ Enregistrer la température'; }
 };
 
@@ -165,10 +169,16 @@ window.handleConsigne = async function(e) {
 window.handleCreateSite = async function(e) {
   e.preventDefault();
   var btn = e.target.querySelector('button[type="submit"]');
-  withLoading(btn, function() {
-    return createSite($('sName').value, $('sType').value, $('sAddr').value, $('sCity').value, $('sPhone').value, $('sEmail').value, $('sAgr').value, $('sResp').value);
+  withLoading(btn, async function() {
+    await createSite($('sName').value, $('sType').value, $('sAddr').value, $('sCity').value, $('sPhone').value, $('sEmail').value, $('sAgr').value, $('sResp').value);
+    if ($('sName')) $('sName').value = '';
+    if ($('sAddr')) $('sAddr').value = '';
+    if ($('sCity')) $('sCity').value = '';
+    if ($('sPhone')) $('sPhone').value = '';
+    if ($('sEmail')) $('sEmail').value = '';
+    if ($('sAgr')) $('sAgr').value = '';
+    if ($('sResp')) $('sResp').value = '';
   });
-  $('sName').value = ''; $('sAddr').value = ''; $('sCity').value = ''; $('sPhone').value = ''; $('sEmail').value = ''; $('sAgr').value = ''; $('sResp').value = '';
 };
 
 window.handleCreateUser = async function(e) {
@@ -194,9 +204,9 @@ window.handleCreateUser = async function(e) {
     }
 
     showToast('Utilisateur créé — ID : ' + loginId, 'success', 5000);
-    openModal('<div class="modal-header"><div class="modal-title">Utilisateur créé</div><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body" style="text-align:center"><div style="width:56px;height:56px;background:var(--af-ok-bg);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 14px">✅</div><div style="padding:14px;background:var(--bg-off);border-radius:var(--radius-sm);margin-bottom:10px"><div class="v2-text-xs v2-text-muted v2-mb-4">Identifiant</div><div class="v2-text-xl v2-font-800" style="letter-spacing:2px;color:var(--af-teal);font-family:monospace">' + esc(loginId) + '</div></div><div style="padding:14px;background:var(--bg-off);border-radius:var(--radius-sm)"><div class="v2-text-xs v2-text-muted v2-mb-4">Mot de passe</div><div class="v2-text-xl v2-font-800">' + esc(tempPass) + '</div></div></div><div class="modal-footer"><button class="btn btn-primary btn-lg" onclick="closeModal()">Compris</button></div>');
+    openModal('<div class="modal-header"><div class="modal-title">Utilisateur créé</div><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body" style="text-align:center"><div style="width:56px;height:56px;background:var(--af-ok-bg);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 14px">✅</div><div style="padding:14px;background:var(--bg-off);border-radius:var(--radius-sm);margin-bottom:10px"><div class="v2-text-xs v2-text-muted v2-mb-4">Identifiant</div><div class="v2-text-xl v2-font-800" style="letter-spacing:2px;color:var(--af-teal);font-family:monospace">' + esc(loginId) + '</div></div><div style="padding:14px;background:var(--bg-off);border-radius:var(--radius-sm)"><div class="v2-text-xs v2-text-muted v2-mb-4">Mot de passe (cliquez pour copier)</div><input type="text" readonly value="' + esc(tempPass) + '" style="width:100%;border:none;background:transparent;font-size:18px;font-weight:800;text-align:center;cursor:pointer" onclick="navigator.clipboard.writeText(this.value);showToast(\'Copié !\',\'success\',1500)"></div></div><div class="modal-footer"><button class="btn btn-primary btn-lg" onclick="closeModal()">Compris</button></div>');
 
-    $('nuName').value = ''; $('nuPass').value = 'Haccp2026!';
+    $('nuName').value = ''; $('nuPass').value = generateTempPassword();
     if ($('nuLoginPreview')) $('nuLoginPreview').textContent = '';
     if ($('userListContainer')) loadAndDisplayUsers();
   } catch(ex) {
@@ -324,14 +334,39 @@ window.handleEditLoginId = async function(userId, currentId) {
 };
 
 window.handleResetUserPassword = async function(userId, loginId) {
-  var newPass = await appPrompt('Réinitialiser le mot de passe', 'Nouveau mot de passe pour <strong>' + esc(loginId) + '</strong>', '', {placeholder:'Minimum 8 caractères',inputType:'text',confirmLabel:'Réinitialiser'});
+  var newPass = await appPrompt('Réinitialiser le mot de passe', 'Nouveau mot de passe pour <strong>' + esc(loginId) + '</strong>', '', {placeholder:'Minimum 8 caractères',inputType:'password',confirmLabel:'Réinitialiser'});
   if (!newPass) return;
   var v = validatePassword(newPass);
   if (!v.valid) { showToast(v.message, 'error'); return; }
   try {
+    // 1. Save current admin session
+    var currentSession = await sb.auth.getSession();
+    var savedToken = currentSession.data.session;
+
+    // 2. Get user's email to sign in as them temporarily
+    var profile = await sb.from('profiles').select('email').eq('id', userId).single();
+    if (!profile.data || !profile.data.email) throw new Error('Email utilisateur introuvable');
+
+    // 3. Sign in as the target user with a known temp password (old approach won't work)
+    // Instead: use Supabase admin RPC if available
+    var rpcResult = await sb.rpc('admin_reset_password', { p_user_id: userId, p_new_password: newPass });
+    if (rpcResult.error) {
+      // Fallback: set must_change_password and warn admin
+      await sb.from('profiles').update({ must_change_password: true }).eq('id', userId);
+      showToast('Le mot de passe n\'a pas pu être changé automatiquement. L\'utilisateur devra le changer à la prochaine connexion.', 'warning', 6000);
+      return;
+    }
+
+    // 4. Mark must_change_password
     await sb.from('profiles').update({ must_change_password: true }).eq('id', userId);
+
+    // 5. Restore admin session
+    if (savedToken) {
+      await sb.auth.setSession({ access_token: savedToken.access_token, refresh_token: savedToken.refresh_token });
+    }
+
     showToast('Mot de passe réinitialisé', 'success');
-    openModal('<div class="modal-header"><div class="modal-title">Mot de passe réinitialisé</div><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body" style="text-align:center"><p class="v2-text-md v2-font-600 v2-mb-14">L\'utilisateur devra changer son mot de passe à la prochaine connexion.</p><div style="padding:14px;background:var(--bg-off);border-radius:var(--radius-sm)"><div class="v2-text-xs v2-text-muted v2-mb-4">Nouveau mot de passe</div><div class="v2-text-xl v2-font-800">' + esc(newPass) + '</div></div></div><div class="modal-footer"><button class="btn btn-primary" onclick="closeModal()">Compris</button></div>');
+    openModal('<div class="modal-header"><div class="modal-title">Mot de passe réinitialisé</div><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body" style="text-align:center"><p class="v2-text-md v2-font-600 v2-mb-14">L\'utilisateur devra changer son mot de passe à la prochaine connexion.</p><div style="padding:14px;background:var(--bg-off);border-radius:var(--radius-sm)"><div class="v2-text-xs v2-text-muted v2-mb-4">Nouveau mot de passe</div><div class="v2-font-800" style="font-size:16px;letter-spacing:1px"><input type="text" readonly value="' + esc(newPass) + '" style="width:100%;border:none;background:transparent;font-size:16px;font-weight:800;text-align:center;cursor:pointer" onclick="navigator.clipboard.writeText(this.value);showToast(\'Copié !\',\'success\',1500)"></div></div><p class="v2-text-xs v2-text-muted v2-mt-8">Cliquez sur le mot de passe pour le copier</p></div><div class="modal-footer"><button class="btn btn-primary" onclick="closeModal()">Compris</button></div>');
   } catch(ex) {
     showToast('Erreur: ' + (ex.message || ex), 'error');
   }
@@ -352,8 +387,8 @@ window.dashMarkReceived = async function(id) {
 };
 window.markConsigneRead = async function(id) {
   try {
-    // 1. Save dismissed ID in localStorage (survives refresh)
-    var key = 'haccp_dismissed_consignes';
+    // 1. Save dismissed ID in localStorage per site (survives refresh)
+    var key = 'haccp_dismissed_consignes_' + (S.currentSiteId || 'global');
     var dismissed = [];
     try { dismissed = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) {}
     if (dismissed.indexOf(id) === -1) dismissed.push(id);
@@ -364,10 +399,8 @@ window.markConsigneRead = async function(id) {
     render();
     showToast('Consigne traitée', 'success');
 
-    // 3. Try to persist in DB (may fail due to RLS, that's OK)
-    sb.from('consignes').update({ is_read: true }).eq('id', id).then(function(r) {
-      if (r.error) sb.from('consignes').delete().eq('id', id);
-    });
+    // 3. Try to persist in DB (may fail due to RLS, that's OK — localStorage is the primary store)
+    sb.from('consignes').update({ is_read: true }).eq('id', id).catch(function() {});
   } catch(e) { console.warn('markConsigneRead:', e); }
 };
 window.closeModal = closeModal;
@@ -384,11 +417,11 @@ window.addOrder = addOrder;
 window.updateOrderStatus = updateOrderStatus;
 window.deleteOrder = deleteOrder;
 window.deleteConsigne = deleteConsigne;
-window.deleteEquipment = deleteEquipment;
-window.deleteProduct = deleteProduct;
-window.deleteSupplier = deleteSupplier;
-window.toggleModule = toggleModule;
-window.deleteSite = deleteSite;
+window.deleteEquipment = function(id) { if (!isManager()) { showToast('Accès refusé','error'); return; } return deleteEquipment(id); };
+window.deleteProduct = function(id) { if (!isManager()) { showToast('Accès refusé','error'); return; } return deleteProduct(id); };
+window.deleteSupplier = function(id) { if (!isManager()) { showToast('Accès refusé','error'); return; } return deleteSupplier(id); };
+window.toggleModule = function(k,v) { if (!isManager()) { showToast('Accès refusé','error'); return; } return toggleModule(k,v); };
+window.deleteSite = function(id) { if (!isSuperAdmin()) { showToast('Accès refusé','error'); return; } return deleteSite(id); };
 window.generateDailyPDF = generateDailyPDF;
 window.generateTempPDF = generateTempPDF;
 window.generateDlcPDF = generateDlcPDF;

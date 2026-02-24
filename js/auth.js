@@ -115,10 +115,16 @@ async function doLoginById(loginId, pass) {
 async function doLogout() {
   if (_sessionTimer) clearTimeout(_sessionTimer);
   await sb.auth.signOut();
+  // Clean sensitive data from storage
+  sessionStorage.removeItem('haccp_claude_key');
+  localStorage.removeItem('haccp_email_enabled');
+  localStorage.removeItem('haccp_email_to');
+  localStorage.removeItem('haccp_email_events');
   S.user = null;
   S.profile = null;
   S.sites = [];
   S.currentSiteId = null;
+  S.claudeApiKey = '';
   render();
 }
 

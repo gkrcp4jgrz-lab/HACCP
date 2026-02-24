@@ -82,8 +82,11 @@ window.toggleBnavMore = function() {
       h += '<div class="bnav-menu-section">Compte</div>';
       h += bnavMenuItem('profile', '👤', 'Mon profil');
     } else {
-      h += bnavMenuItem('profile', '👤', 'Mon profil');
+      // Employee menu
       h += bnavMenuItem('notifications', '🔔', 'Notifications');
+      h += bnavMenuItem('reports', '📄', 'Rapports PDF');
+      h += '<div class="bnav-menu-section">Compte</div>';
+      h += bnavMenuItem('profile', '👤', 'Mon profil');
     }
     // Dark mode toggle
     h += '<div class="bnav-menu-section">Apparence</div>';

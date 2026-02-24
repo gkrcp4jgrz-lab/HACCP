@@ -199,9 +199,9 @@ img{max-width:100%;height:auto}
 /* ══════════════════════════════════════════
    TOAST NOTIFICATIONS — V2
    ══════════════════════════════════════════ */
-.toast-container{position:fixed;top:20px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:10px;max-width:400px}
-.toast{position:fixed;bottom:calc(var(--bottomnav-h) + 24px);left:50%;transform:translateX(-50%) translateY(80px);background:rgba(15,23,42,.88);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);color:#fff;padding:14px 28px;border-radius:var(--radius-pill);font-size:14px;font-weight:600;box-shadow:var(--shadow-xl);z-index:9999;transition:transform .4s var(--ease-spring);pointer-events:none;max-width:90vw;text-align:center;letter-spacing:-.01em}
-.toast.show{transform:translateX(-50%) translateY(0)}
+.toast-container{position:fixed;bottom:calc(var(--bottomnav-h) + 16px);left:50%;transform:translateX(-50%);z-index:10000;display:flex;flex-direction:column-reverse;gap:8px;max-width:90vw;pointer-events:none}
+.toast{position:relative;left:auto;bottom:auto;transform:translateY(80px);background:rgba(15,23,42,.88);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);color:#fff;padding:14px 28px;border-radius:var(--radius-pill);font-size:14px;font-weight:600;box-shadow:var(--shadow-xl);z-index:9999;transition:transform .4s var(--ease-spring);pointer-events:none;max-width:90vw;text-align:center;letter-spacing:-.01em}
+.toast.show{transform:translateY(0)}
 .toast-success{background:var(--af-ok-dark)}
 .toast-error{background:var(--af-err-dark)}
 .toast-warning{background:var(--af-warn-dark)}

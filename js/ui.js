@@ -339,7 +339,7 @@ window.addEventListener('popstate', function(e) {
     navigate(e.state.page, true);
   } else {
     var hash = location.hash.replace('#', '');
-    if (hash) navigate(hash, true);
+    navigate(hash || 'dashboard', true);
   }
 });
 

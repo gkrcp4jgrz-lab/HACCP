@@ -9,7 +9,7 @@ function renderUserManagement() {
   h += '<div class="card"><div class="card-header">Creer un utilisateur</div><div class="card-body"><form onsubmit="handleCreateUser(event)">';
   h += '<div class="form-row"><div class="form-group"><label class="form-label">Nom complet <span class="req">*</span></label><input type="text" class="form-input" id="nuName" required placeholder="Jean Renard" oninput="previewLoginId(this.value)"></div>';
   h += '<div class="form-group"><label class="form-label">Identifiant (auto)</label><div class="v2-login-preview" id="nuLoginPreview">—</div></div></div>';
-  h += '<div class="form-row"><div class="form-group"><label class="form-label">Mot de passe provisoire <span class="req">*</span></label><input type="text" class="form-input" id="nuPass" required value="Haccp2026!"></div>';
+  h += '<div class="form-row"><div class="form-group"><label class="form-label">Mot de passe provisoire <span class="req">*</span></label><input type="password" class="form-input" id="nuPass" required value="' + generateTempPassword() + '"><button type="button" class="btn btn-ghost btn-sm v2-mt-4" onclick="$(\'nuPass\').value=generateTempPassword()">Regénérer</button></div>';
   h += '<div class="form-group"><label class="form-label">Role global</label><select class="form-select" id="nuRole"><option value="employee">Employe</option><option value="manager">Gerant</option><option value="super_admin">Super Admin</option></select></div></div>';
   h += '<div class="form-row"><div class="form-group"><label class="form-label">Assigner a un site</label><select class="form-select" id="nuSite"><option value="">— Aucun site —</option>';
   S.sites.forEach(function(s) { h += '<option value="' + s.id + '">' + esc(s.name) + '</option>'; });
@@ -75,7 +75,7 @@ async function loadAndDisplayUsersDetailed() {
         html += '<div class="v2-flex v2-flex-wrap v2-gap-6 v2-mt-10">';
         userSites.forEach(function(us) {
           var siteRoleIcon = {admin:'🔑',manager:'👔',employee:'👷'}[us.site_role]||'';
-          html += '<span class="badge badge-blue" style="font-size:12px">' + siteRoleIcon + ' ' + esc(us.sites?us.sites.name:'?') + ' <button onclick="removeSiteAccess(\'' + u.id + '\',\'' + us.site_id + '\');setTimeout(loadAndDisplayUsersDetailed,500)" style="background:none;border:none;cursor:pointer;color:var(--err,#ef4444);font-weight:bold;margin-left:4px">✕</button></span>';
+          html += '<span class="badge badge-blue" style="font-size:12px">' + siteRoleIcon + ' ' + esc(us.sites?us.sites.name:'?') + ' <button onclick="removeSiteAccessFromUserList(\'' + u.id + '\',\'' + us.site_id + '\')" style="background:none;border:none;cursor:pointer;color:var(--err,#ef4444);font-weight:bold;margin-left:4px">✕</button></span>';
         });
         html += '</div>';
       } else {
@@ -95,7 +95,7 @@ window.changeGlobalRole = async function(userId, newRole) {
   } catch(e) { showToast('Erreur: ' + (e.message||e), 'error'); }
 };
 
-window.removeSiteAccess = async function(userId, siteId) {
+window.removeSiteAccessFromUserList = async function(userId, siteId) {
   if (!(await appConfirm('Retirer l\'accès', 'Retirer l\'accès de cet utilisateur à ce site ?', {danger:true,icon:'👤',confirmLabel:'Retirer'}))) return;
   try {
     await removeUserFromSite(userId, siteId);

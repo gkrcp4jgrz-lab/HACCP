@@ -25,7 +25,7 @@ function renderConsignes() {
 
   // Consignes urgentes non traitées en premier (toutes dates)
   var urgents = allConsignes.filter(function(c) { return c.priority === 'urgent' && !c.is_read; });
-  var treatedUrgents = allConsignes.filter(function(c) { return c.priority === 'urgent' && c.is_read; });
+  // Note: treatedUrgents removed — is_read consignes are already filtered out in loadSiteData
   if (urgents.length > 0) {
     h += '<div class="card v2-card--danger-left"><div class="card-header v2-text-danger">🔴 Consignes urgentes <span class="badge badge-red v2-ml-auto">' + urgents.length + '</span></div>';
     urgents.forEach(function(c) {

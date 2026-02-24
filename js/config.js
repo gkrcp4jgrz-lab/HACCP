@@ -188,6 +188,27 @@ function exportCSV(filename, headers, rows) {
   showToast('Export CSV téléchargé', 'success');
 }
 
+// ── RANDOM PASSWORD GENERATION ──
+function generateTempPassword() {
+  var upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  var lower = 'abcdefghjkmnpqrstuvwxyz';
+  var digits = '23456789';
+  var special = '!@#$';
+  // Ensure at least one of each required type
+  var pass = '';
+  var arr = new Uint32Array(12);
+  crypto.getRandomValues(arr);
+  pass += upper[arr[0] % upper.length];
+  pass += lower[arr[1] % lower.length];
+  pass += digits[arr[2] % digits.length];
+  pass += special[arr[3] % special.length];
+  var all = upper + lower + digits + special;
+  for (var i = 4; i < 10; i++) pass += all[arr[i] % all.length];
+  // Shuffle
+  pass = pass.split('').sort(function() { return 0.5 - Math.random(); }).join('');
+  return pass;
+}
+
 // ── LOGIN ID GENERATION ──
 
 function getLoginIdInitials(fullName) {

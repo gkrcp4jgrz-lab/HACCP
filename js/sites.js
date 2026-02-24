@@ -6,7 +6,8 @@ async function createSite(name, type, address, city, phone, email, agrement, res
   var r = await sb.rpc('create_site_with_defaults', { p_name: name, p_address: address || '', p_type: type || 'hotel' });
   if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
   var siteId = r.data;
-  await sb.from('sites').update({ city:city||'', phone:phone||'', email:email||'', agrement:agrement||'', responsable:responsable||'' }).eq('id', siteId);
+  var u = await sb.from('sites').update({ city:city||'', phone:phone||'', email:email||'', agrement:agrement||'', responsable:responsable||'' }).eq('id', siteId);
+  if (u.error) { showToast('Erreur mise à jour: ' + u.error.message, 'error'); }
   await loadSites();
   S.currentSiteId = siteId;
   await loadSiteConfig(); await loadSiteData(); render();
@@ -14,7 +15,8 @@ async function createSite(name, type, address, city, phone, email, agrement, res
 }
 
 async function updateSite(siteId, data) {
-  await sb.from('sites').update(data).eq('id', siteId);
+  var r = await sb.from('sites').update(data).eq('id', siteId);
+  if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
   await loadSites(); render();
 }
 
@@ -22,7 +24,8 @@ window.updateSiteConfig = async function(key, value) {
   if (!S.currentSiteId) return;
   var data = {};
   data[key] = value;
-  await sb.from('sites').update(data).eq('id', S.currentSiteId);
+  var r = await sb.from('sites').update(data).eq('id', S.currentSiteId);
+  if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
   var site = S.sites.find(function(s){return s.id===S.currentSiteId;});
   if (site) site[key] = value;
   render();
@@ -31,7 +34,8 @@ window.updateSiteConfig = async function(key, value) {
 async function deleteSite(siteId) {
   if (!(await appConfirm('Supprimer le site', 'ATTENTION : Supprimer ce site supprimera <strong>TOUTES</strong> ses données définitivement.', {danger:true,icon:'🗑️',confirmLabel:'Supprimer le site'}))) return;
   if (!(await appConfirm('Confirmation finale', 'Êtes-vous vraiment sûr ? Cette action est irréversible.', {danger:true,icon:'⚠️',confirmLabel:'Oui, supprimer'}))) return;
-  await sb.from('sites').delete().eq('id', siteId);
+  var r = await sb.from('sites').delete().eq('id', siteId);
+  if (r.error) { showToast('Erreur suppression: ' + r.error.message, 'error'); return; }
   await loadSites();
   if (S.currentSiteId === siteId) {
     S.currentSiteId = S.sites.length > 0 ? S.sites[0].id : null;
@@ -51,13 +55,15 @@ async function addEquipment(name, type, tempMin, tempMax, emoji) {
 }
 
 async function updateEquipment(id, data) {
-  await sb.from('site_equipment').update(data).eq('id', id);
+  var r = await sb.from('site_equipment').update(data).eq('id', id);
+  if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
   await loadSiteConfig(); render();
 }
 
 async function deleteEquipment(id) {
   if (!(await appConfirm('Désactiver', 'Désactiver cet équipement ?', {danger:true,icon:'❄️',confirmLabel:'Désactiver'}))) return;
-  await sb.from('site_equipment').update({active:false}).eq('id', id);
+  var r = await sb.from('site_equipment').update({active:false}).eq('id', id);
+  if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
   showToast('Équipement désactivé', 'success');
   await loadSiteConfig(); render();
 }
@@ -72,7 +78,8 @@ async function addProduct(name, category, tempMin, tempMax, emoji) {
 
 async function deleteProduct(id) {
   if (!(await appConfirm('Désactiver', 'Désactiver ce produit ?', {danger:true,icon:'🍽️',confirmLabel:'Désactiver'}))) return;
-  await sb.from('site_products').update({active:false}).eq('id', id);
+  var r = await sb.from('site_products').update({active:false}).eq('id', id);
+  if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
   showToast('Produit désactivé', 'success');
   await loadSiteConfig(); render();
 }
@@ -86,7 +93,8 @@ async function addSupplier(name, phone, email) {
 
 async function deleteSupplier(id) {
   if (!(await appConfirm('Désactiver', 'Désactiver ce fournisseur ?', {danger:true,icon:'🏭',confirmLabel:'Désactiver'}))) return;
-  await sb.from('site_suppliers').update({active:false}).eq('id', id);
+  var r = await sb.from('site_suppliers').update({active:false}).eq('id', id);
+  if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
   showToast('Fournisseur désactivé', 'success');
   await loadSiteConfig(); render();
 }
@@ -95,11 +103,13 @@ async function deleteSupplier(id) {
 
 async function toggleModule(moduleKey, enabled) {
   var existing = S.siteConfig.modules.find(function(m){return m.module_key===moduleKey;});
+  var r;
   if (existing) {
-    await sb.from('site_modules').update({enabled:enabled}).eq('id', existing.id);
+    r = await sb.from('site_modules').update({enabled:enabled}).eq('id', existing.id);
   } else {
-    await sb.from('site_modules').insert({site_id:S.currentSiteId, module_key:moduleKey, enabled:enabled});
+    r = await sb.from('site_modules').insert({site_id:S.currentSiteId, module_key:moduleKey, enabled:enabled});
   }
+  if (r && r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
   await loadSiteConfig(); render();
 }
 
