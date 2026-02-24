@@ -14,7 +14,7 @@ function renderBottomNav() {
   h += '<div class="bnav-more-backdrop" id="bnavMoreBackdrop" onclick="closeBnavMore()"></div>';
   h += '<div id="bnavMoreMenu" class="bnav-more-menu" style="display:none"></div>';
 
-  h += '<nav class="bottom-nav"><div class="bottom-nav-inner">';
+  h += '<nav class="bottom-nav" aria-label="Navigation principale"><div class="bottom-nav-inner">';
 
   if (isSuperAdmin()) {
     h += bnavItem('dashboard', '📊', 'Accueil');

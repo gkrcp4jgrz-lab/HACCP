@@ -83,16 +83,16 @@ function renderConsignes() {
 
     days.forEach(function(day) {
       var items = byDay[day];
-      var stateKey = '_consHist_' + day;
+      var stateKey = '_consHist_' + day.replace(/-/g,'');
       var isOpen = S[stateKey];
 
       h += '<div style="border-bottom:1px solid var(--border)">';
-      h += '<div onclick="S._consHist_' + day.replace(/-/g,'') + '=!S._consHist_' + day.replace(/-/g,'') + ';render()" style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;cursor:pointer;background:var(--bg-off);transition:background var(--transition-fast)">';
+      h += '<div onclick="S._consHist_' + stateKey + '=!S._consHist_' + stateKey + ';render()" style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;cursor:pointer;background:var(--bg-off);transition:background var(--transition-fast)">';
       h += '<div style="display:flex;align-items:center;gap:10px"><span class="v2-text-md v2-font-700">📅 ' + fmtD(day) + '</span><span class="badge badge-blue">' + items.length + '</span></div>';
-      h += '<span style="font-size:12px;color:var(--ink-muted)">' + (S['_consHist_' + day.replace(/-/g,'')] ? '▼' : '▶') + '</span>';
+      h += '<span style="font-size:12px;color:var(--ink-muted)">' + (isOpen ? '▼' : '▶') + '</span>';
       h += '</div>';
 
-      if (S['_consHist_' + day.replace(/-/g,'')]) {
+      if (isOpen) {
         items.forEach(function(c) {
           var canDelete = isManager() || (S.user && c.created_by === S.user.id);
           var prioIcon = c.priority === 'urgent' ? '🔴 ' : c.priority === 'high' ? '🟡 ' : '';

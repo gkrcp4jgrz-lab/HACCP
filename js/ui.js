@@ -234,16 +234,30 @@ function saveSignature() {
 // MODALS
 // =====================================================================
 
+var _lastFocusedElement = null;
+
 function openModal(html) {
+  _lastFocusedElement = document.activeElement;
   $('modalContent').innerHTML = html;
   $('modalOverlay').classList.add('show');
-  setTimeout(function() { initSignature(); }, 100);
+  setTimeout(function() {
+    initSignature();
+    // Focus first focusable element in modal
+    var modal = $('modalContent');
+    var focusable = modal.querySelector('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (focusable) focusable.focus();
+  }, 100);
 }
 
 function closeModal() {
   $('modalOverlay').classList.remove('show');
   // Clean up any pending confirm/prompt resolve
   if (window._modalResolve) { window._modalResolve(null); window._modalResolve = null; }
+  // Restore focus
+  if (_lastFocusedElement && _lastFocusedElement.focus) {
+    try { _lastFocusedElement.focus(); } catch(e) {}
+    _lastFocusedElement = null;
+  }
 }
 
 // Fermer modals avec Escape
@@ -265,7 +279,7 @@ function appConfirm(title, message, opts) {
 
   return new Promise(function(resolve) {
     window._modalResolve = resolve;
-    var h = '<div class="modal-header"><div class="modal-title">' + esc(title) + '</div></div>';
+    var h = '<div class="modal-header"><div class="modal-title">' + esc(title) + '</div><button class="modal-close" onclick="window._modalResolve(false);window._modalResolve=null;closeModal()" aria-label="Fermer">✕</button></div>';
     h += '<div class="modal-body" style="text-align:center;padding:28px 24px">';
     h += '<div style="width:56px;height:56px;border-radius:50%;background:' + (danger ? 'var(--af-err-bg)' : 'var(--af-teal-bg)') + ';display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 16px">' + icon + '</div>';
     h += '<p style="font-size:15px;line-height:1.6;color:var(--ink);font-weight:500;margin:0">' + message + '</p>';

@@ -69,16 +69,16 @@ function renderSidebar() {
   if (isSuperAdmin()) {
     pages.push({ id:'dashboard', icon:'📊', label:'Tableau de bord' });
     pages.forEach(function(p) {
-      navHtml += '<div class="nav-item' + (S.page===p.id?' active':'') + '" onclick="navigate(\'' + p.id + '\')"><span class="nav-icon">' + p.icon + '</span>' + p.label + '</div>';
+      navHtml += '<div class="nav-item' + (S.page===p.id?' active':'') + '" role="button" tabindex="0" onclick="navigate(\'' + p.id + '\')" onkeydown="if(event.key===\'Enter\')navigate(\'' + p.id + '\')"><span class="nav-icon">' + p.icon + '</span>' + p.label + '</div>';
     });
     navHtml += '<div class="nav-section">Administration</div>';
-    navHtml += '<div class="nav-item' + (S.page==='sites'?' active':'') + '" onclick="navigate(\'sites\')"><span class="nav-icon">🏢</span>Gestion sites</div>';
-    navHtml += '<div class="nav-item' + (S.page==='admin'?' active':'') + '" onclick="navigate(\'admin\')"><span class="nav-icon">👥</span>Utilisateurs</div>';
+    navHtml += '<div class="nav-item' + (S.page==='sites'?' active':'') + '" role="button" tabindex="0" onclick="navigate(\'sites\')" onkeydown="if(event.key===\'Enter\')navigate(\'sites\')"><span class="nav-icon">🏢</span>Gestion sites</div>';
+    navHtml += '<div class="nav-item' + (S.page==='admin'?' active':'') + '" role="button" tabindex="0" onclick="navigate(\'admin\')" onkeydown="if(event.key===\'Enter\')navigate(\'admin\')"><span class="nav-icon">👥</span>Utilisateurs</div>';
     if (S.currentSiteId) {
-      navHtml += '<div class="nav-item' + (S.page==='settings'?' active':'') + '" onclick="navigate(\'settings\')"><span class="nav-icon">⚙️</span>Paramètres site</div>';
+      navHtml += '<div class="nav-item' + (S.page==='settings'?' active':'') + '" role="button" tabindex="0" onclick="navigate(\'settings\')" onkeydown="if(event.key===\'Enter\')navigate(\'settings\')"><span class="nav-icon">⚙️</span>Paramètres site</div>';
     }
     navHtml += '<div class="nav-section">Mon compte</div>';
-    navHtml += '<div class="nav-item' + (S.page==='profile'?' active':'') + '" onclick="navigate(\'profile\')"><span class="nav-icon">👤</span>Mon profil</div>';
+    navHtml += '<div class="nav-item' + (S.page==='profile'?' active':'') + '" role="button" tabindex="0" onclick="navigate(\'profile\')" onkeydown="if(event.key===\'Enter\')navigate(\'profile\')"><span class="nav-icon">👤</span>Mon profil</div>';
   } else {
     pages.push({ id:'dashboard', icon:'📊', label:'Tableau de bord' });
     if (moduleEnabled('temperatures')) pages.push({ id:'temperatures', icon:'🌡️', label:'Températures' });
@@ -88,23 +88,23 @@ function renderSidebar() {
     pages.push({ id:'reports', icon:'📄', label:'Rapports PDF' });
 
     pages.forEach(function(p) {
-      navHtml += '<div class="nav-item' + (S.page===p.id?' active':'') + '" onclick="navigate(\'' + p.id + '\')"><span class="nav-icon">' + p.icon + '</span>' + p.label + '</div>';
+      navHtml += '<div class="nav-item' + (S.page===p.id?' active':'') + '" role="button" tabindex="0" onclick="navigate(\'' + p.id + '\')" onkeydown="if(event.key===\'Enter\')navigate(\'' + p.id + '\')"><span class="nav-icon">' + p.icon + '</span>' + p.label + '</div>';
     });
 
     // Notifications avec badge
     var alertCount = (typeof getAlertCount === 'function') ? getAlertCount() : 0;
-    navHtml += '<div class="nav-item' + (S.page==='notifications'?' active':'') + '" onclick="navigate(\'notifications\')"><span class="nav-icon">🔔</span>Notifications';
+    navHtml += '<div class="nav-item' + (S.page==='notifications'?' active':'') + '" role="button" tabindex="0" onclick="navigate(\'notifications\')" onkeydown="if(event.key===\'Enter\')navigate(\'notifications\')"><span class="nav-icon">🔔</span>Notifications';
     if (alertCount > 0) navHtml += '<span class="nav-badge">' + alertCount + '</span>';
     navHtml += '</div>';
 
     if (isManager()) {
       navHtml += '<div class="nav-section">Administration</div>';
-      navHtml += '<div class="nav-item' + (S.page==='team'?' active':'') + '" onclick="navigate(\'team\')"><span class="nav-icon">👥</span>Personnel</div>';
-      navHtml += '<div class="nav-item' + (S.page==='settings'?' active':'') + '" onclick="navigate(\'settings\')"><span class="nav-icon">⚙️</span>Paramètres site</div>';
+      navHtml += '<div class="nav-item' + (S.page==='team'?' active':'') + '" role="button" tabindex="0" onclick="navigate(\'team\')" onkeydown="if(event.key===\'Enter\')navigate(\'team\')"><span class="nav-icon">👥</span>Personnel</div>';
+      navHtml += '<div class="nav-item' + (S.page==='settings'?' active':'') + '" role="button" tabindex="0" onclick="navigate(\'settings\')" onkeydown="if(event.key===\'Enter\')navigate(\'settings\')"><span class="nav-icon">⚙️</span>Paramètres site</div>';
     }
 
     navHtml += '<div class="nav-section">Mon compte</div>';
-    navHtml += '<div class="nav-item' + (S.page==='profile'?' active':'') + '" onclick="navigate(\'profile\')"><span class="nav-icon">👤</span>Mon profil</div>';
+    navHtml += '<div class="nav-item' + (S.page==='profile'?' active':'') + '" role="button" tabindex="0" onclick="navigate(\'profile\')" onkeydown="if(event.key===\'Enter\')navigate(\'profile\')"><span class="nav-icon">👤</span>Mon profil</div>';
   }
 
   var siteOpts = '';
@@ -117,7 +117,7 @@ function renderSidebar() {
   var roleName = S.profile ? ({super_admin:'Super Admin',manager:'Gérant',employee:'Employé'}[S.profile.role] || 'Utilisateur') : '';
   var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
 
-  return '<nav class="sidebar' + (S.sidebarOpen?' open':'') + '">' +
+  return '<nav class="sidebar' + (S.sidebarOpen?' open':'') + '" role="navigation" aria-label="Menu principal">' +
     '<div class="sidebar-header"><div class="sidebar-brand"><span>🛡️</span><h2 class="brand-text">HACCP Pro</h2></div></div>' +
     siteSelector +
     '<div class="sidebar-nav">' + navHtml + '</div>' +
@@ -125,8 +125,8 @@ function renderSidebar() {
     '<div class="avatar">' + userInitials() + '</div>' +
     '<div class="user-info"><div class="user-name">' + esc(userName()) + '</div><div class="user-role">' + roleName + '</div></div>' +
     '<div class="sidebar-user-actions">' +
-    '<button class="sidebar-action-btn" onclick="toggleDarkMode()" title="' + (isDark ? 'Mode clair' : 'Mode sombre') + '">' + (isDark ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>' : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>') + '</button>' +
-    '<button class="sidebar-action-btn sidebar-logout-btn" onclick="doLogout()" title="Déconnexion"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>' +
+    '<button class="sidebar-action-btn" onclick="toggleDarkMode()" title="' + (isDark ? 'Mode clair' : 'Mode sombre') + '" aria-label="' + (isDark ? 'Activer le mode clair' : 'Activer le mode sombre') + '">' + (isDark ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>' : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>') + '</button>' +
+    '<button class="sidebar-action-btn sidebar-logout-btn" onclick="doLogout()" title="Déconnexion" aria-label="Se déconnecter"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>' +
     '</div></div></nav>';
 }
 
@@ -172,6 +172,6 @@ function renderMainContent() {
   }
 
   return '<div class="main-content">' +
-    '<header class="main-header"><button class="burger" onclick="toggleSidebar()">☰</button><h1>' + (titles[S.page] || 'HACCP Pro') + '</h1>' + headerSiteDropdown + '</header>' +
+    '<header class="main-header"><button class="burger" onclick="toggleSidebar()" aria-label="Ouvrir le menu">☰</button><h1>' + (titles[S.page] || 'HACCP Pro') + '</h1>' + headerSiteDropdown + '</header>' +
     '<div class="main-body">' + content + '</div></div>';
 }

@@ -118,7 +118,10 @@ window.loadAndRenderOrderHistory = async function() {
   var container = $('orderHistoryContainer');
   if (!container) return;
 
-  var r = await sb.from('orders').select('*').eq('site_id', S.currentSiteId).eq('status', 'received').order('received_at', {ascending:false}).limit(50);
+  var r;
+  try {
+    r = await sb.from('orders').select('*').eq('site_id', S.currentSiteId).eq('status', 'received').order('received_at', {ascending:false}).limit(50);
+  } catch(e) { container.innerHTML = '<div class="empty"><div class="empty-title">Erreur de chargement</div></div>'; return; }
   var received = r.data || [];
 
   // Filter by search query
@@ -219,7 +222,8 @@ window.confirmReceive = async function(orderId, photoOnly) {
     if (notes && notes.value) upd.receive_notes = notes.value;
     if (S._blPhotoData) upd.bl_photo = S._blPhotoData;
 
-    await sb.from('orders').update(upd).eq('id', orderId);
+    var r = await sb.from('orders').update(upd).eq('id', orderId);
+    if (r.error) throw r.error;
     S._blPhotoData = null;
     closeModal();
     await loadSiteData();
@@ -231,12 +235,15 @@ window.confirmReceive = async function(orderId, photoOnly) {
 window.markSupplierOrdered = async function(supplierName) {
   if (!(await appConfirm('Commandes passées', 'Marquer toutes les commandes de <strong>' + esc(supplierName) + '</strong> comme commandées ?', {icon:'📞',confirmLabel:'Tout commandé'}))) return;
   var toMark = S.data.orders.filter(function(o) { return o.status === 'to_order' && (o.supplier_name || '— Sans fournisseur —') === supplierName; });
+  var errors = 0;
   for (var i = 0; i < toMark.length; i++) {
-    await sb.from('orders').update({ status: 'ordered' }).eq('id', toMark[i].id);
+    var r = await sb.from('orders').update({ status: 'ordered' }).eq('id', toMark[i].id);
+    if (r.error) errors++;
   }
   await loadSiteData();
   render();
-  showToast(toMark.length + ' commande(s) marquée(s) comme commandée(s)', 'success');
+  if (errors > 0) showToast(errors + ' erreur(s) lors de la mise à jour', 'error');
+  else showToast(toMark.length + ' commande(s) marquée(s) comme commandée(s)', 'success');
 };
 
 window.viewBLPhoto = function(orderId) {

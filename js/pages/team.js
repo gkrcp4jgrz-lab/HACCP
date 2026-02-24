@@ -92,38 +92,12 @@ window.handleTeamAddUser = async function(e) {
     // Auto-generate login_id
     var loginId = await generateUniqueLoginId(name);
 
-    // Create the user account
-    var currentSession = await sb.auth.getSession();
-    var savedToken = currentSession.data.session;
+    // Use centralized createUser (auth.js) — handles signUp + session restore + profile
+    var user = await createUser(loginId, pass, name, 'employee');
+    if (!user) throw new Error('Utilisateur non créé');
 
-    var internalEmail = loginIdToEmail(loginId);
-    var r = await sb.auth.signUp({
-      email: internalEmail,
-      password: pass,
-      options: { data: { full_name: name } }
-    });
-    if (r.error) throw r.error;
-    var userId = r.data.user ? r.data.user.id : null;
-    if (!userId) throw new Error('Utilisateur non cree');
-
-    // Restore manager session
-    if (savedToken) {
-      await sb.auth.setSession({ access_token: savedToken.access_token, refresh_token: savedToken.refresh_token });
-    }
-
-    // Wait for trigger
-    await new Promise(function(resolve) { setTimeout(resolve, 1500); });
-
-    // Set profile fields
-    await sb.from('profiles').update({
-      login_id: loginId.toUpperCase(),
-      email: internalEmail,
-      full_name: name,
-      must_change_password: true
-    }).eq('id', userId);
-
-    // Assign to site
-    await assignUserToSite(userId, S.currentSiteId, siteRole);
+    // Assign to current site with chosen role
+    await assignUserToSite(user.id, S.currentSiteId, siteRole);
 
     showToast('Membre ajouté — ID : ' + loginId, 'success', 5000);
     openModal('<div class="modal-header"><div class="modal-title">✅ Membre ajouté</div><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body"><div class="v2-text-center v2-mb-18"><div style="width:64px;height:64px;background:var(--af-ok-bg);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto">✅</div></div><p class="v2-text-md v2-font-600 v2-mb-14">Communiquez ces informations à l\'employé :</p><div style="padding:16px;background:var(--bg-off);border-radius:var(--radius-sm);margin-bottom:12px"><div class="v2-text-sm v2-text-muted v2-mb-4">Identifiant</div><div class="v2-text-xl v2-font-800 v2-font-mono" style="letter-spacing:2px;color:var(--af-teal)">' + esc(loginId) + '</div></div><div style="padding:16px;background:var(--bg-off);border-radius:var(--radius-sm)"><div class="v2-text-sm v2-text-muted v2-mb-4">Mot de passe (cliquez pour copier)</div><input type="text" readonly value="' + esc(pass) + '" style="width:100%;border:none;background:transparent;font-size:18px;font-weight:800;text-align:center;cursor:pointer" onclick="navigator.clipboard.writeText(this.value);showToast(\'Copié !\',\'success\',1500)"></div></div><div class="modal-footer"><button class="btn btn-primary btn-lg" onclick="closeModal()">Compris</button></div>');

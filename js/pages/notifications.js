@@ -107,11 +107,9 @@ async function loadMultiSiteAlerts() {
   var totalCritical = 0, totalWarning = 0, totalInfo = 0;
   var siteAlerts = [];
 
-  for (var i = 0; i < S.sites.length; i++) {
-    var site = S.sites[i];
+  var siteResults = await Promise.all(S.sites.map(async function(site) {
     var sid = site.id;
     var typeEmoji = { hotel:'🏨', restaurant:'🍽️', cuisine_centrale:'🏭', autre:'🏢' }[site.type] || '🏢';
-
     try {
       var results = await Promise.all([
         sb.from('temperatures').select('*').eq('site_id', sid).gte('recorded_at', localMidnightISO).order('recorded_at', {ascending:false}),
@@ -132,20 +130,23 @@ async function loadMultiSiteAlerts() {
       var products = results[6].data || [];
 
       var alerts = buildAlertsForSite(temps, dlcs, consignes, orders, incidents, equipment, products);
-
-      if (alerts.length > 0) {
-        var c = alerts.filter(function(a) { return a.level === 'critical'; }).length;
-        var w = alerts.filter(function(a) { return a.level === 'warning'; }).length;
-        var inf = alerts.filter(function(a) { return a.level === 'info'; }).length;
-        totalCritical += c;
-        totalWarning += w;
-        totalInfo += inf;
-        siteAlerts.push({ site: site, emoji: typeEmoji, alerts: alerts, critical: c, warning: w, info: inf });
-      }
+      return { site: site, emoji: typeEmoji, alerts: alerts };
     } catch(e) {
       console.error('Alerts error for', site.name, e);
+      return null;
     }
-  }
+  }));
+
+  siteResults.forEach(function(r) {
+    if (!r || r.alerts.length === 0) return;
+    var c = r.alerts.filter(function(a) { return a.level === 'critical'; }).length;
+    var w = r.alerts.filter(function(a) { return a.level === 'warning'; }).length;
+    var inf = r.alerts.filter(function(a) { return a.level === 'info'; }).length;
+    totalCritical += c;
+    totalWarning += w;
+    totalInfo += inf;
+    siteAlerts.push({ site: r.site, emoji: r.emoji, alerts: r.alerts, critical: c, warning: w, info: inf });
+  });
 
   // Trier : sites avec critiques en premier
   siteAlerts.sort(function(a, b) { return b.critical - a.critical || b.warning - a.warning; });
