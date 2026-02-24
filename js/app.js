@@ -77,23 +77,15 @@ initApp = async function() {
 // ── SERVICE WORKER ──
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    // Force clear ALL caches first
-    if (caches) {
-      caches.keys().then(function(names) {
-        names.forEach(function(name) { caches.delete(name); });
-      });
-    }
-    navigator.serviceWorker.getRegistrations().then(function(registrations) {
-      registrations.forEach(function(reg) { reg.unregister(); });
-    }).then(function() {
-      return navigator.serviceWorker.register('/sw.js');
-    }).then(function(reg) {
-      reg.update();
+    navigator.serviceWorker.register('/sw.js').then(function(reg) {
+      // Check for updates periodically
       reg.addEventListener('updatefound', function() {
         var newSW = reg.installing;
+        if (!newSW) return;
         newSW.addEventListener('statechange', function() {
-          if (newSW.state === 'activated') {
-            showToast('Mise à jour installée — rechargement...', 'info');
+          // Only reload if there was an existing controller (= real update, not first install)
+          if (newSW.state === 'activated' && navigator.serviceWorker.controller) {
+            showToast('Mise à jour disponible — rechargement...', 'info');
             setTimeout(function() { location.reload(); }, 1500);
           }
         });
