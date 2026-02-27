@@ -182,9 +182,10 @@ window.openReceiveModal = function(orderId, productName, photoOnly) {
   html += '<div class="form-group"><label class="form-label">📸 Photo du BL ou de la facture <span class="v2-text-sm v2-text-muted v2-font-500">(recommandé)</span></label>';
   html += '<label class="photo-box" for="blPhotoInput" id="blPhotoPreviewBox"><div class="photo-icon">📷</div><div class="photo-text">Prendre une photo du bon de livraison</div><div class="photo-hint">Servira de preuve de réception</div></label>';
   html += '<input type="file" id="blPhotoInput" accept="image/*" capture="environment" onchange="previewBLPhoto()" style="display:none">';
-  html += '<div id="blPhotoPreview" style="display:none;text-align:center;padding:14px;border:2px solid var(--success);border-radius:12px;background:var(--success-bg)"><img id="blPhotoImg" alt="Photo du bon de livraison" class="photo-preview" style="max-width:300px"><br><button type="button" class="btn btn-ghost" onclick="clearBLPhoto()">✕ Supprimer</button></div>';
+  html += '<div id="blPhotoPreview" style="display:none;text-align:center;padding:14px;border:2px solid var(--success);border-radius:12px;background:var(--success-bg)"><img id="blPhotoImg" alt="Photo du bon de livraison" class="photo-preview" style="max-width:300px"><div class="v2-flex v2-gap-8" style="justify-content:center;margin-top:10px"><label for="blPhotoInput" class="btn btn-primary btn-sm" style="cursor:pointer">📷 Reprendre</label><button type="button" class="btn btn-ghost btn-sm" onclick="clearBLPhoto()">✕ Supprimer</button></div></div>';
+  html += '<div id="ocrStatusBl"></div>';
   html += '</div>';
-  html += '<div class="form-group"><label class="form-label">Notes de réception</label><input type="text" class="form-input" id="receiveNotes" placeholder="Ex: Tout conforme, manque 2 cartons..."></div>';
+  html += '<div class="form-group"><label class="form-label">Notes de réception</label><textarea class="form-textarea" id="receiveNotes" rows="3" placeholder="Ex: Tout conforme, manque 2 cartons..."></textarea></div>';
   html += '</div>';
   html += '<div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Annuler</button>';
   html += '<button class="btn btn-success btn-lg" onclick="confirmReceive(\'' + orderId + '\',' + (photoOnly ? 'true' : 'false') + ')">✅ ' + (photoOnly ? 'Enregistrer' : 'Confirmer la réception') + '</button></div>';
@@ -196,11 +197,28 @@ window.previewBLPhoto = function() {
   if (!input || !input.files || !input.files[0]) return;
   var reader = new FileReader();
   reader.onload = function(e) {
-    S._blPhotoData = e.target.result;
-    document.getElementById('blPhotoPreviewBox').style.display = 'none';
-    var preview = document.getElementById('blPhotoPreview');
-    preview.style.display = 'block';
-    document.getElementById('blPhotoImg').src = e.target.result;
+    // Compress BL photo via canvas (same as handlePhotoFor)
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var maxW = 800;
+      var scale = img.width > maxW ? maxW / img.width : 1;
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      var dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      S._blPhotoData = dataUrl;
+      document.getElementById('blPhotoPreviewBox').style.display = 'none';
+      var preview = document.getElementById('blPhotoPreview');
+      preview.style.display = 'block';
+      document.getElementById('blPhotoImg').src = dataUrl;
+      // Launch OCR on BL photo
+      if (typeof runPhotoOCR === 'function') {
+        runPhotoOCR(dataUrl, 'bl');
+      }
+    };
+    img.src = e.target.result;
   };
   reader.readAsDataURL(input.files[0]);
 };

@@ -11,13 +11,13 @@ function handlePhotoFor(inputId, context) {
     var img = new Image();
     img.onload = function() {
       var canvas = document.createElement('canvas');
-      var maxW = 1200;
+      var maxW = 800;
       var scale = img.width > maxW ? maxW / img.width : 1;
       canvas.width = img.width * scale;
       canvas.height = img.height * scale;
       var ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      var dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      var dataUrl = canvas.toDataURL('image/jpeg', 0.7);
       if (context === 'dlc') { S.photoDlcData = dataUrl; }
       else { S.photoLotData = dataUrl; }
       render();
@@ -40,60 +40,100 @@ function clearClaudeKey() {
 }
 
 async function runPhotoOCR(dataUrl, context) {
-  // Vérifier si une clé API Claude est configurée
-  var apiKey = S.claudeApiKey || sessionStorage.getItem('haccp_claude_key') || '';
-
-  if (!apiKey) {
-    showOcrStatus(context, 'info', '💡 Configurez votre clé API Claude dans les réglages pour activer la détection automatique.');
-    return;
-  }
-
-  showOcrStatus(context, 'loading', '🔍 Analyse de l\'étiquette en cours...');
+  showOcrStatus(context, 'loading', '🔍 Analyse en cours...');
 
   try {
     var base64 = dataUrl.split(',')[1];
-    var prompt = context === 'dlc'
-      ? 'Analyse cette photo d\'étiquette alimentaire. Extrais UNIQUEMENT en JSON:\n{"product_name": "...", "dlc_date": "YYYY-MM-DD", "lot_number": "...", "confidence": "high/medium/low"}\nSi un champ n\'est pas visible, mets null. dlc_date = date limite de consommation (DLC) ou DDM. Cherche les formats: JJ/MM/AAAA, DD.MM.YYYY, etc.'
-      : 'Analyse cette photo d\'étiquette alimentaire. Extrais UNIQUEMENT en JSON:\n{"product_name": "...", "lot_number": "...", "origin": "...", "supplier": "...", "confidence": "high/medium/low"}\nSi un champ n\'est pas visible, mets null.';
 
-    var resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 300,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
-            { type: 'text', text: prompt }
-          ]
-        }]
-      })
-    });
-
-    if (!resp.ok) {
-      var errData = await resp.json().catch(function() { return {}; });
-      throw new Error(errData.error ? errData.error.message : 'Erreur API ' + resp.status);
+    // Try Edge Function proxy first (no API key needed)
+    var result = await _ocrViaProxy(base64, context);
+    if (!result) {
+      // Fallback: direct API call with local key (super_admin only)
+      result = await _ocrDirectApi(base64, context);
     }
-
-    var data = await resp.json();
-    var text = data.content && data.content[0] ? data.content[0].text : '';
-    
-    // Extraire le JSON de la réponse
-    var jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('Pas de données détectées');
-    
-    var result = JSON.parse(jsonMatch[0]);
+    if (!result) {
+      showOcrStatus(context, 'error', '⚠️ OCR non disponible. Contactez votre administrateur.');
+      return;
+    }
     applyOcrResult(result, context);
   } catch(err) {
     showOcrStatus(context, 'error', '⚠️ ' + (err.message || 'Erreur de détection'));
   }
+}
+
+async function _ocrViaProxy(base64, context) {
+  try {
+    var session = await sb.auth.getSession();
+    var token = session.data.session ? session.data.session.access_token : null;
+    if (!token) return null;
+
+    var resp = await fetch(SB_URL + '/functions/v1/ocr-analyze', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ image_base64: base64, context: context })
+    });
+
+    if (!resp.ok) {
+      var errData = await resp.json().catch(function() { return {}; });
+      // If function not deployed (404) or API key not set (500), return null for fallback
+      if (resp.status === 404 || resp.status === 500) return null;
+      throw new Error(errData.error || 'Erreur serveur OCR');
+    }
+
+    var data = await resp.json();
+    return data.result || null;
+  } catch(e) {
+    // Network error or function not deployed — allow fallback
+    if (e.message && e.message.indexOf('fetch') >= 0) return null;
+    throw e;
+  }
+}
+
+async function _ocrDirectApi(base64, context) {
+  var apiKey = S.claudeApiKey || sessionStorage.getItem('haccp_claude_key') || '';
+  if (!apiKey) return null;
+
+  var prompts = {
+    dlc: 'Analyse cette photo d\'étiquette alimentaire. Extrais UNIQUEMENT en JSON:\n{"product_name": "...", "dlc_date": "YYYY-MM-DD", "lot_number": "...", "supplier": "...", "confidence": "high/medium/low"}\nSi un champ n\'est pas visible, mets null. dlc_date = date limite de consommation (DLC) ou DDM. Cherche les formats: JJ/MM/AAAA, DD.MM.YYYY, DDMMYY, etc. Convertis toujours en YYYY-MM-DD.',
+    lot: 'Analyse cette photo d\'étiquette alimentaire. Extrais UNIQUEMENT en JSON:\n{"product_name": "...", "lot_number": "...", "origin": "...", "supplier": "...", "dlc_date": "YYYY-MM-DD", "confidence": "high/medium/low"}\nSi un champ n\'est pas visible, mets null.',
+    bl: 'Analyse ce bon de livraison ou facture. Extrais UNIQUEMENT en JSON:\n{"supplier": "...", "delivery_date": "YYYY-MM-DD", "bl_number": "...", "total_amount": "...", "products": [{"name": "...", "qty": "..."}], "confidence": "high/medium/low"}\nSi un champ n\'est pas visible, mets null.'
+  };
+  var prompt = prompts[context] || prompts.dlc;
+
+  var resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 500,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
+          { type: 'text', text: prompt }
+        ]
+      }]
+    })
+  });
+
+  if (!resp.ok) {
+    var errData = await resp.json().catch(function() { return {}; });
+    throw new Error(errData.error ? errData.error.message : 'Erreur API ' + resp.status);
+  }
+
+  var data = await resp.json();
+  var text = data.content && data.content[0] ? data.content[0].text : '';
+  var jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('Pas de données détectées');
+  return JSON.parse(jsonMatch[0]);
 }
 
 function normalizeOcrDate(value) {
@@ -117,8 +157,27 @@ function normalizeLotNumber(value) {
 function applyOcrResult(result, context) {
   var filled = [];
 
-  // Unified form field IDs (new) with fallback to old IDs
-  if (context === 'dlc') {
+  if (context === 'bl') {
+    // BL context: fill receive notes with detected info
+    var notesEl = document.getElementById('receiveNotes');
+    if (notesEl) {
+      var lines = [];
+      if (result.supplier) lines.push('Fournisseur: ' + result.supplier);
+      if (result.bl_number) lines.push('BL/Facture: ' + result.bl_number);
+      if (result.delivery_date) { var d = normalizeOcrDate(result.delivery_date); if (d) lines.push('Date: ' + d); }
+      if (result.total_amount) lines.push('Montant: ' + result.total_amount);
+      if (result.products && result.products.length > 0) {
+        lines.push('Produits:');
+        result.products.forEach(function(p) {
+          if (p.name) lines.push('  - ' + p.name + (p.qty ? ' (' + p.qty + ')' : ''));
+        });
+      }
+      if (lines.length > 0) {
+        notesEl.value = lines.join('\n');
+        filled = lines.slice(0, 3).map(function(l) { return l.split(':')[0]; });
+      }
+    }
+  } else if (context === 'dlc') {
     if (result.product_name) {
       var el = document.getElementById('recProduct') || document.getElementById('dlcProd');
       if (el && !el.value) { el.value = result.product_name; filled.push('produit'); }
@@ -137,6 +196,7 @@ function applyOcrResult(result, context) {
       if (el6 && !el6.value) { el6.value = result.supplier; filled.push('fournisseur'); }
     }
   } else {
+    // lot context
     if (result.product_name) {
       var el4 = document.getElementById('recProduct') || document.getElementById('lotProd');
       if (el4 && !el4.value) { el4.value = result.product_name; filled.push('produit'); }
@@ -164,7 +224,7 @@ function applyOcrResult(result, context) {
 
   var confidence = result.confidence || 'medium';
   var confLabel = confidence === 'high' ? '🟢 Élevée' : confidence === 'medium' ? '🟡 Moyenne' : '🔴 Faible';
-  
+
   if (filled.length > 0) {
     showOcrStatus(context, 'success', '✅ Détecté : ' + filled.join(', ') + ' (confiance : ' + confLabel + ')');
   } else {
@@ -173,11 +233,19 @@ function applyOcrResult(result, context) {
 }
 
 function showOcrStatus(context, type, message) {
-  var id = context === 'dlc' ? 'ocrStatusDlc' : 'ocrStatusLot';
-  var el = document.getElementById(id);
+  var idMap = { dlc: 'ocrStatusDlc', lot: 'ocrStatusLot', bl: 'ocrStatusBl' };
+  var el = document.getElementById(idMap[context] || 'ocrStatusDlc');
   if (!el) return;
   var safeType = esc(type);
   el.innerHTML = '<div class="v2-ocr-status v2-ocr-status--' + safeType + '">' + (type === 'loading' ? '<span class="loading v2-mr-6"></span>' : '') + esc(message) + '</div>';
+
+  // Add/remove scanning animation on the photo
+  var imgMap = { dlc: 'photoDlcImg', bl: 'blPhotoImg' };
+  var img = document.getElementById(imgMap[context]);
+  if (img) {
+    if (type === 'loading') img.classList.add('photo-scanning');
+    else img.classList.remove('photo-scanning');
+  }
 }
 
 function clearPhotoDlc() { S.photoDlcData = null; render(); }

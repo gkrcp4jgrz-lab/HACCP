@@ -134,15 +134,21 @@ function renderSettingsNotifications() {
   h += '<div id="emailSaveStatus"></div>';
   h += '</div></div>';
 
-  // Claude Vision API Key
+  // OCR status (visible to all managers)
   h += '<div class="card"><div class="card-header">📷 Reconnaissance d\'étiquettes (OCR)</div><div class="card-body">';
-  h += '<p class="v2-text-sm v2-text-muted v2-mb-12">La reconnaissance automatique des étiquettes (DLC, lot, produit) utilise Claude Vision. Une clé API Anthropic est nécessaire.</p>';
-  h += '<div class="form-group"><label class="form-label">Clé API Claude</label><input type="password" class="form-input" id="claudeApiKey" value="' + esc(claudeKey) + '" placeholder="sk-ant-..." onchange="saveClaudeKey()"></div>';
-  if (claudeKey) {
-    h += '<div class="v2-ocr-status v2-ocr-status--success v2-mb-8">✅ Clé API configurée — La détection automatique est active</div>';
-    h += '<button type="button" class="btn btn-ghost btn-sm" onclick="clearClaudeKey()">🗑️ Supprimer la clé de cette session</button>';
+  h += '<div class="v2-ocr-status v2-ocr-status--success v2-mb-8">✅ Détection automatique active — Prenez une photo d\'étiquette, les champs se rempliront automatiquement.</div>';
+  h += '<p class="v2-text-sm v2-text-muted">Fonctionne pour : DLC, numéros de lot, bons de livraison.</p>';
+
+  // Advanced: API key fallback (super_admin only)
+  if (S.profile && S.profile.role === 'super_admin') {
+    h += '<details class="v2-mt-16"><summary class="v2-text-sm v2-text-muted" style="cursor:pointer">⚙️ Configuration avancée (admin)</summary>';
+    h += '<div class="v2-mt-8"><p class="v2-text-xs v2-text-muted v2-mb-8">Clé API de secours si le serveur OCR n\'est pas disponible.</p>';
+    h += '<div class="form-group"><label class="form-label">Clé API Claude (fallback)</label><input type="password" class="form-input" id="claudeApiKey" value="' + esc(claudeKey) + '" placeholder="sk-ant-..." onchange="saveClaudeKey()"></div>';
+    if (claudeKey) {
+      h += '<button type="button" class="btn btn-ghost btn-sm" onclick="clearClaudeKey()">🗑️ Supprimer la clé</button>';
+    }
+    h += '</div></details>';
   }
-  h += '<p class="v2-text-xs v2-text-muted">Obtenez une clé sur <a href="https://console.anthropic.com" target="_blank" class="v2-text-primary">console.anthropic.com</a>. Coût : ~0.01€ par photo analysée.</p>';
   h += '</div></div>';
 
   return h;
