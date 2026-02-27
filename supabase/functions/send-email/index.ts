@@ -27,9 +27,9 @@ serve(async (req) => {
   }
 
   try {
-    const { to, subject, body } = await req.json();
+    const { to, subject, body, html_body } = await req.json();
 
-    if (!to || !subject || !body) {
+    if (!to || !subject || (!body && !html_body)) {
       return new Response(JSON.stringify({ error: "Missing fields" }), {
         status: 400,
         headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
@@ -56,16 +56,16 @@ serve(async (req) => {
         from: FROM_EMAIL,
         to: recipients,
         subject: subject,
-        text: body,
-        html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto">
-          <div style="background:#1e1e2e;color:#fff;padding:16px 24px;border-radius:8px 8px 0 0">
+        text: body || subject,
+        html: html_body || `<div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+          <div style="background:#0891B2;color:#fff;padding:16px 24px;border-radius:8px 8px 0 0">
             <h2 style="margin:0;font-size:16px">HACCP Pro</h2>
           </div>
           <div style="padding:24px;background:#fff;border:1px solid #eceef1;border-top:none;border-radius:0 0 8px 8px">
-            <h3 style="margin:0 0 12px;color:#1e1e2e">${subject}</h3>
-            <pre style="white-space:pre-wrap;font-family:sans-serif;color:#3a3a4a;line-height:1.6;margin:0">${body}</pre>
+            <h3 style="margin:0 0 12px;color:#111827">${subject}</h3>
+            <pre style="white-space:pre-wrap;font-family:sans-serif;color:#374151;line-height:1.6;margin:0">${body}</pre>
             <hr style="border:none;border-top:1px solid #eceef1;margin:20px 0">
-            <p style="font-size:11px;color:#9ca3af;margin:0">Email automatique envoyé par HACCP Pro. Ne pas répondre.</p>
+            <p style="font-size:11px;color:#9ca3af;margin:0">Email automatique — HACCP Pro</p>
           </div>
         </div>`,
       }),

@@ -37,16 +37,6 @@ function renderConsignes() {
     });
     h += '</div>';
   }
-  if (treatedUrgents.length > 0) {
-    h += '<div class="card"><div class="card-header" style="color:var(--af-ok)">✅ Consignes urgentes traitées <span class="badge badge-green v2-ml-auto">' + treatedUrgents.length + '</span></div>';
-    treatedUrgents.forEach(function(c) {
-      var canDelete = isManager() || (S.user && c.created_by === S.user.id);
-      h += '<div class="list-item" style="opacity:.6"><div class="list-content"><div class="list-title" style="text-decoration:line-through">' + esc(c.message) + '</div><div class="list-sub">Traité — Par ' + esc(c.created_by_name) + ' — ' + fmtDT(c.created_at) + '</div></div>';
-      if (canDelete) h += '<div class="list-actions"><button class="btn btn-ghost btn-sm" onclick="deleteConsigne(\'' + c.id + '\')">🗑️</button></div>';
-      h += '</div>';
-    });
-    h += '</div>';
-  }
 
   // Journal du jour
   h += '<div class="card"><div class="card-header">📋 Journal du jour — ' + fmtD(todayStr) + ' <span class="badge badge-blue v2-ml-auto">' + todayConsignes.length + '</span></div>';
@@ -87,7 +77,7 @@ function renderConsignes() {
       var isOpen = S[stateKey];
 
       h += '<div style="border-bottom:1px solid var(--border)">';
-      h += '<div onclick="S._consHist_' + stateKey + '=!S._consHist_' + stateKey + ';render()" style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;cursor:pointer;background:var(--bg-off);transition:background var(--transition-fast)">';
+      h += '<div onclick="S.' + stateKey + '=!S.' + stateKey + ';render()" style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;cursor:pointer;background:var(--bg-off);transition:background var(--transition-fast)">';
       h += '<div style="display:flex;align-items:center;gap:10px"><span class="v2-text-md v2-font-700">📅 ' + fmtD(day) + '</span><span class="badge badge-blue">' + items.length + '</span></div>';
       h += '<span style="font-size:12px;color:var(--ink-muted)">' + (isOpen ? '▼' : '▶') + '</span>';
       h += '</div>';

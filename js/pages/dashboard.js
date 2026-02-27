@@ -28,8 +28,8 @@ function renderDashboard() {
   var greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
   var firstName = userName().split(' ')[0];
 
-  h += '<div class="greeting-banner">';
-  h += '<div class="v2-flex v2-items-center v2-justify-between v2-flex-wrap v2-gap-12">';
+  h += '<div class="greeting-banner greeting-banner--compact">';
+  h += '<div class="v2-flex v2-items-center v2-justify-between v2-flex-wrap v2-gap-8">';
   h += '<div class="greeting-text"><h2>' + greeting + ', ' + esc(firstName) + '</h2>';
   h += '<p>' + fmtD(today()) + ' · ' + esc(site.name) + '</p></div>';
   if (S.sites.length > 1) {
@@ -41,15 +41,7 @@ function renderDashboard() {
   }
   h += '</div></div>';
 
-  // ── 2. QUICK ACTIONS ──
-  h += '<div class="quick-actions">';
-  if (moduleEnabled('temperatures')) h += '<div class="quick-action" onclick="navigate(\'temperatures\')"><div class="qa-icon">🌡️</div><div class="qa-label">Températures</div></div>';
-  if (moduleEnabled('dlc') || moduleEnabled('lots')) h += '<div class="quick-action" onclick="navigate(\'dlc\')"><div class="qa-icon">📥</div><div class="qa-label">Réception</div></div>';
-  if (moduleEnabled('orders')) h += '<div class="quick-action" onclick="navigate(\'orders\')"><div class="qa-icon">🛒</div><div class="qa-label">Commandes</div></div>';
-  h += '<div class="quick-action" onclick="navigate(\'reports\')"><div class="qa-icon">📄</div><div class="qa-label">Rapports</div></div>';
-  h += '</div>';
-
-  // ── 3. STATS GRID ──
+  // ── 2. STATS GRID ──
   h += '<div class="stats-grid">';
 
   var tempPct = totalExpected > 0 ? Math.round(tempCount / totalExpected * 100) : 0;

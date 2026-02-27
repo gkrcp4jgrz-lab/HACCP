@@ -134,6 +134,14 @@ function renderSettingsNotifications() {
   h += '<div id="emailSaveStatus"></div>';
   h += '</div></div>';
 
+  // Report email (manager only)
+  var reportEmail = localStorage.getItem('haccp_report_email') || emailTo;
+  h += '<div class="card"><div class="card-header">📄 Envoi automatique des rapports</div><div class="card-body">';
+  h += '<p class="v2-text-sm v2-text-muted v2-mb-12">Les rapports générés seront automatiquement envoyés par email.</p>';
+  h += '<div class="form-group"><label class="form-label">Email destinataire des rapports</label><input type="text" class="form-input" id="reportEmail" value="' + esc(reportEmail) + '" placeholder="gerant@hotel.com" onchange="saveReportEmail()"></div>';
+  h += '<div id="reportEmailStatus"></div>';
+  h += '</div></div>';
+
   // OCR status (visible to all managers)
   h += '<div class="card"><div class="card-header">📷 Reconnaissance d\'étiquettes (OCR)</div><div class="card-body">';
   h += '<div class="v2-ocr-status v2-ocr-status--success v2-mb-8">✅ Détection automatique active — Prenez une photo d\'étiquette, les champs se rempliront automatiquement.</div>';
@@ -172,6 +180,16 @@ window.saveNotifSettings = function() {
   if (status) {
     status.innerHTML = '<div class="v2-ocr-status v2-ocr-status--success v2-mt-8">✅ Paramètres sauvegardés</div>';
     setTimeout(function() { if (status) status.innerHTML = ''; }, 2000);
+  }
+};
+
+window.saveReportEmail = function() {
+  var email = document.getElementById('reportEmail').value.trim();
+  localStorage.setItem('haccp_report_email', email);
+  var status = document.getElementById('reportEmailStatus');
+  if (status) {
+    status.innerHTML = '<div class="v2-ocr-status v2-ocr-status--success v2-mt-8">' + (email ? '✅ Rapports envoyés à ' + email : '⚠️ Email supprimé — les rapports ne seront plus envoyés') + '</div>';
+    setTimeout(function() { if (status) status.innerHTML = ''; }, 3000);
   }
 };
 

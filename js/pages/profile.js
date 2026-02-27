@@ -21,7 +21,8 @@ function renderProfile() {
   // ── Informations personnelles ──
   h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">👤</span> Informations personnelles</div><div class="card-body">';
   h += '<form onsubmit="handleUpdateProfile(event)">';
-  h += '<div class="form-row"><div class="form-group"><label class="form-label">Nom complet</label><input type="text" class="form-input" id="profName" value="' + esc(p.full_name||'') + '" required></div>';
+  var nameDisabled = p.role === 'employee' ? ' disabled style="background:var(--bg-off)"' : '';
+  h += '<div class="form-row"><div class="form-group"><label class="form-label">Nom complet' + (p.role === 'employee' ? ' <span class="v2-text-xs v2-text-muted">(modifiable par le gérant)</span>' : '') + '</label><input type="text" class="form-input" id="profName" value="' + esc(p.full_name||'') + '" required' + nameDisabled + '></div>';
   h += '<div class="form-group"><label class="form-label">Identifiant <span class="v2-text-xs v2-text-muted">(non modifiable)</span></label><input type="text" class="form-input" value="' + esc(loginId) + '" disabled style="background:var(--bg-off);letter-spacing:1.5px;font-weight:700;font-family:\'SF Mono\',\'Fira Code\',monospace"></div></div>';
   h += '<div class="form-row"><div class="form-group"><label class="form-label">Téléphone</label><input type="tel" class="form-input" id="profPhone" value="' + esc(p.phone||'') + '" placeholder="06 12 34 56 78"></div>';
   h += '<div class="form-group"><label class="form-label">Rôle</label><input type="text" class="form-input" value="' + roleLabel + '" disabled style="background:var(--bg-off)"></div></div>';
@@ -76,11 +77,15 @@ window.handleUpdateProfile = async function(e) {
   e.preventDefault();
   var btn = e.target.querySelector('button[type="submit"]');
   withLoading(btn, async function() {
-    var updates = { full_name: $('profName').value };
+    var updates = {};
+    // Employees cannot change their own name
+    if (S.profile.role !== 'employee') {
+      updates.full_name = $('profName').value;
+    }
     var phone = $('profPhone') ? $('profPhone').value : '';
     updates.phone = phone || '';
     await sb.from('profiles').update(updates).eq('id', S.user.id);
-    S.profile.full_name = updates.full_name;
+    if (updates.full_name) S.profile.full_name = updates.full_name;
     S.profile.phone = updates.phone;
     showToast('Profil mis à jour', 'success');
     render();

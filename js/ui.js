@@ -479,7 +479,7 @@ function pdfSignatureBlock() {
     '</div>';
 }
 
-function openPdfWindow(html) {
+function openPdfWindow(html, reportTitle) {
   // Mobile-friendly: use blob URL to avoid blocking
   var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   var url = URL.createObjectURL(blob);
@@ -496,6 +496,14 @@ function openPdfWindow(html) {
     showToast('Le rapport a été téléchargé. Ouvrez-le pour imprimer.', 'info');
   } else {
     setTimeout(function() { try { w.print(); } catch(e) {} }, 500);
+  }
+
+  // Auto-send by email if configured (managers only)
+  if (isManager() && reportTitle) {
+    var emailTo = localStorage.getItem('haccp_report_email') || localStorage.getItem('haccp_email_to') || '';
+    if (emailTo) {
+      sendReportByEmail(html, reportTitle);
+    }
   }
 }
 
@@ -558,7 +566,7 @@ async function generateTempPDF() {
   html += pdfSignatureBlock();
   html += pdfFooter();
   html += '</body></html>';
-  openPdfWindow(html);
+  openPdfWindow(html, 'Rapport Températures — ' + siteName);
 }
 
 // Compatibilité ancien nom
@@ -623,7 +631,7 @@ function generateDlcPDF() {
   html += pdfSignatureBlock();
   html += pdfFooter();
   html += '</body></html>';
-  openPdfWindow(html);
+  openPdfWindow(html, 'Rapport DLC & Traçabilité — ' + siteName);
 }
 
 // ── RAPPORT SIGNALEMENTS / INCIDENTS ──
@@ -677,7 +685,7 @@ async function generateIncidentPDF() {
     html += pdfSignatureBlock();
     html += pdfFooter();
     html += '</body></html>';
-    openPdfWindow(html);
+    openPdfWindow(html, 'Rapport Signalements — ' + siteName);
   } catch(e) {
     showToast('Erreur lors de la génération : ' + (e.message || e), 'error');
   }
@@ -845,11 +853,57 @@ async function generateFullPDF() {
   html += pdfSignatureBlock();
   html += pdfFooter();
   html += '</body></html>';
-  openPdfWindow(html);
+  openPdfWindow(html, 'Synthèse HACCP — ' + siteName);
   S.reportGenerated = today();
   setTimeout(function() { render(); }, 200);
 }
 
+
+// =====================================================================
+// SEND REPORT BY EMAIL (managers only)
+// =====================================================================
+
+async function sendReportByEmail(htmlContent, reportTitle) {
+  if (!isManager()) return;
+  var emailTo = localStorage.getItem('haccp_report_email') || localStorage.getItem('haccp_email_to') || '';
+  if (!emailTo) {
+    showToast('Configurez l\'email dans Paramètres > Notifications', 'warning');
+    return;
+  }
+
+  try {
+    var session = await sb.auth.getSession();
+    var token = session.data.session ? session.data.session.access_token : null;
+    if (!token) { showToast('Session expirée', 'error'); return; }
+
+    showToast('Envoi du rapport par email...', 'info');
+
+    var resp = await fetch(SB_URL + '/functions/v1/send-email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({
+        to: emailTo,
+        subject: reportTitle + ' — ' + fmtD(today()),
+        html_body: htmlContent
+      })
+    });
+
+    if (!resp.ok) {
+      var errData = await resp.json().catch(function() { return {}; });
+      throw new Error(errData.error || 'Erreur envoi email');
+    }
+
+    showToast('Rapport envoyé par email', 'success');
+  } catch(e) {
+    console.warn('Email send failed:', e);
+    showToast('Email non envoyé : ' + (e.message || 'erreur'), 'error');
+  }
+}
+
+window.sendReportByEmail = sendReportByEmail;
 
 // =====================================================================
 // EMAIL NOTIFICATIONS (via Supabase Edge Function)
