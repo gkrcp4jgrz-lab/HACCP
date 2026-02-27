@@ -1219,6 +1219,7 @@ body.theme-transitioning,body.theme-transitioning *{transition-duration:.3s !imp
   .main-body{padding:12px;padding-bottom:calc(var(--bottomnav-h) + 12px)}
   .quick-actions{grid-template-columns:1fr 1fr}
   .greeting-text h2{font-size:16px}
+  .greeting-banner--compact .greeting-text h2{font-size:14px}
   .photo-box{padding:14px 10px}
   .photo-box .photo-icon{font-size:22px}
   .photo-preview{max-height:140px}

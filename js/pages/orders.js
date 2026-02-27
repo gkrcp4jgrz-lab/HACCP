@@ -48,7 +48,7 @@ function renderOrdersActive() {
       h += '<div class="v2-supplier-group">';
       h += '<div class="v2-supplier-group__header">';
       h += '<h4 class="v2-supplier-group__title"><span class="v2-text-3xl">🏭</span> ' + esc(supplier) + ' <span class="badge badge-blue">' + items.length + ' article' + (items.length > 1 ? 's' : '') + '</span></h4>';
-      h += '<button class="btn btn-primary" onclick="markSupplierOrdered(\'' + esc(supplier).replace(/'/g,'\\\'') + '\')">📞 Tout commandé</button>';
+      h += '<button class="btn btn-primary" onclick="markSupplierOrdered(' + JSON.stringify(supplier) + ')">📞 Tout commandé</button>';
       h += '</div>';
 
       items.forEach(function(o) {
@@ -85,7 +85,7 @@ function renderOrdersActive() {
         h += '<div class="v2-order-row">';
         h += '<div><strong class="v2-order-row__name">' + esc(o.product_name) + '</strong><span class="v2-order-row__qty">' + (o.quantity||1) + ' ' + esc(o.unit||'unité') + '</span>';
         h += '<div class="v2-text-sm v2-text-muted v2-font-500 v2-mt-2">Commandé le ' + fmtD(o.ordered_at) + '</div></div>';
-        h += '<button class="btn btn-success" onclick="openReceiveModal(\'' + o.id + '\',\'' + esc(o.product_name).replace(/'/g,'\\\'') + '\')">✅ Réceptionner</button>';
+        h += '<button class="btn btn-success" onclick="openReceiveModal(\'' + o.id + '\',' + JSON.stringify(o.product_name) + ')">✅ Réceptionner</button>';
         h += '</div>';
       });
       h += '</div>';
@@ -161,7 +161,7 @@ window.loadAndRenderOrderHistory = async function() {
         html += '<button class="btn btn-ghost btn-sm" onclick="viewBLPhoto(\'' + o.id + '\')">📸 Voir BL</button>';
       } else {
         html += '<span class="badge badge-yellow v2-text-xs">Pas de BL</span>';
-        html += '<button class="btn btn-ghost btn-sm" onclick="openReceiveModal(\'' + o.id + '\',\'' + esc(o.product_name).replace(/'/g,'\\\'') + '\',true)">📸 Ajouter</button>';
+        html += '<button class="btn btn-ghost btn-sm" onclick="openReceiveModal(\'' + o.id + '\',' + JSON.stringify(o.product_name) + ',true)">📸 Ajouter</button>';
       }
       html += '</div></div>';
     });
@@ -173,11 +173,12 @@ window.loadAndRenderOrderHistory = async function() {
 
 // Modal de réception avec photo BL
 window.openReceiveModal = function(orderId, productName, photoOnly) {
-  var title = photoOnly ? '📸 Ajouter photo BL/Facture' : '✅ Réception : ' + productName;
+  var safeName = esc(productName);
+  var title = photoOnly ? '📸 Ajouter photo BL/Facture' : '✅ Réception : ' + safeName;
   var html = '<div class="modal-header"><div class="modal-title">' + title + '</div><button class="modal-close" onclick="closeModal()">✕</button></div>';
   html += '<div class="modal-body">';
   if (!photoOnly) {
-    html += '<p style="margin-bottom:16px;font-size:15px;font-weight:500">Confirmez la réception de <strong>' + productName + '</strong>.</p>';
+    html += '<p style="margin-bottom:16px;font-size:15px;font-weight:500">Confirmez la réception de <strong>' + safeName + '</strong>.</p>';
   }
   html += '<div class="form-group"><label class="form-label">📸 Photo du BL ou de la facture <span class="v2-text-sm v2-text-muted v2-font-500">(recommandé)</span></label>';
   html += '<label class="photo-box" for="blPhotoInput" id="blPhotoPreviewBox"><div class="photo-icon">📷</div><div class="photo-text">Prendre une photo du bon de livraison</div><div class="photo-hint">Servira de preuve de réception</div></label>';
@@ -267,7 +268,7 @@ window.markSupplierOrdered = async function(supplierName) {
 window.viewBLPhoto = function(orderId) {
   sb.from('orders').select('bl_photo,product_name').eq('id', orderId).single().then(function(r) {
     if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
-    if (r.data && r.data.bl_photo) {
+    if (r.data && r.data.bl_photo && /^data:image\//.test(r.data.bl_photo)) {
       var html = '<div class="modal-header"><div class="modal-title">📸 BL : ' + esc(r.data.product_name) + '</div><button class="modal-close" onclick="closeModal()">✕</button></div>';
       html += '<div class="modal-body v2-text-center"><img src="' + r.data.bl_photo + '" alt="Bon de livraison ' + esc(r.data.product_name) + '" style="max-width:100%;max-height:70vh;border-radius:12px"></div>';
       openModal(html);

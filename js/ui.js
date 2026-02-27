@@ -78,8 +78,8 @@ async function _ocrViaProxy(base64, context) {
 
     if (!resp.ok) {
       var errData = await resp.json().catch(function() { return {}; });
-      // If function not deployed (404) or API key not set (500), return null for fallback
-      if (resp.status === 404 || resp.status === 500) return null;
+      // If function not deployed (404), API key not set (500), or auth issue (401), return null for fallback
+      if (resp.status === 404 || resp.status === 500 || resp.status === 401) return null;
       throw new Error(errData.error || 'Erreur serveur OCR');
     }
 
@@ -133,7 +133,8 @@ async function _ocrDirectApi(base64, context) {
   var text = data.content && data.content[0] ? data.content[0].text : '';
   var jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('Pas de données détectées');
-  return JSON.parse(jsonMatch[0]);
+  try { return JSON.parse(jsonMatch[0]); }
+  catch(e) { throw new Error('Réponse OCR invalide'); }
 }
 
 function normalizeOcrDate(value) {
@@ -240,7 +241,7 @@ function showOcrStatus(context, type, message) {
   el.innerHTML = '<div class="v2-ocr-status v2-ocr-status--' + safeType + '">' + (type === 'loading' ? '<span class="loading v2-mr-6"></span>' : '') + esc(message) + '</div>';
 
   // Add/remove scanning animation on the photo
-  var imgMap = { dlc: 'photoDlcImg', bl: 'blPhotoImg' };
+  var imgMap = { dlc: 'photoDlcImg', lot: 'photoLotImg', bl: 'blPhotoImg' };
   var img = document.getElementById(imgMap[context]);
   if (img) {
     if (type === 'loading') img.classList.add('photo-scanning');
@@ -872,9 +873,10 @@ async function sendReportByEmail(htmlContent, reportTitle) {
   }
 
   try {
-    var session = await sb.auth.getSession();
-    var token = session.data.session ? session.data.session.access_token : null;
-    if (!token) { showToast('Session expirée', 'error'); return; }
+    var session;
+    try { session = await sb.auth.getSession(); } catch(e) { return; }
+    var token = session && session.data && session.data.session ? session.data.session.access_token : null;
+    if (!token) return;
 
     showToast('Envoi du rapport par email...', 'info');
 
