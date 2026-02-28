@@ -55,8 +55,8 @@ async function doLoginById(loginId, pass) {
     email = loginId;
   }
 
-  // Fallback 2: RPC not available (SQL not run yet) — try as direct email
-  if (!email && !rpcAvailable) {
+  // Fallback 2: no email found (RPC unavailable OR login_id not yet set in profile)
+  if (!email) {
     // Try direct Supabase auth with input as email (migration period)
     var directR = await sb.auth.signInWithPassword({ email: loginId, password: pass });
     if (!directR.error) {
