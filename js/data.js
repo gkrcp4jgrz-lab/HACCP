@@ -330,13 +330,11 @@ async function addCleaningLog(scheduleId, status, notes) {
   var rec = {
     site_id: S.currentSiteId, schedule_id: scheduleId,
     status: status || 'completed', notes: notes || '',
-    photo_data: S.photoCleaningData || null,
     performed_by: S.user.id, performed_by_name: userName()
   };
   var r = await sb.from('cleaning_logs').insert(rec);
   if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
-  showToast(status === 'skipped' ? 'Tâche passée' : 'Nettoyage enregistré', 'success');
-  S.photoCleaningData = null;
+  showToast(status === 'skipped' ? 'Tâche passée' : 'Nettoyage enregistré ✓', 'success');
   await loadSiteData(); render();
 }
 

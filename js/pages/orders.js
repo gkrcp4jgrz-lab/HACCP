@@ -156,13 +156,7 @@ window.loadAndRenderOrderHistory = async function() {
       html += '<div class="v2-order-row v2-flex-wrap v2-gap-8 v2-py-10">';
       html += '<div><strong class="v2-order-row__name">' + esc(o.product_name) + '</strong> — ' + (o.quantity||1) + ' ' + esc(o.unit||'unité');
       html += '<div class="v2-text-sm v2-text-muted v2-font-500 v2-mt-2">Reçu le ' + fmtDT(o.received_at) + '</div></div>';
-      html += '<div class="v2-order-row__actions" style="align-items:center">';
-      if (o.bl_photo) {
-        html += '<button class="btn btn-ghost btn-sm" onclick="viewBLPhoto(\'' + o.id + '\')">📸 Voir BL</button>';
-      } else {
-        html += '<span class="badge badge-yellow v2-text-xs">Pas de BL</span>';
-        html += '<button class="btn btn-ghost btn-sm" onclick="openReceiveModal(\'' + o.id + '\',' + JSON.stringify(o.product_name) + ',true)">📸 Ajouter</button>';
-      }
+      if (o.receive_notes) html += '<div class="v2-text-sm v2-text-muted v2-mt-2">' + esc(o.receive_notes) + '</div>';
       html += '</div></div>';
     });
     html += '</div>';
@@ -172,24 +166,15 @@ window.loadAndRenderOrderHistory = async function() {
 }
 
 // Modal de réception avec photo BL
-window.openReceiveModal = function(orderId, productName, photoOnly) {
+window.openReceiveModal = function(orderId, productName) {
   var safeName = esc(productName);
-  var title = photoOnly ? '📸 Ajouter photo BL/Facture' : '✅ Réception : ' + safeName;
-  var html = '<div class="modal-header"><div class="modal-title">' + title + '</div><button class="modal-close" onclick="closeModal()">✕</button></div>';
+  var html = '<div class="modal-header"><div class="modal-title">✅ Réception : ' + safeName + '</div><button class="modal-close" onclick="closeModal()">✕</button></div>';
   html += '<div class="modal-body">';
-  if (!photoOnly) {
-    html += '<p style="margin-bottom:16px;font-size:15px;font-weight:500">Confirmez la réception de <strong>' + safeName + '</strong>.</p>';
-  }
-  html += '<div class="form-group"><label class="form-label">📸 Photo du BL ou de la facture <span class="v2-text-sm v2-text-muted v2-font-500">(recommandé)</span></label>';
-  html += '<label class="photo-box" for="blPhotoInput" id="blPhotoPreviewBox"><div class="photo-icon">📷</div><div class="photo-text">Prendre une photo du bon de livraison</div><div class="photo-hint">Servira de preuve de réception</div></label>';
-  html += '<input type="file" id="blPhotoInput" accept="image/*" capture="environment" onchange="previewBLPhoto()" style="display:none">';
-  html += '<div id="blPhotoPreview" style="display:none;text-align:center;padding:14px;border:2px solid var(--success);border-radius:12px;background:var(--success-bg)"><img id="blPhotoImg" alt="Photo du bon de livraison" class="photo-preview" style="max-width:300px"><div class="v2-flex v2-gap-8" style="justify-content:center;margin-top:10px"><label for="blPhotoInput" class="btn btn-primary btn-sm" style="cursor:pointer">📷 Reprendre</label><button type="button" class="btn btn-ghost btn-sm" onclick="clearBLPhoto()">✕ Supprimer</button></div></div>';
-  html += '<div id="ocrStatusBl"></div>';
-  html += '</div>';
-  html += '<div class="form-group"><label class="form-label">Notes de réception</label><textarea class="form-textarea" id="receiveNotes" rows="3" placeholder="Ex: Tout conforme, manque 2 cartons..."></textarea></div>';
+  html += '<p style="margin-bottom:16px;font-size:15px;font-weight:500">Confirmez la réception de <strong>' + safeName + '</strong>.</p>';
+  html += '<div class="form-group"><label class="form-label">Notes de réception (optionnel)</label><textarea class="form-textarea" id="receiveNotes" rows="2" placeholder="Ex: Tout conforme, manque 2 cartons..."></textarea></div>';
   html += '</div>';
   html += '<div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Annuler</button>';
-  html += '<button class="btn btn-success btn-lg" onclick="confirmReceive(\'' + orderId + '\',' + (photoOnly ? 'true' : 'false') + ')">✅ ' + (photoOnly ? 'Enregistrer' : 'Confirmer la réception') + '</button></div>';
+  html += '<button class="btn btn-success btn-lg" onclick="confirmReceive(\'' + orderId + '\')">✅ Confirmer la réception</button></div>';
   openModal(html);
 };
 
@@ -230,24 +215,18 @@ window.clearBLPhoto = function() {
   document.getElementById('blPhotoPreview').style.display = 'none';
 };
 
-window.confirmReceive = async function(orderId, photoOnly) {
+window.confirmReceive = async function(orderId) {
   try {
-    var upd = {};
-    if (!photoOnly) {
-      upd.status = 'received';
-      upd.received_at = new Date().toISOString();
-    }
+    var upd = { status: 'received', received_at: new Date().toISOString() };
     var notes = document.getElementById('receiveNotes');
     if (notes && notes.value) upd.receive_notes = notes.value;
-    if (S._blPhotoData) upd.bl_photo = S._blPhotoData;
 
     var r = await sb.from('orders').update(upd).eq('id', orderId);
     if (r.error) throw r.error;
-    S._blPhotoData = null;
     closeModal();
     await loadSiteData();
     render();
-    showToast(photoOnly ? 'Photo enregistrée' : 'Réception confirmée', 'success');
+    showToast('Réception confirmée ✓', 'success');
   } catch(e) { showToast('Erreur: ' + (e.message||e), 'error'); }
 };
 

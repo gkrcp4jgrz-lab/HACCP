@@ -203,10 +203,6 @@ window.openCleaningRecordModal = function(scheduleId, scheduleName) {
   h += '<div class="modal-body">';
   h += '<div class="form-group"><label class="form-label">Notes (optionnel)</label>';
   h += '<textarea class="form-textarea" id="cleanNotes" rows="2" placeholder="Observations, remarques..."></textarea></div>';
-  h += '<div class="form-group"><label class="form-label">Photo (optionnel)</label>';
-  h += '<label class="photo-box" for="cleanPhotoInput"><div class="photo-icon">📷</div><div class="photo-text">Prendre une photo</div><div class="photo-hint">Preuve de nettoyage</div></label>';
-  h += '<input type="file" id="cleanPhotoInput" accept="image/*" capture="environment" onchange="handleCleaningPhoto(this)" style="display:none">';
-  h += '<div id="cleanPhotoPreview"></div></div>';
   h += '</div>';
   h += '<div class="modal-footer" style="gap:12px">';
   h += '<button class="btn btn-ghost" onclick="handleCleaningRecord(' + JSON.stringify(scheduleId) + ',\'skipped\')">⏭️ Passer</button>';

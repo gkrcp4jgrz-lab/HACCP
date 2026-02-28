@@ -832,7 +832,35 @@ async function generateFullPDF() {
   }
 
   var incidents = S.data.incident_reports || [];
-  html += '<div class="section"><h3>5. 🚨 Signalements en cours</h3>';
+  // ── 5. NETTOYAGE ──
+  html += '<div class="section"><h3>5. 🧹 Plan de nettoyage</h3>';
+  if (typeof getTodayCleaningSchedules === 'function') {
+    var cleanScheds = getTodayCleaningSchedules();
+    var cleanLogs = S.data.cleaning_logs || [];
+    var cleanDoneMap = {};
+    cleanLogs.forEach(function(l) { cleanDoneMap[l.schedule_id] = l; });
+    if (cleanScheds.length > 0) {
+      html += '<table><thead><tr><th>Tâche</th><th>Zone</th><th>Statut</th><th>Effectué par</th><th>Heure</th></tr></thead><tbody>';
+      cleanScheds.forEach(function(s) {
+        var log = cleanDoneMap[s.id];
+        var statusHtml = log ? '<span class="badge badge-green">✓ Fait</span>' : '<span class="badge badge-red">✗ Non fait</span>';
+        html += '<tr><td>' + esc(s.name) + '</td><td>' + esc(s.zone || '—') + '</td>';
+        html += '<td>' + statusHtml + '</td>';
+        html += '<td>' + (log ? esc(log.performed_by_name || '—') : '—') + '</td>';
+        html += '<td>' + (log && log.performed_at ? fmtDT(log.performed_at).split(' ').pop() : '—') + '</td></tr>';
+      });
+      html += '</tbody></table>';
+      var cleanDoneCount = cleanScheds.filter(function(s) { return cleanDoneMap[s.id]; }).length;
+      html += '<p style="margin-top:8px;font-weight:600;color:' + (cleanDoneCount >= cleanScheds.length ? '#059669' : '#dc2626') + '">' + cleanDoneCount + '/' + cleanScheds.length + ' tâches complétées</p>';
+    } else {
+      html += '<p style="color:#6b7280">Aucune tâche de nettoyage programmée aujourd\'hui.</p>';
+    }
+  } else {
+    html += '<p style="color:#6b7280">Module nettoyage non activé.</p>';
+  }
+  html += '</div>';
+
+  html += '<div class="section"><h3>6. 🚨 Signalements en cours</h3>';
   if (incidents.length > 0) {
     html += '<table><thead><tr><th>Date</th><th>Titre</th><th>Catégorie</th><th>Priorité</th><th>Statut</th><th>Signalé par</th></tr></thead><tbody>';
     incidents.forEach(function(rep) {
@@ -849,7 +877,13 @@ async function generateFullPDF() {
   html += '</div>';
 
   // ── CONCLUSION ──
-  var allOk = (temps.length - conform === 0) && expired.length === 0 && incidents.filter(function(i) { return i.priority === 'urgent'; }).length === 0;
+  var cleaningOk = true;
+  if (typeof getTodayCleaningSchedules === 'function') {
+    var _cs = getTodayCleaningSchedules(); var _cl = S.data.cleaning_logs || []; var _cm = {};
+    _cl.forEach(function(l) { _cm[l.schedule_id] = true; });
+    cleaningOk = _cs.length === 0 || _cs.filter(function(s) { return _cm[s.id]; }).length >= _cs.length;
+  }
+  var allOk = (temps.length - conform === 0) && expired.length === 0 && incidents.filter(function(i) { return i.priority === 'urgent'; }).length === 0 && cleaningOk;
   html += '<div style="margin-top:24px;padding:16px;border-radius:8px;background:' + (allOk ? '#d1fae5' : '#fee2e2') + ';text-align:center">';
   html += '<strong style="font-size:15px;color:' + (allOk ? '#059669' : '#dc2626') + '">';
   html += allOk ? '✅ Conformité globale : SITE CONFORME' : '⚠️ Points d\'attention identifiés — Actions correctives requises';
