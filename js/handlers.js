@@ -401,7 +401,7 @@ window.markConsigneRead = async function(id) {
     showToast('Consigne traitée', 'success');
 
     // 3. Try to persist in DB (may fail due to RLS, that's OK — localStorage is the primary store)
-    sb.from('consignes').update({ is_read: true }).eq('id', id).catch(function() {});
+    sb.from('consignes').update({ is_read: true }).eq('id', id).then(null, function() {});
   } catch(e) { console.warn('markConsigneRead:', e); }
 };
 window.closeModal = closeModal;
