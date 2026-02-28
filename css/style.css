@@ -1130,6 +1130,11 @@ img{max-width:100%;height:auto}
 [data-theme="dark"] .tl-card:hover{background:rgba(255,255,255,.02)}
 [data-theme="dark"] .tl-dot{border-color:var(--af-bg)}
 
+/* Dark greeting banner */
+[data-theme="dark"] .greeting-banner{background:var(--af-bg);border-color:rgba(255,255,255,.06)}
+[data-theme="dark"] .v2-greeting-select{background:var(--af-bg);border-color:var(--border);color:var(--ink)}
+[data-theme="dark"] .v2-greeting-select:hover{background:var(--bg-off);border-color:var(--af-teal)}
+
 /* Dark auth (no change needed - already dark) */
 
 /* Dark mode toggle (integrated in sidebar-user-actions) */
