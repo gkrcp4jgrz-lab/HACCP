@@ -7,7 +7,7 @@ function renderLegal() {
   h += '<div class="card"><div class="card-header">📜 Mentions légales</div><div class="card-body" style="line-height:1.8;font-size:14px">';
 
   h += '<h3 class="v2-text-lg v2-font-700 v2-mb-8">1. Éditeur de l\'application</h3>';
-  h += '<p class="v2-mb-16">HACCP Pro est une application de gestion de la sécurité alimentaire conforme au règlement européen CE 852/2004 et au Paquet Hygiène.</p>';
+  h += '<p class="v2-mb-16">CONI est une application de gestion de la sécurité alimentaire conforme au règlement européen CE 852/2004 et au Paquet Hygiène.</p>';
 
   h += '<h3 class="v2-text-lg v2-font-700 v2-mb-8">2. Hébergement</h3>';
   h += '<p class="v2-mb-16">L\'application est hébergée par <strong>Vercel Inc.</strong> (San Francisco, USA) et les données sont stockées par <strong>Supabase Inc.</strong> sur des serveurs sécurisés.</p>';
@@ -35,7 +35,7 @@ function renderLegal() {
   h += '</ul>';
 
   h += '<h3 class="v2-text-lg v2-font-700 v2-mb-8">6. Limitation de responsabilité</h3>';
-  h += '<p class="v2-mb-16">HACCP Pro est un outil d\'aide à la gestion. L\'utilisateur reste responsable de la conformité de ses pratiques HACCP et de la véracité des données enregistrées. L\'application ne se substitue pas au Plan de Maîtrise Sanitaire (PMS) de l\'établissement.</p>';
+  h += '<p class="v2-mb-16">CONI est un outil d\'aide à la gestion. L\'utilisateur reste responsable de la conformité de ses pratiques HACCP et de la véracité des données enregistrées. L\'application ne se substitue pas au Plan de Maîtrise Sanitaire (PMS) de l\'établissement.</p>';
 
   h += '<h3 class="v2-text-lg v2-font-700 v2-mb-8">7. Contact</h3>';
   h += '<p>Pour toute question relative à vos données ou à l\'utilisation de l\'application, contactez l\'administrateur de votre établissement.</p>';
@@ -51,8 +51,8 @@ function renderAbout() {
   var h = '';
 
   h += '<div class="card"><div class="card-body" style="text-align:center;padding:36px 24px">';
-  h += '<div style="width:80px;height:80px;margin:0 auto 16px"><img src="/icon.svg" alt="HACCP Pro" style="width:100%;height:100%;border-radius:18px"></div>';
-  h += '<h2 class="v2-text-2xl v2-font-800 v2-mb-4">HACCP Pro</h2>';
+  h += '<div style="width:80px;height:80px;margin:0 auto 16px"><img src="/icon.svg" alt="CONI" style="width:100%;height:100%;border-radius:18px"></div>';
+  h += '<h2 class="v2-text-2xl v2-font-800 v2-mb-4">CONI</h2>';
   h += '<p class="v2-text-muted v2-font-600 v2-mb-16">Version 3.0 — Arctic Frost</p>';
   h += '<p class="v2-text-base v2-mb-20" style="max-width:500px;margin-left:auto;margin-right:auto;line-height:1.7">Application professionnelle de gestion de la sécurité alimentaire. Relevés de températures, contrôle DLC, traçabilité des lots, gestion des commandes et rapports conformes.</p>';
   h += '</div></div>';

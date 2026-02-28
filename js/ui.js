@@ -468,7 +468,7 @@ function pdfHeader(title, subtitle) {
 }
 
 function pdfFooter() {
-  return '<div class="footer"><span>Généré par HACCP Pro le ' + fmtDT(new Date()) + '</span><span>Document à conserver 2 ans minimum — Règlement CE 852/2004</span></div>';
+  return '<div class="footer"><span>Généré par CONI le ' + fmtDT(new Date()) + '</span><span>Document à conserver 2 ans minimum — Règlement CE 852/2004</span></div>';
 }
 
 function pdfSignatureBlock() {

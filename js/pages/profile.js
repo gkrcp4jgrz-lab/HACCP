@@ -63,7 +63,7 @@ function renderProfile() {
 
   // ── Informations & Légal ──
   h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">ℹ️</span> Informations</div>';
-  h += '<div class="list-item" style="cursor:pointer" onclick="navigate(\'about\')"><div class="list-icon v2-list-icon--info" style="font-size:18px">📱</div><div class="list-content"><div class="list-title">À propos de HACCP Pro</div><div class="list-sub">Version 3.0 — Arctic Frost</div></div><span class="v2-text-muted" style="font-size:18px">›</span></div>';
+  h += '<div class="list-item" style="cursor:pointer" onclick="navigate(\'about\')"><div class="list-icon v2-list-icon--info" style="font-size:18px">📱</div><div class="list-content"><div class="list-title">À propos de CONI</div><div class="list-sub">Version 3.0 — Arctic Frost</div></div><span class="v2-text-muted" style="font-size:18px">›</span></div>';
   h += '<div class="list-item" style="cursor:pointer" onclick="navigate(\'legal\')"><div class="list-icon v2-list-icon--info" style="font-size:18px">📜</div><div class="list-content"><div class="list-title">Mentions légales</div><div class="list-sub">RGPD, conditions d\'utilisation, conformité</div></div><span class="v2-text-muted" style="font-size:18px">›</span></div>';
   h += '</div>';
 

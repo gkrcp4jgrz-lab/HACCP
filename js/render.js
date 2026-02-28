@@ -29,7 +29,7 @@ function render() {
 
 function renderAuth() {
   return '<div class="auth-wrapper"><div class="auth-card">' +
-    '<div class="auth-logo"><div class="auth-logo-icon">🛡️</div><h1>HACCP Pro</h1><p>Sécurité alimentaire professionnelle</p></div>' +
+    '<div class="auth-logo"><div class="auth-logo-icon">🛡️</div><h1>CONI</h1><p>Sécurité alimentaire professionnelle</p></div>' +
     '<div id="authForm">' + renderLoginForm() + '</div>' +
     '<p class="auth-footer">Contactez votre administrateur pour obtenir vos identifiants.</p>' +
     '</div></div>';
@@ -119,7 +119,7 @@ function renderSidebar() {
   var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
 
   return '<nav class="sidebar' + (S.sidebarOpen?' open':'') + '" role="navigation" aria-label="Menu principal">' +
-    '<div class="sidebar-header"><div class="sidebar-brand"><span>🛡️</span><h2 class="brand-text">HACCP Pro</h2></div></div>' +
+    '<div class="sidebar-header"><div class="sidebar-brand"><h2 class="brand-text">CONI</h2><span class="brand-sub">HACCP</span></div></div>' +
     siteSelector +
     '<div class="sidebar-nav">' + navHtml + '</div>' +
     '<div class="sidebar-user">' +
@@ -174,6 +174,6 @@ function renderMainContent() {
   }
 
   return '<div class="main-content">' +
-    '<header class="main-header"><button class="burger" onclick="toggleSidebar()" aria-label="Ouvrir le menu">☰</button><h1>' + (titles[S.page] || 'HACCP Pro') + '</h1>' + headerSiteDropdown + '</header>' +
+    '<header class="main-header"><button class="burger" onclick="toggleSidebar()" aria-label="Ouvrir le menu">☰</button><h1>' + (titles[S.page] || 'CONI') + '</h1>' + headerSiteDropdown + '</header>' +
     '<div class="main-body">' + content + '</div></div>';
 }
