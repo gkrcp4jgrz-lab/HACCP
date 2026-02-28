@@ -141,11 +141,12 @@ async function _insertDlcRecord(productName, dlcDate, lotNumber, notes, photoDat
   return r;
 }
 
-async function _insertLotRecord(productName, lotNumber, supplierName, dlcDate, notes, photoData) {
+async function _insertLotRecord(productName, lotNumber, supplierName, dlcDate, notes, photoData, quantity) {
   var rec = {
     site_id: S.currentSiteId, product_name: productName, lot_number: lotNumber,
     supplier_name: supplierName || '', dlc_date: dlcDate || null,
     photo_data: photoData || null, notes: notes || '',
+    quantity: parseInt(quantity) || 1,
     recorded_by: S.user.id, recorded_by_name: userName()
   };
   var r = await sb.from('lots').insert(rec);
@@ -193,6 +194,13 @@ async function addLot(productName, lotNumber, supplierName, dlcDate, notes) {
   if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
   showToast('Lot enregistré', 'success');
   S.photoLotData = null; await loadSiteData(); render();
+}
+
+async function updateLotStatus(id, status) {
+  var r = await sbExec(sb.from('lots').update({ status: status }).eq('id', id), 'Mise à jour lot');
+  if (!r) return;
+  showToast(status === 'consumed' ? 'Lot marqué utilisé' : 'Lot marqué jeté', 'success');
+  await loadSiteData(); render();
 }
 
 async function deleteLot(id) {
@@ -256,10 +264,10 @@ async function deleteConsigne(id) {
   await loadSiteData(); render();
 }
 // -- Cleaning Schedules --
-async function addCleaningSchedule(name, zone, frequency, assignedRole) {
+async function addCleaningSchedule(name, zone, frequency) {
   var rec = {
     site_id: S.currentSiteId, name: name, zone: zone || '',
-    frequency: frequency || 'daily', assigned_role: assignedRole || 'employee'
+    frequency: frequency || 'daily'
   };
   var r = await sb.from('cleaning_schedules').insert(rec);
   if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }

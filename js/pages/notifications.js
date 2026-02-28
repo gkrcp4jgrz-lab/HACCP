@@ -248,6 +248,21 @@ function buildAlertsForSite(temperatures, dlcs, consignes, orders, incidents, eq
     });
   });
 
+  // 4b. DLC secondaire (multi-site)
+  dlcs.filter(function(d) {
+    return d.opened_at && d.shelf_life_days && d.status !== 'consumed' && d.status !== 'discarded';
+  }).forEach(function(d) {
+    var openDate = new Date(d.opened_at + 'T00:00:00');
+    var expiryDate = new Date(openDate.getTime() + d.shelf_life_days * 86400000);
+    var todayDate = new Date(today() + 'T00:00:00');
+    var daysLeft = Math.ceil((expiryDate - todayDate) / 86400000);
+    if (daysLeft < 0) {
+      alerts.push({ level: 'critical', icon: '📂', category: 'dlc2', title: 'DLC2 expirée : ' + d.product_name, message: 'Ouvert depuis ' + Math.ceil((todayDate - openDate) / 86400000) + 'j (max ' + d.shelf_life_days + 'j)' });
+    } else if (daysLeft <= 1) {
+      alerts.push({ level: 'warning', icon: '📂', category: 'dlc2', title: 'DLC2 proche : ' + d.product_name, message: (daysLeft === 0 ? 'Expire aujourd\'hui' : 'Expire demain') });
+    }
+  });
+
   // 5. Commandes en attente longtemps (WARNING)
   orders.filter(function(o) {
     if (o.status !== 'ordered' || !o.ordered_at) return false;
@@ -382,6 +397,31 @@ function buildAlerts() {
       time: fmtD(d.dlc_date),
       action: '<button class="btn btn-success" onclick="updateDlcStatus(\'' + d.id + '\',\'consumed\')">✓ Consommé</button>'
     });
+  });
+
+  // 4b. DLC secondaire expirée (CRITICAL) ou proche (WARNING)
+  S.data.dlcs.filter(function(d) {
+    return d.opened_at && d.shelf_life_days && d.status !== 'consumed' && d.status !== 'discarded';
+  }).forEach(function(d) {
+    var openDate = new Date(d.opened_at + 'T00:00:00');
+    var expiryDate = new Date(openDate.getTime() + d.shelf_life_days * 86400000);
+    var todayDate = new Date(today() + 'T00:00:00');
+    var daysLeft = Math.ceil((expiryDate - todayDate) / 86400000);
+    if (daysLeft < 0) {
+      alerts.push({
+        level: 'critical', icon: '📂', category: 'dlc2',
+        title: 'DLC secondaire expirée : ' + d.product_name,
+        message: 'Ouvert depuis ' + Math.ceil((todayDate - openDate) / 86400000) + 'j (max ' + d.shelf_life_days + 'j)',
+        action: '<button class="btn btn-danger" onclick="updateDlcStatus(\'' + d.id + '\',\'discarded\')">🗑️ Jeter</button>'
+      });
+    } else if (daysLeft <= 1) {
+      alerts.push({
+        level: 'warning', icon: '📂', category: 'dlc2',
+        title: 'DLC secondaire proche : ' + d.product_name,
+        message: (daysLeft === 0 ? 'Expire aujourd\'hui' : 'Expire demain') + ' (ouvert ' + d.shelf_life_days + 'j max)',
+        action: '<button class="btn btn-success" onclick="updateDlcStatus(\'' + d.id + '\',\'consumed\')">Utiliser</button>'
+      });
+    }
   });
 
   // 5. Commandes en attente depuis longtemps (WARNING)

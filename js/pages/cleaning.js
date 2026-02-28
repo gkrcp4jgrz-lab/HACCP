@@ -44,16 +44,10 @@ function renderCleaning() {
     h += '</div></div>';
   }
 
-  // Quick add form (all roles)
-  h += '<div class="card v2-mb-16"><div class="card-header"><span class="v2-text-2xl">➕</span> Ajouter une tâche rapide</div><div class="card-body">';
-  h += '<form onsubmit="handleCleaningSchedule(event)">';
-  h += '<div class="form-row"><div class="form-group" style="flex:2"><label class="form-label">Nom <span class="req">*</span></label><input type="text" class="form-input" id="cleanName" required placeholder="Ex: Nettoyage plan de travail"></div>';
-  h += '<div class="form-group"><label class="form-label">Zone</label><input type="text" class="form-input" id="cleanZone" placeholder="Cuisine, Salle..."></div></div>';
-  h += '<div class="form-row"><div class="form-group"><label class="form-label">Fréquence</label>';
-  h += '<select class="form-select" id="cleanFreq"><option value="daily">Quotidien</option><option value="weekly">Hebdomadaire</option><option value="monthly">Mensuel</option></select></div>';
-  h += '<div class="form-group" style="display:flex;align-items:flex-end"><button type="submit" class="btn btn-primary" style="width:100%">✓ Ajouter</button></div></div>';
-  h += '<input type="hidden" id="cleanRole" value="employee">';
-  h += '</form></div></div>';
+  // Quick add button
+  h += '<div style="display:flex;justify-content:flex-end;margin-bottom:12px">';
+  h += '<button class="btn btn-primary" onclick="openCleaningAddModal()">+ Ajouter une tâche</button>';
+  h += '</div>';
 
   // Content by filter
   if (S.cleaningFilter === 'today') {
@@ -175,7 +169,6 @@ function renderCleaningCompleted(records) {
 function renderCleaningAll(schedules) {
   var h = '';
   var freqLabels = {daily:'Quotidien', weekly:'Hebdomadaire', monthly:'Mensuel'};
-  var roleLabels = {employee:'Employé', manager:'Gérant'};
 
   if (schedules.length === 0) {
     h += '<div class="card"><div class="card-body"><div class="empty"><div class="empty-icon">🧹</div>';
@@ -188,7 +181,7 @@ function renderCleaningAll(schedules) {
   schedules.forEach(function(s) {
     h += '<div class="list-item"><div class="list-icon" style="font-size:24px">🧹</div>';
     h += '<div class="list-content"><div class="list-title">' + esc(s.name) + '</div>';
-    h += '<div class="list-sub">' + esc(s.zone || 'Sans zone') + ' · ' + (freqLabels[s.frequency] || s.frequency) + ' · ' + (roleLabels[s.assigned_role] || s.assigned_role) + '</div></div>';
+    h += '<div class="list-sub">' + esc(s.zone || 'Sans zone') + ' · ' + (freqLabels[s.frequency] || s.frequency) + '</div></div>';
     h += '<div class="list-actions"><button class="btn btn-danger btn-sm" onclick="deleteCleaningSchedule(\'' + s.id + '\')">🗑️</button></div>';
     h += '</div>';
   });
@@ -223,4 +216,19 @@ window.openCleaningRecordModal = function(scheduleId, scheduleName) {
 
 window.deleteCleaningSchedule = function(id) {
   return deleteCleaningSchedule(id);
+};
+
+window.openCleaningAddModal = function() {
+  var h = '<div class="modal-header"><div class="modal-title">🧹 Ajouter une tâche</div><button class="modal-close" onclick="closeModal()">✕</button></div>';
+  h += '<div class="modal-body">';
+  h += '<form onsubmit="handleCleaningSchedule(event)">';
+  h += '<div class="form-group"><label class="form-label">Nom <span class="req">*</span></label><input type="text" class="form-input" id="cleanName" required placeholder="Ex: Nettoyage plan de travail"></div>';
+  h += '<div class="form-group"><label class="form-label">Zone</label><input type="text" class="form-input" id="cleanZone" placeholder="Cuisine, Salle..."></div>';
+  h += '<div class="form-group"><label class="form-label">Fréquence</label>';
+  h += '<select class="form-select" id="cleanFreq"><option value="daily">Quotidien</option><option value="weekly">Hebdomadaire</option><option value="monthly">Mensuel</option></select></div>';
+  h += '<input type="hidden" id="cleanRole" value="employee">';
+  h += '<button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:8px">Ajouter</button>';
+  h += '</form>';
+  h += '</div>';
+  openModal(h);
 };

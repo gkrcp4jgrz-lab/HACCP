@@ -115,6 +115,7 @@ window.handleReception = async function(e) {
   e.preventDefault();
   var product = $('recProduct').value.trim();
   var lotNum = $('recLotNum').value.trim().toUpperCase();
+  var qty = $('recQty') ? $('recQty').value : '1';
   var dlcDate = $('recDlcDate').value;
   var supplier = $('recSupplier').value.trim();
   var notes = $('recNotes').value.trim();
@@ -134,7 +135,7 @@ window.handleReception = async function(e) {
       await _insertDlcRecord(product, dlcDate, lotNum, notes, photoData);
     }
     if (saveLot && lotNum) {
-      await _insertLotRecord(product, lotNum, supplier, dlcDate, notes, photoData);
+      await _insertLotRecord(product, lotNum, supplier, dlcDate, notes, photoData, qty);
     }
     S.photoDlcData = null;
     await loadSiteData();
@@ -413,6 +414,7 @@ window.clearPhotoLot = clearPhotoLot;
 window.deleteDlc = deleteDlc;
 window.updateDlcStatus = updateDlcStatus;
 window.deleteLot = deleteLot;
+window.updateLotStatus = updateLotStatus;
 window.addOrder = addOrder;
 window.updateOrderStatus = updateOrderStatus;
 window.deleteOrder = deleteOrder;
@@ -447,12 +449,11 @@ window.handleCleaningSchedule = async function(e) {
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading"></span>'; }
   try {
     await addCleaningSchedule(name, zone, freq, role);
-    if ($('cleanName')) $('cleanName').value = '';
-    if ($('cleanZone')) $('cleanZone').value = '';
+    closeModal();
   } catch(ex) {
     showToast('Erreur: ' + (ex.message || ex), 'error');
+    if (btn) { btn.disabled = false; btn.innerHTML = 'Ajouter'; }
   }
-  if (btn) { btn.disabled = false; btn.innerHTML = '✓ Ajouter'; }
 };
 
 window.handleCleaningPhoto = function(input) {

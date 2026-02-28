@@ -48,7 +48,7 @@ function bnavItem(page, icon, label) {
 }
 
 function bnavItemMore(alertCount) {
-  var active = ['orders','notifications','reports','team','settings','profile','cleaning'].indexOf(S.page) >= 0 ? ' active' : '';
+  var active = '';
   var badge = alertCount > 0 ? '<span class="bnav-badge">' + alertCount + '</span>' : '';
   return '<button class="bnav-item' + active + '" onclick="toggleBnavMore()">' +
     '<span class="bnav-icon">☰</span>' + badge + 'Plus</button>';

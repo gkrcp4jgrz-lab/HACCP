@@ -34,6 +34,7 @@ var S = {
   photoCleaningData: null,
   filter: 'all',
   dlcTab: 'dlc',
+  showClosedLots: false,
   adminTab: 'users',
   settingsTab: 'equipment',
   notifTab: 'alerts',
