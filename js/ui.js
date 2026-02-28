@@ -433,33 +433,38 @@ window.addEventListener('popstate', function(e) {
 // ── STYLES COMMUNS ──
 
 function pdfStyles() {
-  return 'body{font-family:Arial,sans-serif;padding:30px;font-size:13px;color:#1a1a2e}' +
-    'h1{color:#2563eb;font-size:20px;margin-bottom:4px}' +
-    'h2{font-size:14px;color:#666;margin-bottom:20px}' +
-    'h3{font-size:15px;color:#2563eb;margin:24px 0 10px;border-bottom:1px solid #e5e7eb;padding-bottom:6px}' +
-    'table{width:100%;border-collapse:collapse;margin:12px 0 20px}' +
-    'th{background:#2563eb;color:#fff;padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.3px}' +
-    'td{padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:12px}' +
-    'tr:nth-child(even) td{background:#f8fafc}' +
-    '.ok{color:#059669;font-weight:600}.nok{color:#dc2626;font-weight:600}' +
-    '.header{border-bottom:2px solid #2563eb;padding-bottom:12px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-start}' +
-    '.header-left{flex:1}.header-right{text-align:right;font-size:11px;color:#999}' +
-    '.footer{margin-top:30px;padding-top:16px;border-top:2px solid #2563eb;font-size:10px;color:#999;display:flex;justify-content:space-between}' +
-    '.stat-box{display:inline-block;border:1px solid #e5e7eb;border-radius:6px;padding:10px 16px;margin:0 8px 8px 0;text-align:center}' +
-    '.stat-box .val{font-size:22px;font-weight:800;color:#2563eb}.stat-box .lbl{font-size:10px;color:#666;margin-top:2px}' +
-    '.stat-box.danger .val{color:#dc2626}.stat-box.warn .val{color:#d97706}.stat-box.success .val{color:#059669}' +
-    '.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600}' +
-    '.badge-red{background:#fee2e2;color:#dc2626}.badge-green{background:#d1fae5;color:#059669}.badge-yellow{background:#fef3c7;color:#d97706}.badge-gray{background:#f3f4f6;color:#6b7280}' +
-    '.section{page-break-inside:avoid}' +
-    '.sig-block{margin-top:24px;display:flex;gap:40px}' +
-    '.sig-item{flex:1;border-top:1px solid #999;padding-top:6px;font-size:11px;color:#666}' +
-    '@media print{body{padding:15px}h1{font-size:18px}.footer{position:fixed;bottom:0;left:0;right:0;padding:10px 30px}}';
+  return 'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:30px;color:#0F172A;font-size:13px;line-height:1.6;max-width:900px;margin:0 auto;background:#fff}' +
+    'h1{font-size:22px;margin:0;color:#0F172A;font-weight:800;letter-spacing:-.3px}' +
+    'h2{font-size:13px;margin:4px 0 0;color:#64748B;font-weight:500}' +
+    'h3{font-size:14px;margin:0 0 12px;color:#0F172A;padding:10px 14px;background:linear-gradient(135deg,#F0FDFA,#E0F2FE);border-radius:8px;border-left:4px solid #0891B2;font-weight:700}' +
+    'table{width:100%;border-collapse:separate;border-spacing:0;margin:12px 0 20px;border-radius:8px;overflow:hidden;border:1px solid #E2E8F0}' +
+    'th{background:linear-gradient(135deg,#0891B2,#0E7490);color:#fff;padding:10px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:700}' +
+    'td{padding:9px 12px;border-bottom:1px solid #F1F5F9;font-size:12px}' +
+    'tr:nth-child(even) td{background:#F8FAFC}tr:last-child td{border-bottom:none}' +
+    '.ok{color:#059669;font-weight:700;background:#D1FAE5;padding:2px 8px;border-radius:4px;font-size:11px}' +
+    '.nok{color:#DC2626;font-weight:700;background:#FEE2E2;padding:2px 8px;border-radius:4px;font-size:11px}' +
+    '.header{border-bottom:3px solid #0891B2;padding-bottom:16px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:flex-start}' +
+    '.header-left{flex:1}' +
+    '.header-right{text-align:right;font-size:11px;color:#64748B;line-height:1.7;background:#F8FAFC;padding:10px 14px;border-radius:8px;border:1px solid #E2E8F0}' +
+    '.footer{margin-top:30px;padding:14px 0;border-top:3px solid #0891B2;font-size:10px;color:#64748B;display:flex;justify-content:space-between}' +
+    '.stat-box{display:inline-block;border:1.5px solid #E2E8F0;border-radius:10px;padding:12px 20px;margin:0 8px 8px 0;text-align:center;background:#FAFBFC}' +
+    '.stat-box .val{font-size:24px;font-weight:800;color:#0891B2}.stat-box .lbl{font-size:10px;color:#64748B;margin-top:3px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}' +
+    '.stat-box.danger{border-color:#FECACA;background:#FFF5F5}.stat-box.danger .val{color:#DC2626}' +
+    '.stat-box.warn{border-color:#FDE68A;background:#FFFBEB}.stat-box.warn .val{color:#D97706}' +
+    '.stat-box.success{border-color:#A7F3D0;background:#F0FDF4}.stat-box.success .val{color:#059669}' +
+    '.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:10px;font-weight:700}' +
+    '.badge-red{background:#FEE2E2;color:#DC2626}.badge-green{background:#D1FAE5;color:#059669}.badge-yellow{background:#FEF3C7;color:#D97706}.badge-gray{background:#F1F5F9;color:#64748B}' +
+    '.section{page-break-inside:avoid;margin-bottom:24px}' +
+    '.sig-block{margin-top:28px;display:flex;gap:40px;padding:16px 0}' +
+    '.sig-item{flex:1;border-top:2px solid #CBD5E1;padding-top:8px;font-size:11px;color:#64748B}' +
+    '@media print{body{padding:20px}h1{font-size:18px}.footer{position:fixed;bottom:0;left:0;right:0;padding:10px 30px}table,th,td,.stat-box,.badge,.ok,.nok,h3{-webkit-print-color-adjust:exact;print-color-adjust:exact}}';
 }
 
 function pdfHeader(title, subtitle) {
   var site = currentSite();
-  return '<div class="header"><div class="header-left"><h1>🛡️ ' + esc(title) + '</h1><h2>' + esc(subtitle) + '</h2></div>' +
-    '<div class="header-right">' + (site ? esc(site.name) + '<br>' : '') +
+  return '<div class="header"><div class="header-left"><h1>' + esc(title) + '</h1><h2>' + esc(subtitle) + '</h2>' +
+    '<div style="margin-top:8px;font-size:11px;color:#0891B2;font-weight:700;letter-spacing:1px">CONI — Sécurité Alimentaire</div></div>' +
+    '<div class="header-right">' + (site ? '<strong>' + esc(site.name) + '</strong><br>' : '') +
     (site && site.address ? esc(site.address) + '<br>' : '') +
     (site && site.city ? esc(site.city) + '<br>' : '') +
     (site && site.agrement ? 'N° agrément : ' + esc(site.agrement) + '<br>' : '') +
@@ -773,8 +778,8 @@ async function generateFullPDF() {
   html += '</div>';
 
   // ── 3. TRAÇABILITÉ ──
-  html += '<div class="section"><h3>3. 📦 Derniers lots enregistrés</h3>';
-  var recentLots = S.data.lots.slice(0, 10);
+  html += '<div class="section"><h3>3. 📦 Lots actifs</h3>';
+  var recentLots = S.data.lots.filter(function(l) { return l.status !== 'consumed' && l.status !== 'discarded'; }).slice(0, 10);
   html += '<table><thead><tr><th>Produit</th><th>N° Lot</th><th>Fournisseur</th><th>DLC</th><th>Date</th></tr></thead><tbody>';
   recentLots.forEach(function(l) {
     html += '<tr><td>' + esc(l.product_name) + '</td><td style="font-weight:600">' + esc(l.lot_number) + '</td>';
@@ -820,7 +825,7 @@ async function generateFullPDF() {
         html += '<tr><td>' + esc(o.product_name) + '</td><td>' + o.quantity + ' ' + esc(o.unit || '') + '</td>';
         html += '<td>' + esc(o.supplier_name || '—') + '</td>';
         html += '<td>' + fmtD(o.received_at) + '</td>';
-        html += '<td>' + esc(o.receive_notes || '—') + '</td></tr>';
+        html += '<td>' + esc(o.notes || '—') + '</td></tr>';
       });
       html += '</tbody></table>';
     } else {

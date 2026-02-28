@@ -595,7 +595,7 @@ img{max-width:100%;height:auto}
    TIMELINE — Ma Journee
    ══════════════════════════════════════════ */
 .timeline{position:relative;padding-left:32px;margin-top:8px}
-.timeline::before{content:'';position:absolute;left:13px;top:0;bottom:0;width:2px;background:linear-gradient(180deg,var(--af-teal) 0%,var(--border) 100%);border-radius:1px}
+.timeline::before{content:'';position:absolute;left:7px;top:0;bottom:0;width:2px;background:linear-gradient(180deg,var(--af-teal) 0%,var(--border) 100%);border-radius:1px}
 .tl-item{position:relative;margin-bottom:14px;animation:fadeIn .4s var(--ease) both}
 .tl-item:nth-child(1){animation-delay:.05s}
 .tl-item:nth-child(2){animation-delay:.1s}
@@ -603,7 +603,7 @@ img{max-width:100%;height:auto}
 .tl-item:nth-child(4){animation-delay:.2s}
 .tl-item:nth-child(5){animation-delay:.25s}
 .tl-item:nth-child(6){animation-delay:.3s}
-.tl-dot{position:absolute;left:-32px;top:8px;width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px var(--border)}
+.tl-dot{position:absolute;left:-32px;top:18px;width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px var(--border)}
 .tl-dot.done{background:var(--af-ok);box-shadow:0 0 0 2px var(--af-ok),0 2px 6px rgba(16,185,129,.25)}
 .tl-dot.warn{background:var(--af-warn);box-shadow:0 0 0 2px var(--af-warn),0 2px 6px rgba(245,158,11,.25)}
 .tl-dot.danger{background:var(--af-err);box-shadow:0 0 0 2px var(--af-err),0 2px 6px rgba(239,68,68,.25)}

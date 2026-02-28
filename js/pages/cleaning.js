@@ -26,10 +26,10 @@ function renderCleaning() {
   var pct = totalCount > 0 ? Math.round(doneCount / totalCount * 100) : 0;
 
   // Tabs
-  h += '<div class="tabs">';
+  h += '<div class="tabs" style="overflow:visible">';
   ['today','overdue','completed','all'].forEach(function(t) {
     var labels = {today:'📋 Aujourd\'hui', overdue:'⚠️ En retard', completed:'✅ Terminées', all:'📁 Toutes'};
-    h += '<button class="tab' + (S.cleaningFilter === t ? ' active' : '') + '" onclick="S.cleaningFilter=\'' + t + '\';render()">' + labels[t] + '</button>';
+    h += '<button class="tab' + (S.cleaningFilter === t ? ' active' : '') + '" onclick="S.cleaningFilter=\'' + t + '\';render()" style="flex:1;text-align:center">' + labels[t] + '</button>';
   });
   h += '</div>';
 

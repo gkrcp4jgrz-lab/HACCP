@@ -156,7 +156,7 @@ window.loadAndRenderOrderHistory = async function() {
       html += '<div class="v2-order-row v2-flex-wrap v2-gap-8 v2-py-10">';
       html += '<div><strong class="v2-order-row__name">' + esc(o.product_name) + '</strong> — ' + (o.quantity||1) + ' ' + esc(o.unit||'unité');
       html += '<div class="v2-text-sm v2-text-muted v2-font-500 v2-mt-2">Reçu le ' + fmtDT(o.received_at) + '</div></div>';
-      if (o.receive_notes) html += '<div class="v2-text-sm v2-text-muted v2-mt-2">' + esc(o.receive_notes) + '</div>';
+      if (o.notes) html += '<div class="v2-text-sm v2-text-muted v2-mt-2">' + esc(o.notes) + '</div>';
       html += '</div></div>';
     });
     html += '</div>';
@@ -219,7 +219,7 @@ window.confirmReceive = async function(orderId) {
   try {
     var upd = { status: 'received', received_at: new Date().toISOString() };
     var notes = document.getElementById('receiveNotes');
-    if (notes && notes.value) upd.receive_notes = notes.value;
+    if (notes && notes.value) upd.notes = notes.value;
 
     var r = await sb.from('orders').update(upd).eq('id', orderId);
     if (r.error) throw r.error;
