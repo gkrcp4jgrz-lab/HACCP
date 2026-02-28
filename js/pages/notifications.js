@@ -6,10 +6,10 @@ function renderNotifications() {
   var h = '';
 
   // Onglets
-  h += '<div class="tabs">';
-  h += '<button class="tab' + ((!S.notifTab || S.notifTab === 'alerts') ? ' active' : '') + '" onclick="S.notifTab=\'alerts\';render()">🔔 Alertes</button>';
-  h += '<button class="tab' + (S.notifTab === 'reports' ? ' active' : '') + '" onclick="S.notifTab=\'reports\';render()">🚨 Signalements</button>';
-  h += '<button class="tab' + (S.notifTab === 'history' ? ' active' : '') + '" onclick="S.notifTab=\'history\';render()">📋 Historique</button>';
+  h += '<div class="tabs" style="overflow:visible">';
+  h += '<button class="tab' + ((!S.notifTab || S.notifTab === 'alerts') ? ' active' : '') + '" onclick="S.notifTab=\'alerts\';render()" style="flex:1;text-align:center">🔔 Alertes</button>';
+  h += '<button class="tab' + (S.notifTab === 'reports' ? ' active' : '') + '" onclick="S.notifTab=\'reports\';render()" style="flex:1;text-align:center">🚨 Signalements</button>';
+  h += '<button class="tab' + (S.notifTab === 'history' ? ' active' : '') + '" onclick="S.notifTab=\'history\';render()" style="flex:1;text-align:center">📋 Historique</button>';
   h += '</div>';
 
   if (S.notifTab === 'reports') {

@@ -446,11 +446,14 @@ window.handleCleaningSchedule = async function(e) {
   var name = $('cleanName') ? $('cleanName').value.trim() : '';
   var zone = $('cleanZone') ? $('cleanZone').value.trim() : '';
   var freq = $('cleanFreq') ? $('cleanFreq').value : 'daily';
-  var role = $('cleanRole') ? $('cleanRole').value : 'employee';
   if (!name) { showToast('Nom de la tâche requis', 'error'); return; }
+  var opts = {};
+  if (freq === 'weekly' && $('cleanDayOfWeek')) opts.day_of_week = $('cleanDayOfWeek').value;
+  if (freq === 'monthly' && $('cleanDayOfMonth')) opts.day_of_month = $('cleanDayOfMonth').value;
+  if (freq === 'one_time' && $('cleanOneTimeDate')) opts.one_time_date = $('cleanOneTimeDate').value;
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading"></span>'; }
   try {
-    await addCleaningSchedule(name, zone, freq, role);
+    await addCleaningSchedule(name, zone, freq, opts);
     closeModal();
   } catch(ex) {
     showToast('Erreur: ' + (ex.message || ex), 'error');

@@ -307,11 +307,15 @@ async function deleteConsigne(id) {
   await loadSiteData(); render();
 }
 // -- Cleaning Schedules --
-async function addCleaningSchedule(name, zone, frequency) {
+async function addCleaningSchedule(name, zone, frequency, opts) {
+  opts = opts || {};
   var rec = {
     site_id: S.currentSiteId, name: name, zone: zone || '',
     frequency: frequency || 'daily'
   };
+  if (opts.day_of_week != null) rec.day_of_week = parseInt(opts.day_of_week);
+  if (opts.day_of_month != null) rec.day_of_month = parseInt(opts.day_of_month);
+  if (opts.one_time_date) rec.one_time_date = opts.one_time_date;
   var r = await sb.from('cleaning_schedules').insert(rec);
   if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
   showToast('Tâche de nettoyage ajoutée', 'success');
@@ -337,6 +341,11 @@ async function addCleaningLog(scheduleId, status, notes) {
   showToast(status === 'skipped' ? 'Tâche passée' : 'Nettoyage enregistré ✓', 'success');
   await loadSiteData(); render();
 }
+
+// Window bindings for cleaning functions (needed for onclick in dynamic HTML)
+window.addCleaningLog = addCleaningLog;
+window.deleteCleaningSchedule = deleteCleaningSchedule;
+window.addCleaningSchedule = addCleaningSchedule;
 
 // ── SUPABASE HELPERS (safe) ──
 function notifyError(title, err) {

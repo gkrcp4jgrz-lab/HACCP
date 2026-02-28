@@ -4,12 +4,22 @@
 
 function getTodayCleaningSchedules() {
   var now = new Date();
-  var dow = now.getDay(); // 0=dim
+  var dow = now.getDay(); // 0=dim, 1=lun, ..., 6=sam
   var dom = now.getDate();
+  var todayStr = now.toISOString().slice(0, 10);
   return (S.data.cleaning_schedules || []).filter(function(s) {
     if (s.frequency === 'daily') return true;
-    if (s.frequency === 'weekly') return dow === 1; // lundi
-    if (s.frequency === 'monthly') return dom === 1; // 1er du mois
+    if (s.frequency === 'weekly') {
+      var targetDay = (s.day_of_week != null) ? s.day_of_week : 1;
+      return dow === targetDay;
+    }
+    if (s.frequency === 'monthly') {
+      var targetDom = (s.day_of_month != null) ? s.day_of_month : 1;
+      return dom === targetDom;
+    }
+    if (s.frequency === 'one_time') {
+      return s.one_time_date === todayStr;
+    }
     return false;
   });
 }
@@ -65,7 +75,7 @@ function renderCleaning() {
 
 function renderCleaningToday(schedules, completedIds) {
   var h = '';
-  var freqLabels = {daily:'Quotidien', weekly:'Hebdomadaire', monthly:'Mensuel'};
+  var freqLabels = {daily:'Quotidien', weekly:'Hebdomadaire', monthly:'Mensuel', one_time:'Ponctuel'};
 
   if (schedules.length === 0) {
     h += '<div class="card"><div class="card-body"><div class="empty"><div class="empty-icon">🧹</div>';
@@ -86,8 +96,8 @@ function renderCleaningToday(schedules, completedIds) {
     h += '<div class="list-item" style="cursor:pointer" onclick="quickCleaningDone(' + JSON.stringify(s.id) + ',' + JSON.stringify(s.name) + ')">';
     h += '<div style="width:28px;height:28px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s"></div>';
     h += '<div class="list-content"><div class="list-title">' + esc(s.name) + '</div>';
-    h += '<div class="list-sub">' + esc(s.zone || 'Sans zone') + ' · ' + (freqLabels[s.frequency] || s.frequency) + '</div></div>';
-    h += '<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openCleaningRecordModal(' + JSON.stringify(s.id) + ',' + JSON.stringify(s.name) + ')" title="Notes & photo">📝</button>';
+    h += '<div class="list-sub">' + esc(s.zone || 'Sans zone') + ' · ' + getFreqLabel(s) + '</div></div>';
+    h += '<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openCleaningRecordModal(' + JSON.stringify(s.id) + ',' + JSON.stringify(s.name) + ')" title="Notes">📝</button>';
     h += '</div>';
   });
 
@@ -167,9 +177,17 @@ function renderCleaningCompleted(records) {
   return h;
 }
 
+function getFreqLabel(s) {
+  var dayNames = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+  if (s.frequency === 'daily') return 'Quotidien';
+  if (s.frequency === 'weekly') return 'Hebdo (' + (dayNames[s.day_of_week] || 'Lun') + ')';
+  if (s.frequency === 'monthly') return 'Mensuel (le ' + (s.day_of_month || 1) + ')';
+  if (s.frequency === 'one_time') return 'Ponctuel' + (s.one_time_date ? ' (' + s.one_time_date + ')' : '');
+  return s.frequency;
+}
+
 function renderCleaningAll(schedules) {
   var h = '';
-  var freqLabels = {daily:'Quotidien', weekly:'Hebdomadaire', monthly:'Mensuel'};
 
   if (schedules.length === 0) {
     h += '<div class="card"><div class="card-body"><div class="empty"><div class="empty-icon">🧹</div>';
@@ -182,7 +200,7 @@ function renderCleaningAll(schedules) {
   schedules.forEach(function(s) {
     h += '<div class="list-item"><div class="list-icon" style="font-size:24px">🧹</div>';
     h += '<div class="list-content"><div class="list-title">' + esc(s.name) + '</div>';
-    h += '<div class="list-sub">' + esc(s.zone || 'Sans zone') + ' · ' + (freqLabels[s.frequency] || s.frequency) + '</div></div>';
+    h += '<div class="list-sub">' + esc(s.zone || 'Sans zone') + ' · ' + getFreqLabel(s) + '</div></div>';
     h += '<div class="list-actions"><button class="btn btn-danger btn-sm" onclick="deleteCleaningSchedule(\'' + s.id + '\')">🗑️</button></div>';
     h += '</div>';
   });
@@ -226,10 +244,36 @@ window.openCleaningAddModal = function() {
   h += '<div class="form-group"><label class="form-label">Nom <span class="req">*</span></label><input type="text" class="form-input" id="cleanName" required placeholder="Ex: Nettoyage plan de travail"></div>';
   h += '<div class="form-group"><label class="form-label">Zone</label><input type="text" class="form-input" id="cleanZone" placeholder="Cuisine, Salle..."></div>';
   h += '<div class="form-group"><label class="form-label">Fréquence</label>';
-  h += '<select class="form-select" id="cleanFreq"><option value="daily">Quotidien</option><option value="weekly">Hebdomadaire</option><option value="monthly">Mensuel</option></select></div>';
+  h += '<select class="form-select" id="cleanFreq" onchange="toggleCleanFreqFields()">';
+  h += '<option value="daily">Quotidien</option>';
+  h += '<option value="weekly">Hebdomadaire</option>';
+  h += '<option value="monthly">Mensuel</option>';
+  h += '<option value="one_time">Ponctuel</option>';
+  h += '</select></div>';
+  h += '<div id="cleanFreqFields"></div>';
   h += '<input type="hidden" id="cleanRole" value="employee">';
   h += '<button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:8px">Ajouter</button>';
   h += '</form>';
   h += '</div>';
   openModal(h);
+};
+
+window.toggleCleanFreqFields = function() {
+  var freq = document.getElementById('cleanFreq').value;
+  var container = document.getElementById('cleanFreqFields');
+  if (!container) return;
+  var dayNames = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  var h = '';
+  if (freq === 'weekly') {
+    h += '<div class="form-group"><label class="form-label">Jour de la semaine</label><select class="form-select" id="cleanDayOfWeek">';
+    for (var i = 1; i <= 6; i++) h += '<option value="' + i + '"' + (i === 1 ? ' selected' : '') + '>' + dayNames[i] + '</option>';
+    h += '<option value="0">Dimanche</option></select></div>';
+  } else if (freq === 'monthly') {
+    h += '<div class="form-group"><label class="form-label">Jour du mois</label><select class="form-select" id="cleanDayOfMonth">';
+    for (var j = 1; j <= 28; j++) h += '<option value="' + j + '">' + j + '</option>';
+    h += '</select></div>';
+  } else if (freq === 'one_time') {
+    h += '<div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="cleanOneTimeDate" required></div>';
+  }
+  container.innerHTML = h;
 };

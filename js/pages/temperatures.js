@@ -85,28 +85,36 @@ function renderTemperatures() {
 
   h += '</div></div>';
 
-  // Form - Equipment
-  h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">❄️</span> Relevé Équipement <span class="badge badge-blue v2-badge-lg v2-ml-auto">' + eqCount + ' équipements</span></div><div class="card-body"><form onsubmit="handleTempEquip(event)">';
-  h += '<div class="form-row"><div class="form-group"><label class="form-label">Équipement <span class="req">*</span></label><select class="form-select" id="tempEq" required><option value="">Sélectionner...</option>';
-  S.siteConfig.equipment.forEach(function(e) {
-    // Check if already recorded this service
-    var alreadyDone = S.data.temperatures.some(function(t) { return t.equipment_id === e.id && t.record_type === 'equipment'; });
-    var minLabel = (e.temp_min != null && e.temp_min !== '') ? e.temp_min : '—';
-    var maxLabel = (e.temp_max != null && e.temp_max !== '') ? e.temp_max : '—';
-    h += '<option value="' + e.id + '">' + (alreadyDone ? '✅ ' : '') + e.emoji + ' ' + esc(e.name) + ' (' + minLabel + '°/' + maxLabel + '°C)</option>';
-  });
-  h += '</select></div><div class="form-group"><label class="form-label">Température °C <span class="req">*</span></label><input type="number" step="0.1" class="form-input" id="tempEqVal" required placeholder="Ex: 3.5"></div></div>';
-  h += '<button type="submit" class="btn btn-primary btn-lg v2-mt-4">✓ Enregistrer la température</button></form></div></div>';
+  // Tabs: Équipements / Produits
+  if (!S.tempTab) S.tempTab = 'equipment';
+  h += '<div class="tabs" style="overflow:visible">';
+  h += '<button class="tab' + (S.tempTab === 'equipment' ? ' active' : '') + '" onclick="S.tempTab=\'equipment\';render()" style="flex:1;text-align:center">❄️ Équipements <span class="badge badge-blue">' + eqCount + '</span></button>';
+  h += '<button class="tab' + (S.tempTab === 'product' ? ' active' : '') + '" onclick="S.tempTab=\'product\';render()" style="flex:1;text-align:center">🍽️ Produits <span class="badge badge-blue">' + prCount + '</span></button>';
+  h += '</div>';
 
-  // Form - Product
-  h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">🍽️</span> Relevé Produit <span class="badge badge-blue v2-badge-lg v2-ml-auto">' + prCount + ' produits</span></div><div class="card-body"><form onsubmit="handleTempProd(event)">';
-  h += '<div class="form-row"><div class="form-group"><label class="form-label">Produit <span class="req">*</span></label><select class="form-select" id="tempPr" required><option value="">Sélectionner...</option>';
-  S.siteConfig.products.forEach(function(p) {
-    var alreadyDone = S.data.temperatures.some(function(t) { return t.product_id === p.id && t.record_type === 'product'; });
-    h += '<option value="' + p.id + '">' + (alreadyDone ? '✅ ' : '') + p.emoji + ' ' + esc(p.name) + ' (' + p.temp_min + '°/' + p.temp_max + '°C)</option>';
-  });
-  h += '</select></div><div class="form-group"><label class="form-label">Température °C <span class="req">*</span></label><input type="number" step="0.1" class="form-input" id="tempPrVal" required placeholder="Ex: 2.0"></div></div>';
-  h += '<button type="submit" class="btn btn-primary btn-lg v2-mt-4">✓ Enregistrer la température</button></form></div></div>';
+  if (S.tempTab === 'equipment') {
+    // Form - Equipment
+    h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">❄️</span> Relevé Équipement</div><div class="card-body"><form onsubmit="handleTempEquip(event)">';
+    h += '<div class="form-row"><div class="form-group"><label class="form-label">Équipement <span class="req">*</span></label><select class="form-select" id="tempEq" required><option value="">Sélectionner...</option>';
+    S.siteConfig.equipment.forEach(function(e) {
+      var alreadyDone = S.data.temperatures.some(function(t) { return t.equipment_id === e.id && t.record_type === 'equipment'; });
+      var minLabel = (e.temp_min != null && e.temp_min !== '') ? e.temp_min : '—';
+      var maxLabel = (e.temp_max != null && e.temp_max !== '') ? e.temp_max : '—';
+      h += '<option value="' + e.id + '">' + (alreadyDone ? '✅ ' : '') + e.emoji + ' ' + esc(e.name) + ' (' + minLabel + '°/' + maxLabel + '°C)</option>';
+    });
+    h += '</select></div><div class="form-group"><label class="form-label">Température °C <span class="req">*</span></label><input type="number" step="0.1" class="form-input" id="tempEqVal" required placeholder="Ex: 3.5"></div></div>';
+    h += '<button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:8px">✓ Enregistrer la température</button></form></div></div>';
+  } else {
+    // Form - Product
+    h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">🍽️</span> Relevé Produit</div><div class="card-body"><form onsubmit="handleTempProd(event)">';
+    h += '<div class="form-row"><div class="form-group"><label class="form-label">Produit <span class="req">*</span></label><select class="form-select" id="tempPr" required><option value="">Sélectionner...</option>';
+    S.siteConfig.products.forEach(function(p) {
+      var alreadyDone = S.data.temperatures.some(function(t) { return t.product_id === p.id && t.record_type === 'product'; });
+      h += '<option value="' + p.id + '">' + (alreadyDone ? '✅ ' : '') + p.emoji + ' ' + esc(p.name) + ' (' + p.temp_min + '°/' + p.temp_max + '°C)</option>';
+    });
+    h += '</select></div><div class="form-group"><label class="form-label">Température °C <span class="req">*</span></label><input type="number" step="0.1" class="form-input" id="tempPrVal" required placeholder="Ex: 2.0"></div></div>';
+    h += '<button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:8px">✓ Enregistrer la température</button></form></div></div>';
+  }
 
   // Signature
   h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">✍️</span> Signature</div><div class="card-body">';

@@ -4,10 +4,10 @@ function renderSettings() {
   }
 
   var h = '';
-  h += '<div class="tabs">';
+  h += '<div class="tabs" style="overflow:visible;flex-wrap:wrap">';
   ['equipment','products','suppliers','cleaning','modules','notifications'].forEach(function(t) {
     var labels = {equipment:'❄️ Équipements',products:'🍽️ Produits',suppliers:'🏭 Fournisseurs',cleaning:'🧹 Nettoyage',modules:'📦 Modules',notifications:'🔔 Notifications'};
-    h += '<button class="tab' + (S.settingsTab===t?' active':'') + '" onclick="S.settingsTab=\'' + t + '\';render()">' + labels[t] + '</button>';
+    h += '<button class="tab' + (S.settingsTab===t?' active':'') + '" onclick="S.settingsTab=\'' + t + '\';render()" style="flex:1;text-align:center">' + labels[t] + '</button>';
   });
   h += '</div>';
 
@@ -213,19 +213,22 @@ window.clearClaudeKey = function() {
 
 function renderSettingsCleaning() {
   var h = '';
-  var freqLabels = {daily:'Quotidien', weekly:'Hebdomadaire', monthly:'Mensuel'};
-  var roleLabels = {employee:'Employé', manager:'Gérant'};
 
   // Add form
   h += '<div class="card card-accent"><div class="card-header"><span class="v2-text-2xl">🧹</span> Ajouter une tâche de nettoyage</div><div class="card-body">';
   h += '<form onsubmit="handleCleaningSchedule(event)">';
   h += '<div class="form-row"><div class="form-group"><label class="form-label">Nom de la tâche <span class="req">*</span></label><input type="text" class="form-input" id="cleanName" required placeholder="Ex: Nettoyage plan de travail"></div>';
   h += '<div class="form-group"><label class="form-label">Zone</label><input type="text" class="form-input" id="cleanZone" placeholder="Ex: Cuisine, Salle, Stockage"></div></div>';
-  h += '<div class="form-row"><div class="form-group"><label class="form-label">Fréquence</label>';
-  h += '<select class="form-select" id="cleanFreq"><option value="daily">Quotidien</option><option value="weekly">Hebdomadaire (lundi)</option><option value="monthly">Mensuel (1er du mois)</option></select></div>';
-  h += '<div class="form-group"><label class="form-label">Rôle assigné</label>';
-  h += '<select class="form-select" id="cleanRole"><option value="employee">Employé</option><option value="manager">Gérant</option></select></div></div>';
-  h += '<button type="submit" class="btn btn-primary">✓ Ajouter</button>';
+  h += '<div class="form-group"><label class="form-label">Fréquence</label>';
+  h += '<select class="form-select" id="cleanFreq" onchange="toggleCleanFreqFields()">';
+  h += '<option value="daily">Quotidien</option>';
+  h += '<option value="weekly">Hebdomadaire</option>';
+  h += '<option value="monthly">Mensuel</option>';
+  h += '<option value="one_time">Ponctuel</option>';
+  h += '</select></div>';
+  h += '<div id="cleanFreqFields"></div>';
+  h += '<input type="hidden" id="cleanRole" value="employee">';
+  h += '<button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:8px">✓ Ajouter</button>';
   h += '</form></div></div>';
 
   // List
@@ -233,9 +236,10 @@ function renderSettingsCleaning() {
   h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">📋</span> Tâches configurées <span class="badge badge-blue">' + schedules.length + '</span></div>';
   if (schedules.length > 0) {
     schedules.forEach(function(s) {
+      var freqLabel = (typeof getFreqLabel === 'function') ? getFreqLabel(s) : s.frequency;
       h += '<div class="list-item"><div class="list-icon" style="font-size:24px">🧹</div><div class="list-content">';
       h += '<div class="list-title">' + esc(s.name) + '</div>';
-      h += '<div class="list-sub">' + esc(s.zone || 'Sans zone') + ' · ' + (freqLabels[s.frequency] || s.frequency) + ' · ' + (roleLabels[s.assigned_role] || s.assigned_role) + '</div>';
+      h += '<div class="list-sub">' + esc(s.zone || 'Sans zone') + ' · ' + freqLabel + '</div>';
       h += '</div><div class="list-actions"><button class="btn btn-danger btn-sm" onclick="deleteCleaningSchedule(\'' + s.id + '\')">🗑️</button></div></div>';
     });
   } else {
