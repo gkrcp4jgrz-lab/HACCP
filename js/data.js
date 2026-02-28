@@ -272,7 +272,7 @@ async function updateOrderStatus(id, status) {
   var upd = { status: status };
   if (status === 'received') upd.received_at = new Date().toISOString();
   if (status === 'ordered') upd.ordered_at = new Date().toISOString();
-  var r = await sbExec(sb.from('orders').update(upd).eq('id', id), 'Mise à jour commande');
+  var r = await sbExec(sb.from('orders').update(upd).eq('id', id).select(), 'Mise à jour commande');
   if (!r) return;
   var labels = {ordered:'Commande passée', received:'Commande reçue', to_order:'Remis en attente'};
   showToast(labels[status] || 'Statut mis à jour', 'success');
@@ -334,9 +334,10 @@ async function addCleaningLog(scheduleId, status, notes) {
   var rec = {
     site_id: S.currentSiteId, schedule_id: scheduleId,
     status: status || 'completed', notes: notes || '',
-    performed_by: S.user.id, performed_by_name: userName()
+    performed_by: S.user.id, performed_by_name: userName(),
+    performed_at: new Date().toISOString()
   };
-  var r = await sb.from('cleaning_logs').insert(rec);
+  var r = await sb.from('cleaning_logs').insert(rec).select();
   if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
   showToast(status === 'skipped' ? 'Tâche passée' : 'Nettoyage enregistré ✓', 'success');
   await loadSiteData(); render();

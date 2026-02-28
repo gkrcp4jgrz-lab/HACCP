@@ -229,12 +229,13 @@ window.openCleaningRecordModal = function(scheduleId, scheduleName) {
   openModal(h);
 };
 
-window.quickCleaningDone = function(scheduleId, scheduleName) {
-  addCleaningLog(scheduleId, 'completed', '');
-};
-
-window.deleteCleaningSchedule = function(id) {
-  return deleteCleaningSchedule(id);
+window.quickCleaningDone = async function(scheduleId, scheduleName) {
+  try {
+    await addCleaningLog(scheduleId, 'completed', '');
+  } catch(e) {
+    console.error('quickCleaningDone error:', e);
+    showToast('Erreur: ' + (e.message || e), 'error');
+  }
 };
 
 window.openCleaningAddModal = function() {

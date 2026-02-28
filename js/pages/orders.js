@@ -218,16 +218,26 @@ window.clearBLPhoto = function() {
 window.confirmReceive = async function(orderId) {
   try {
     var upd = { status: 'received', received_at: new Date().toISOString() };
-    var notes = document.getElementById('receiveNotes');
-    if (notes && notes.value) upd.notes = notes.value;
+    var notesEl = document.getElementById('receiveNotes');
+    if (notesEl && notesEl.value.trim()) upd.notes = notesEl.value.trim();
 
-    var r = await sb.from('orders').update(upd).eq('id', orderId);
-    if (r.error) throw r.error;
+    var r = await sb.from('orders').update(upd).eq('id', orderId).select();
+    if (r.error) {
+      console.error('confirmReceive error:', r.error);
+      throw r.error;
+    }
+    if (!r.data || r.data.length === 0) {
+      showToast('Erreur: commande non trouvée ou accès refusé', 'error');
+      return;
+    }
     closeModal();
     await loadSiteData();
     render();
     showToast('Réception confirmée ✓', 'success');
-  } catch(e) { showToast('Erreur: ' + (e.message||e), 'error'); }
+  } catch(e) {
+    console.error('confirmReceive catch:', e);
+    showToast('Erreur: ' + (e.message||e), 'error');
+  }
 };
 
 window.markSupplierOrdered = async function(supplierName) {

@@ -10,10 +10,10 @@ function renderDLC() {
 
   // Tabbed view: DLC / Lots / Stock
   var activeTab = S.dlcTab || 'dlc';
-  h += '<div class="tabs">';
-  h += '<button class="tab' + (activeTab === 'dlc' ? ' active' : '') + '" onclick="S.dlcTab=\'dlc\';render()">📅 DLC</button>';
-  h += '<button class="tab' + (activeTab === 'lots' ? ' active' : '') + '" onclick="S.dlcTab=\'lots\';render()">📦 Lots</button>';
-  h += '<button class="tab' + (activeTab === 'stock' ? ' active' : '') + '" onclick="S.dlcTab=\'stock\';render()">📊 Stock</button>';
+  h += '<div class="tabs" style="overflow:visible">';
+  h += '<button class="tab' + (activeTab === 'dlc' ? ' active' : '') + '" onclick="S.dlcTab=\'dlc\';render()" style="flex:1;text-align:center">📅 DLC</button>';
+  h += '<button class="tab' + (activeTab === 'lots' ? ' active' : '') + '" onclick="S.dlcTab=\'lots\';render()" style="flex:1;text-align:center">📦 Lots</button>';
+  h += '<button class="tab' + (activeTab === 'stock' ? ' active' : '') + '" onclick="S.dlcTab=\'stock\';render()" style="flex:1;text-align:center">📊 Stock</button>';
   h += '</div>';
 
   if (activeTab === 'lots') {
