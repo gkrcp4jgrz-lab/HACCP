@@ -75,7 +75,6 @@ function renderCleaning() {
 
 function renderCleaningToday(schedules, completedIds) {
   var h = '';
-  var freqLabels = {daily:'Quotidien', weekly:'Hebdomadaire', monthly:'Mensuel', one_time:'Ponctuel'};
 
   if (schedules.length === 0) {
     h += '<div class="card"><div class="card-body"><div class="empty"><div class="empty-icon">🧹</div>';

@@ -12,7 +12,7 @@ function renderReports() {
   h += '<p class="v2-text-sm v2-text-muted v2-font-500 v2-mt-4">Rapport pour <strong class="v2-text-teal">' + siteName + '</strong></p></div></div>';
   h += '<div class="form-row">';
   h += '<div class="form-group"><label class="form-label">Date du rapport</label><input type="date" class="form-input" id="rptFullDate" value="' + today() + '"></div>';
-  h += '<div class="form-group v2-flex v2-items-end"><button class="btn btn-primary btn-lg btn-block" onclick="generateFullPDF()">🛡️ Générer la synthèse</button></div>';
+  h += '<div class="form-group v2-flex v2-items-end"><button class="btn btn-primary btn-lg" style="width:100%;margin-top:8px" onclick="generateFullPDF()">🛡️ Générer la synthèse</button></div>';
   h += '</div></div></div>';
 
   // ── Rapports individuels — card grid ──
@@ -57,7 +57,7 @@ function renderReports() {
   // ── Export Backup complet ──
   h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">💾</span> Sauvegarde complète</div><div class="card-body">';
   h += '<p class="v2-text-sm v2-text-muted v2-mb-14">Exportez toutes les données du site (températures, DLC, lots, commandes) dans un seul fichier CSV.</p>';
-  h += '<button class="btn btn-primary btn-lg btn-block" onclick="exportFullBackup()">💾 Exporter la sauvegarde complète</button>';
+  h += '<button class="btn btn-primary btn-lg" style="width:100%;margin-top:8px" onclick="exportFullBackup()">💾 Exporter la sauvegarde complète</button>';
   h += '</div></div>';
 
   // ── Rappel réglementaire ──

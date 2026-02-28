@@ -275,7 +275,7 @@ function renderDashboardTimeline(tempCount, totalExpected, dlcExpired, dlcWarnin
     }
     h += '</div>';
     if (cleanTotal > 0 && cleanDone < cleanTotal) {
-      h += '<div class="v2-mt-8"><div class="progress" style="height:4px"><div class="progress-bar" style="width:' + cleanPct + '%"></div></div>';
+      h += '<div class="v2-mt-8"><div class="progress v2-progress-sm"><div class="progress-bar" style="width:' + cleanPct + '%;background:' + (cleanPct >= 100 ? 'var(--success)' : 'var(--primary)') + '"></div></div>';
       h += '<div class="tl-card-sub v2-mt-6">' + (cleanTotal - cleanDone) + ' tâche(s) restante(s)</div></div>';
     } else if (cleanDone >= cleanTotal && cleanTotal > 0) {
       h += '<div class="tl-card-sub">Toutes les tâches sont complétées</div>';

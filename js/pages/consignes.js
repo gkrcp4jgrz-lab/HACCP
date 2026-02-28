@@ -4,8 +4,8 @@ function renderConsignes() {
   // Form nouvelle consigne
   h += '<div class="card card-accent"><div class="card-header"><span class="v2-text-2xl">💬</span> Nouvelle consigne</div><div class="card-body"><form onsubmit="handleConsigne(event)">';
   h += '<div class="form-group"><label class="form-label">Message <span class="req">*</span></label><textarea class="form-textarea" id="conMsg" rows="3" required placeholder="Écrire une consigne pour l\'équipe..." style="font-size:15px"></textarea></div>';
-  h += '<div class="v2-flex v2-items-end v2-gap-12"><div class="form-group" style="flex:1"><label class="form-label">Priorité</label><select class="form-select" id="conPrio"><option value="normal">🟢 Normal</option><option value="high">🟡 Important</option><option value="urgent">🔴 Urgent</option></select></div>';
-  h += '<button type="submit" class="btn btn-primary btn-lg" style="margin-bottom:22px">✓ Publier</button></div></form></div></div>';
+  h += '<div class="form-group"><label class="form-label">Priorité</label><select class="form-select" id="conPrio"><option value="normal">🟢 Normal</option><option value="high">🟡 Important</option><option value="urgent">🔴 Urgent</option></select></div>';
+  h += '<button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:8px">✓ Publier</button></form></div></div>';
 
   // Search bar
   h += '<div class="card" style="margin-bottom:0;border-bottom:0;border-radius:var(--radius) var(--radius) 0 0"><div class="card-body" style="padding:10px 18px"><input type="text" class="form-input" id="consigneSearch" placeholder="Rechercher une consigne..." oninput="S._consigneSearch=this.value;render()" value="' + esc(S._consigneSearch || '') + '"></div></div>';

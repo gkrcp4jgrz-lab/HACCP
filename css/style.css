@@ -351,7 +351,7 @@ img{max-width:100%;height:auto}
 .card:hover{box-shadow:var(--shadow-card-hover)}
 .card-header{padding:16px var(--card-pad);font-weight:700;font-size:14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);color:var(--ink);background:var(--bg-off);letter-spacing:-.01em}
 .card-body{padding:var(--card-pad)}
-.card-footer{padding:14px var(--card-pad);border-top:1px solid var(--border);background:var(--bg-off)}
+.card-footer{padding:16px var(--card-pad);border-top:1px solid var(--border);background:var(--bg-off)}
 
 /* Card with accent — teal top bar */
 .card-accent{position:relative;overflow:hidden}

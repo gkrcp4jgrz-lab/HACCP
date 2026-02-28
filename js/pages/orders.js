@@ -27,7 +27,7 @@ function renderOrdersActive() {
   h += '<div class="form-row"><div class="form-group"><label class="form-label">Fournisseur <span class="req">*</span></label><select class="form-select" id="ordSupp" required><option value="">Sélectionner...</option>';
   S.siteConfig.suppliers.forEach(function(s) { h += '<option value="' + esc(s.name) + '">' + esc(s.name) + '</option>'; });
   h += '</select></div><div class="form-group"><label class="form-label">Notes</label><input type="text" class="form-input" id="ordNotes" placeholder="Optionnel"></div></div>';
-  h += '<button type="submit" class="btn btn-primary btn-lg v2-mt-4">✓ Ajouter à la commande</button></form></div></div>';
+  h += '<button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:8px">✓ Ajouter à la commande</button></form></div></div>';
 
   // À commander — groupé par fournisseur
   var toOrder = S.data.orders.filter(function(o) { return o.status === 'to_order'; });
