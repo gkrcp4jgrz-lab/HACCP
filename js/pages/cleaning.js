@@ -167,7 +167,9 @@ function renderCleaningCompleted(records) {
     if (r.notes) h += ' — ' + esc(r.notes);
     h += '</div></div>';
     if (r.photo_data) {
-      h += '<div class="list-actions"><img src="' + r.photo_data + '" style="width:40px;height:40px;border-radius:6px;object-fit:cover;cursor:pointer" onclick="openModal(\'<div class=modal-body><img src=&quot;\' + this.src + \'&quot; style=max-width:100%;border-radius:12px></div>\')"></div>';
+      S._cleaningPhotos = S._cleaningPhotos || {};
+      S._cleaningPhotos[r.id] = r.photo_data;
+      h += '<div class="list-actions"><img src="' + r.photo_data + '" style="width:40px;height:40px;border-radius:6px;object-fit:cover;cursor:pointer" onclick="openCleaningPhoto(\'' + r.id + '\')"></div>';
     }
     h += '</div>';
   });
@@ -226,6 +228,14 @@ window.openCleaningRecordModal = function(scheduleId) {
   h += '<button class="btn btn-ghost" onclick="handleCleaningRecord(\'' + scheduleId + '\',\'skipped\')">⏭️ Passer</button>';
   h += '<button class="btn btn-primary btn-lg" onclick="handleCleaningRecord(\'' + scheduleId + '\',\'completed\')">✅ Terminé</button>';
   h += '</div>';
+  openModal(h);
+};
+
+window.openCleaningPhoto = function(logId) {
+  var src = S._cleaningPhotos && S._cleaningPhotos[logId];
+  if (!src) return;
+  var h = '<div class="modal-header"><div class="modal-title">📸 Photo nettoyage</div><button class="modal-close" onclick="closeModal()">✕</button></div>';
+  h += '<div class="modal-body" style="text-align:center"><img src="' + src + '" style="max-width:100%;border-radius:12px"></div>';
   openModal(h);
 };
 

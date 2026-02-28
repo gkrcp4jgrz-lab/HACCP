@@ -208,7 +208,13 @@ window.loadLotsHistory = async function() {
   }
   container.innerHTML = '<div class="card-body" style="text-align:center;padding:20px"><div class="loading" style="width:24px;height:24px;border-width:3px;display:inline-block"></div></div>';
   container.style.display = '';
-  var r = await sb.from('lots').select('*').eq('site_id', S.currentSiteId).in('status', ['consumed','discarded']).order('recorded_at', {ascending:false}).limit(100);
+  var r;
+  try {
+    r = await sb.from('lots').select('*').eq('site_id', S.currentSiteId).in('status', ['consumed','discarded']).order('recorded_at', {ascending:false}).limit(100);
+  } catch(e) {
+    container.innerHTML = '<div class="card-body"><div class="empty"><div class="empty-title">Erreur de chargement</div></div></div>';
+    return;
+  }
   var lots = r.data || [];
   if (lots.length === 0) {
     container.innerHTML = '<div class="card-body"><div class="empty"><div class="empty-icon">📋</div><div class="empty-title">Aucun lot dans l\'historique</div><div class="empty-text">Les lots consommés ou jetés apparaissent ici. Ils sont inclus dans le rapport quotidien.</div></div></div>';

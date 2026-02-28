@@ -1232,7 +1232,7 @@ body.theme-transitioning,body.theme-transitioning *{transition-duration:.3s !imp
   .tl-card{padding:12px 14px}
   .tl-card-title{font-size:13px}
   .btn{font-size:13px;min-height:40px;padding:9px 16px}
-  .btn-sm{min-height:32px;font-size:12px}
+  .btn-sm{min-height:38px;font-size:12px;padding:8px 12px}
   .btn-lg{min-height:46px;font-size:14px;padding:12px 24px}
   .auth-card{padding:28px 24px}
   .greeting-banner{padding:16px 14px;margin-bottom:14px}
