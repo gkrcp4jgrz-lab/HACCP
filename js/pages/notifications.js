@@ -448,6 +448,26 @@ function buildAlerts() {
     });
   });
 
+  // 9. Cleaning tasks not completed today
+  if (moduleEnabled('cleaning') && typeof getTodayCleaningSchedules === 'function') {
+    var cleanScheds = getTodayCleaningSchedules();
+    var cleanRecs = S.data.cleaning_records || [];
+    var cleanCompIds = {};
+    cleanRecs.forEach(function(r) { cleanCompIds[r.schedule_id] = true; });
+    var cleanOverdue = cleanScheds.filter(function(s) { return !cleanCompIds[s.id]; });
+    if (cleanOverdue.length > 0) {
+      var now = new Date();
+      var hour = now.getHours();
+      var level = hour >= 18 ? 'critical' : hour >= 14 ? 'warning' : 'info';
+      alerts.push({
+        level: level, icon: '🧹', category: 'cleaning',
+        title: cleanOverdue.length + ' tâche(s) de nettoyage non effectuée(s)',
+        message: cleanOverdue.map(function(s) { return s.name; }).slice(0, 3).join(', ') + (cleanOverdue.length > 3 ? '...' : ''),
+        action: '<button class="btn btn-primary" onclick="navigate(\'cleaning\')">Voir</button>'
+      });
+    }
+  }
+
   return alerts;
 }
 

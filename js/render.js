@@ -85,6 +85,7 @@ function renderSidebar() {
     if (moduleEnabled('dlc') || moduleEnabled('lots')) pages.push({ id:'dlc', icon:'📋', label:'DLC & Traçabilité' });
     if (moduleEnabled('orders')) pages.push({ id:'orders', icon:'🛒', label:'Commandes' });
     if (moduleEnabled('consignes')) pages.push({ id:'consignes', icon:'💬', label:'Consignes' });
+    if (moduleEnabled('cleaning')) pages.push({ id:'cleaning', icon:'🧹', label:'Nettoyage' });
     pages.push({ id:'reports', icon:'📄', label:'Rapports PDF' });
 
     pages.forEach(function(p) {
@@ -138,7 +139,7 @@ function renderMainContent() {
     lots:'DLC & Traçabilité', orders:'Commandes', consignes:'Consignes',
     reports:'Rapports PDF', settings:'Paramètres du site', sites:'Gestion des sites',
     admin:'Gestion utilisateurs', profile:'Mon profil', team:'Personnel',
-    notifications:'Notifications', legal:'Mentions légales', about:'À propos'
+    cleaning:'Plan de nettoyage', notifications:'Notifications', legal:'Mentions légales', about:'À propos'
   };
 
   var content = '';
@@ -149,6 +150,7 @@ function renderMainContent() {
     case 'lots': content = renderLots(); break;
     case 'orders': content = renderOrders(); break;
     case 'consignes': content = renderConsignes(); break;
+    case 'cleaning': content = renderCleaning(); break;
     case 'reports': content = renderReports(); break;
     case 'settings': content = renderSettings(); break;
     case 'sites': content = renderSiteManagement(); break;

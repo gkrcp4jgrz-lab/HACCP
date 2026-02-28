@@ -46,7 +46,9 @@ async function loadSiteData() {
       sb.from('lots').select('*').eq('site_id', sid).order('recorded_at', {ascending:false}).limit(50),
       sb.from('orders').select('*').eq('site_id', sid).in('status', ['to_order','ordered']).order('ordered_at', {ascending:false}),
       sb.from('consignes').select('*').eq('site_id', sid).order('created_at', {ascending:false}).limit(50),
-      sb.from('incident_reports').select('*').eq('site_id', sid).in('status', ['open','in_progress']).order('created_at', {ascending:false})
+      sb.from('incident_reports').select('*').eq('site_id', sid).in('status', ['open','in_progress']).order('created_at', {ascending:false}),
+      sb.from('cleaning_schedules').select('*').eq('site_id', sid).eq('active', true).order('name'),
+      sb.from('cleaning_records').select('*').eq('site_id', sid).gte('recorded_at', localMidnightISO).order('recorded_at', {ascending:false})
     ]);
     S.data.temperatures = results[0].data || [];
     S.data.dlcs = results[1].data || [];
@@ -61,6 +63,8 @@ async function loadSiteData() {
     S.data.consignes = (results[4].data || []).filter(function(con) { return dismissed.indexOf(con.id) === -1 && con.is_read !== true; });
 
     S.data.incident_reports = results[5].data || [];
+    S.data.cleaning_schedules = results[6].data || [];
+    S.data.cleaning_records = results[7].data || [];
   } catch(e) { console.error('Load data error:', e); }
 }
 
@@ -251,6 +255,40 @@ async function deleteConsigne(id) {
   showToast('Consigne supprimée', 'success');
   await loadSiteData(); render();
 }
+// -- Cleaning Schedules --
+async function addCleaningSchedule(name, zone, frequency, assignedRole) {
+  var rec = {
+    site_id: S.currentSiteId, name: name, zone: zone || '',
+    frequency: frequency || 'daily', assigned_role: assignedRole || 'employee'
+  };
+  var r = await sb.from('cleaning_schedules').insert(rec);
+  if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
+  showToast('Tâche de nettoyage ajoutée', 'success');
+  await loadSiteData(); render();
+}
+
+async function deleteCleaningSchedule(id) {
+  if (!(await appConfirm('Supprimer', 'Supprimer cette tâche de nettoyage ?', {danger:true,icon:'🗑️',confirmLabel:'Supprimer'}))) return;
+  var r = await sb.from('cleaning_schedules').update({active: false}).eq('id', id);
+  if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
+  showToast('Tâche supprimée', 'success');
+  await loadSiteData(); render();
+}
+
+async function addCleaningRecord(scheduleId, status, notes) {
+  var rec = {
+    site_id: S.currentSiteId, schedule_id: scheduleId,
+    status: status || 'completed', notes: notes || '',
+    photo_data: S.photoCleaningData || null,
+    recorded_by: S.user.id, recorded_by_name: userName()
+  };
+  var r = await sb.from('cleaning_records').insert(rec);
+  if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
+  showToast(status === 'skipped' ? 'Tâche passée' : 'Nettoyage enregistré', 'success');
+  S.photoCleaningData = null;
+  await loadSiteData(); render();
+}
+
 // ── SUPABASE HELPERS (safe) ──
 function notifyError(title, err) {
   console.error(title, err);

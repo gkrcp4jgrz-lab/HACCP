@@ -48,7 +48,7 @@ function bnavItem(page, icon, label) {
 }
 
 function bnavItemMore(alertCount) {
-  var active = ['orders','notifications','reports','team','settings','profile'].indexOf(S.page) >= 0 ? ' active' : '';
+  var active = ['orders','notifications','reports','team','settings','profile','cleaning'].indexOf(S.page) >= 0 ? ' active' : '';
   var badge = alertCount > 0 ? '<span class="bnav-badge">' + alertCount + '</span>' : '';
   return '<button class="bnav-item' + active + '" onclick="toggleBnavMore()">' +
     '<span class="bnav-icon">☰</span>' + badge + 'Plus</button>';
@@ -75,6 +75,7 @@ window.toggleBnavMore = function() {
     } else if (isManager()) {
       h += bnavMenuItem('settings', '⚙️', 'Paramètres site');
       h += bnavMenuItem('orders', '🛒', 'Commandes');
+      h += bnavMenuItem('cleaning', '🧹', 'Nettoyage');
       h += bnavMenuItem('reports', '📄', 'Rapports PDF');
       h += '<div class="bnav-menu-section">Administration</div>';
       h += bnavMenuItem('team', '👥', 'Personnel');
@@ -83,6 +84,7 @@ window.toggleBnavMore = function() {
       h += bnavMenuItem('profile', '👤', 'Mon profil');
     } else {
       // Employee menu
+      h += bnavMenuItem('cleaning', '🧹', 'Nettoyage');
       h += bnavMenuItem('notifications', '🔔', 'Notifications');
       h += bnavMenuItem('reports', '📄', 'Rapports PDF');
       h += '<div class="bnav-menu-section">Compte</div>';

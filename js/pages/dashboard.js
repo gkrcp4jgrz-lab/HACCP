@@ -64,6 +64,18 @@ function renderDashboard() {
   h += '<div class="stat-card v2-clickable' + (ordersToOrder.length > 0 ? ' warning' : ' success') + '" onclick="navigate(\'orders\')">';
   h += '<div class="v2-mb-8"><span class="v2-text-5xl">🛒</span></div>';
   h += '<div class="stat-value">' + ordersToOrder.length + '</div><div class="stat-label">À commander</div></div>';
+
+  if (moduleEnabled('cleaning') && typeof getTodayCleaningSchedules === 'function') {
+    var cScheds = getTodayCleaningSchedules();
+    var cRecs = S.data.cleaning_records || [];
+    var cCompIds = {};
+    cRecs.forEach(function(r) { cCompIds[r.schedule_id] = true; });
+    var cDone = cScheds.filter(function(s) { return cCompIds[s.id]; }).length;
+    h += '<div class="stat-card v2-clickable' + (cDone >= cScheds.length && cScheds.length > 0 ? ' success' : '') + '" onclick="navigate(\'cleaning\')">';
+    h += '<div class="v2-mb-8"><span class="v2-text-5xl">🧹</span></div>';
+    h += '<div class="stat-value">' + cDone + '/' + cScheds.length + '</div><div class="stat-label">Nettoyage</div></div>';
+  }
+
   h += '</div>';
 
   // ── 4. ALERTS (Urgent consignes + DLC expired combined) ──
@@ -238,6 +250,37 @@ function renderDashboardTimeline(tempCount, totalExpected, dlcExpired, dlcWarnin
     }
     if (totalOrders === 0) {
       h += '<div class="tl-card-sub">Aucune commande en cours</div>';
+    }
+    h += '</div></div>';
+  }
+
+  // 4.5 Nettoyage
+  if (moduleEnabled('cleaning') && typeof getTodayCleaningSchedules === 'function') {
+    var cleanScheds = getTodayCleaningSchedules();
+    var cleanRecs = S.data.cleaning_records || [];
+    var cleanCompIds = {};
+    cleanRecs.forEach(function(r) { cleanCompIds[r.schedule_id] = true; });
+    var cleanDone = cleanScheds.filter(function(s) { return cleanCompIds[s.id]; }).length;
+    var cleanTotal = cleanScheds.length;
+    var cleanPct = cleanTotal > 0 ? Math.round(cleanDone / cleanTotal * 100) : 0;
+    var cleanDotClass = cleanTotal === 0 ? 'done' : cleanDone >= cleanTotal ? 'done' : cleanDone > 0 ? 'info' : 'pending';
+
+    h += '<div class="tl-item"><div class="tl-dot ' + cleanDotClass + '"></div>';
+    h += '<div class="tl-card" onclick="navigate(\'cleaning\')">';
+    h += '<div class="tl-card-header"><div class="tl-card-title">🧹 Nettoyage</div>';
+    if (cleanTotal === 0) {
+      h += '<span class="badge badge-gray">Aucune tâche</span>';
+    } else if (cleanDone >= cleanTotal) {
+      h += '<span class="badge badge-green">✓ Terminé</span>';
+    } else {
+      h += '<span class="badge badge-blue">' + cleanDone + '/' + cleanTotal + '</span>';
+    }
+    h += '</div>';
+    if (cleanTotal > 0 && cleanDone < cleanTotal) {
+      h += '<div class="v2-mt-8"><div class="progress" style="height:4px"><div class="progress-bar" style="width:' + cleanPct + '%"></div></div>';
+      h += '<div class="tl-card-sub v2-mt-6">' + (cleanTotal - cleanDone) + ' tâche(s) restante(s)</div></div>';
+    } else if (cleanDone >= cleanTotal && cleanTotal > 0) {
+      h += '<div class="tl-card-sub">Toutes les tâches sont complétées</div>';
     }
     h += '</div></div>';
   }

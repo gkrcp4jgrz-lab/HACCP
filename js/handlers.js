@@ -428,3 +428,50 @@ window.generateDlcPDF = generateDlcPDF;
 window.generateIncidentPDF = generateIncidentPDF;
 window.generateFullPDF = generateFullPDF;
 window.loadAndDisplayUsers = loadAndDisplayUsers;
+
+// -- Cleaning handlers --
+window.handleCleaningRecord = async function(scheduleId, status) {
+  var notes = $('cleanNotes') ? $('cleanNotes').value.trim() : '';
+  closeModal();
+  await addCleaningRecord(scheduleId, status, notes);
+};
+
+window.handleCleaningSchedule = async function(e) {
+  e.preventDefault();
+  var btn = e.target.querySelector('button[type="submit"]');
+  var name = $('cleanName') ? $('cleanName').value.trim() : '';
+  var zone = $('cleanZone') ? $('cleanZone').value.trim() : '';
+  var freq = $('cleanFreq') ? $('cleanFreq').value : 'daily';
+  var role = $('cleanRole') ? $('cleanRole').value : 'employee';
+  if (!name) { showToast('Nom de la tâche requis', 'error'); return; }
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading"></span>'; }
+  try {
+    await addCleaningSchedule(name, zone, freq, role);
+    if ($('cleanName')) $('cleanName').value = '';
+    if ($('cleanZone')) $('cleanZone').value = '';
+  } catch(ex) {
+    showToast('Erreur: ' + (ex.message || ex), 'error');
+  }
+  if (btn) { btn.disabled = false; btn.innerHTML = '✓ Ajouter'; }
+};
+
+window.handleCleaningPhoto = function(input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var maxW = 800;
+      var scale = img.width > maxW ? maxW / img.width : 1;
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      S.photoCleaningData = canvas.toDataURL('image/jpeg', 0.7);
+      var preview = $('cleanPhotoPreview');
+      if (preview) preview.innerHTML = '<img src="' + S.photoCleaningData + '" class="photo-preview" style="margin-top:8px"><button class="btn btn-ghost btn-sm" style="margin-top:4px" onclick="S.photoCleaningData=null;this.parentElement.innerHTML=\'\'">🗑️ Supprimer</button>';
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(input.files[0]);
+};

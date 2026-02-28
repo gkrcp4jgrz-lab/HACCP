@@ -5,8 +5,8 @@ function renderSettings() {
 
   var h = '';
   h += '<div class="tabs">';
-  ['equipment','products','suppliers','modules','notifications'].forEach(function(t) {
-    var labels = {equipment:'❄️ Équipements',products:'🍽️ Produits',suppliers:'🏭 Fournisseurs',modules:'📦 Modules',notifications:'🔔 Notifications'};
+  ['equipment','products','suppliers','cleaning','modules','notifications'].forEach(function(t) {
+    var labels = {equipment:'❄️ Équipements',products:'🍽️ Produits',suppliers:'🏭 Fournisseurs',cleaning:'🧹 Nettoyage',modules:'📦 Modules',notifications:'🔔 Notifications'};
     h += '<button class="tab' + (S.settingsTab===t?' active':'') + '" onclick="S.settingsTab=\'' + t + '\';render()">' + labels[t] + '</button>';
   });
   h += '</div>';
@@ -14,6 +14,7 @@ function renderSettings() {
   if (S.settingsTab === 'equipment') h += renderSettingsEquipment();
   else if (S.settingsTab === 'products') h += renderSettingsProducts();
   else if (S.settingsTab === 'suppliers') h += renderSettingsSuppliers();
+  else if (S.settingsTab === 'cleaning') h += renderSettingsCleaning();
   else if (S.settingsTab === 'modules') h += renderSettingsModules();
   else if (S.settingsTab === 'notifications') h += renderSettingsNotifications();
 
@@ -79,6 +80,7 @@ function renderSettingsModules() {
     {key:'lots',label:'📦 Traçabilité',desc:'Enregistrement des numéros de lots'},
     {key:'orders',label:'🛒 Commandes',desc:'Gestion des commandes fournisseurs'},
     {key:'consignes',label:'💬 Consignes',desc:'Communication inter-équipes'},
+    {key:'cleaning',label:'🧹 Nettoyage',desc:'Plan de nettoyage et suivi des tâches'},
     {key:'incidents',label:'🚨 Signalements',desc:'Signalement et suivi des incidents'}
   ];
 
@@ -208,3 +210,38 @@ window.clearClaudeKey = function() {
   render();
   showToast('Clé API supprimée', 'success');
 };
+
+function renderSettingsCleaning() {
+  var h = '';
+  var freqLabels = {daily:'Quotidien', weekly:'Hebdomadaire', monthly:'Mensuel'};
+  var roleLabels = {employee:'Employé', manager:'Gérant'};
+
+  // Add form
+  h += '<div class="card card-accent"><div class="card-header"><span class="v2-text-2xl">🧹</span> Ajouter une tâche de nettoyage</div><div class="card-body">';
+  h += '<form onsubmit="handleCleaningSchedule(event)">';
+  h += '<div class="form-row"><div class="form-group"><label class="form-label">Nom de la tâche <span class="req">*</span></label><input type="text" class="form-input" id="cleanName" required placeholder="Ex: Nettoyage plan de travail"></div>';
+  h += '<div class="form-group"><label class="form-label">Zone</label><input type="text" class="form-input" id="cleanZone" placeholder="Ex: Cuisine, Salle, Stockage"></div></div>';
+  h += '<div class="form-row"><div class="form-group"><label class="form-label">Fréquence</label>';
+  h += '<select class="form-select" id="cleanFreq"><option value="daily">Quotidien</option><option value="weekly">Hebdomadaire (lundi)</option><option value="monthly">Mensuel (1er du mois)</option></select></div>';
+  h += '<div class="form-group"><label class="form-label">Rôle assigné</label>';
+  h += '<select class="form-select" id="cleanRole"><option value="employee">Employé</option><option value="manager">Gérant</option></select></div></div>';
+  h += '<button type="submit" class="btn btn-primary">✓ Ajouter</button>';
+  h += '</form></div></div>';
+
+  // List
+  var schedules = S.data.cleaning_schedules || [];
+  h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">📋</span> Tâches configurées <span class="badge badge-blue">' + schedules.length + '</span></div>';
+  if (schedules.length > 0) {
+    schedules.forEach(function(s) {
+      h += '<div class="list-item"><div class="list-icon" style="font-size:24px">🧹</div><div class="list-content">';
+      h += '<div class="list-title">' + esc(s.name) + '</div>';
+      h += '<div class="list-sub">' + esc(s.zone || 'Sans zone') + ' · ' + (freqLabels[s.frequency] || s.frequency) + ' · ' + (roleLabels[s.assigned_role] || s.assigned_role) + '</div>';
+      h += '</div><div class="list-actions"><button class="btn btn-danger btn-sm" onclick="deleteCleaningSchedule(\'' + s.id + '\')">🗑️</button></div></div>';
+    });
+  } else {
+    h += '<div class="card-body"><div class="empty"><div class="empty-icon">🧹</div><div class="empty-title">Aucune tâche configurée</div><div class="empty-text">Ajoutez des tâches de nettoyage pour votre site.</div></div></div>';
+  }
+  h += '</div>';
+
+  return h;
+}
