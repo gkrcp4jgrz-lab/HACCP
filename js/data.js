@@ -43,7 +43,7 @@ async function loadSiteData() {
     var results = await Promise.all([
       sb.from('temperatures').select('*').eq('site_id', sid).gte('recorded_at', localMidnightISO).order('recorded_at', {ascending:false}),
       sb.from('dlcs').select('*').eq('site_id', sid).not('status', 'in', '("consumed","discarded")').order('dlc_date').limit(500),
-      sb.from('lots').select('*').eq('site_id', sid).order('recorded_at', {ascending:false}).limit(50),
+      sb.from('lots').select('*').eq('site_id', sid).not('status', 'in', '("consumed","discarded")').order('recorded_at', {ascending:false}).limit(100),
       sb.from('orders').select('*').eq('site_id', sid).in('status', ['to_order','ordered']).order('ordered_at', {ascending:false}),
       sb.from('consignes').select('*').eq('site_id', sid).gte('created_at', new Date(Date.now() - 7 * 86400000).toISOString()).order('created_at', {ascending:false}).limit(50),
       sb.from('incident_reports').select('*').eq('site_id', sid).in('status', ['open','in_progress']).order('created_at', {ascending:false}),

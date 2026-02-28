@@ -264,5 +264,5 @@ window.viewBLPhoto = function(orderId) {
     } else {
       showToast('Aucune photo disponible', 'warning');
     }
-  }).catch(function(e) { showToast('Erreur: ' + (e.message||e), 'error'); });
+  }).then(null, function(e) { showToast('Erreur: ' + (e.message||e), 'error'); });
 };

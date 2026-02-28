@@ -168,10 +168,10 @@ function renderDlcTabContent() {
 
 function renderLotsTabContent() {
   var h = '';
-  var activeLots = S.data.lots.filter(function(l) { return !l.status || l.status === 'active'; });
-  var closedLots = S.data.lots.filter(function(l) { return l.status === 'consumed' || l.status === 'discarded'; });
+  // S.data.lots only contains active lots (filtered at DB level)
+  var activeLots = S.data.lots;
 
-  h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">📦</span> Lots actifs <span class="badge badge-blue v2-badge-lg v2-ml-auto">' + activeLots.length + '</span></div>';
+  h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">📦</span> Lots en cours <span class="badge badge-blue v2-badge-lg v2-ml-auto">' + activeLots.length + '</span></div>';
   if (activeLots.length === 0) {
     h += '<div class="card-body"><div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Aucun lot actif</div><div class="empty-text">Enregistrez vos lots via le formulaire de réception.</div></div></div>';
   } else {
@@ -190,26 +190,47 @@ function renderLotsTabContent() {
   }
   h += '</div>';
 
-  // Closed lots (consumed/discarded)
-  if (closedLots.length > 0) {
-    h += '<div class="card v2-mt-16"><div class="card-header" style="cursor:pointer" onclick="S.showClosedLots=!S.showClosedLots;render()"><span class="v2-text-2xl">📋</span> Consommés / Jetés <span class="badge badge-gray v2-badge-lg v2-ml-auto">' + closedLots.length + '</span> <span style="margin-left:auto;font-size:12px;color:var(--ink-muted)">' + (S.showClosedLots ? '▲ Masquer' : '▼ Afficher') + '</span></div>';
-    if (S.showClosedLots) {
-      closedLots.forEach(function(l) {
-        var statusIcon = l.status === 'consumed' ? '✅' : '🗑️';
-        var statusLabel = l.status === 'consumed' ? 'Utilisé' : 'Jeté';
-        var badgeClass = l.status === 'consumed' ? 'badge-green' : 'badge-red';
-        var qty = l.quantity && l.quantity > 1 ? ' x' + l.quantity : '';
-        h += '<div class="list-item" style="opacity:.7"><div class="list-icon">' + statusIcon + '</div><div class="list-content"><div class="list-title">' + esc(l.product_name) + qty + ' — ' + esc(l.lot_number) + ' <span class="badge ' + badgeClass + '">' + statusLabel + '</span></div><div class="list-sub">';
-        if (l.supplier_name) h += '🏭 ' + esc(l.supplier_name) + ' · ';
-        if (l.dlc_date) h += '📅 DLC: ' + fmtD(l.dlc_date);
-        h += '</div></div></div>';
-      });
-    }
-    h += '</div>';
-  }
+  // History button — loads consumed/discarded on demand
+  h += '<div class="card v2-mt-16"><div class="card-header" style="cursor:pointer" onclick="loadLotsHistory()">';
+  h += '<span class="v2-text-2xl">📋</span> Historique (consommés / jetés)';
+  h += '<span style="margin-left:auto;font-size:13px;color:var(--ink-muted);font-weight:600">Voir →</span></div>';
+  h += '<div id="lotsHistoryContainer"></div></div>';
 
   return h;
 }
+
+window.loadLotsHistory = async function() {
+  var container = document.getElementById('lotsHistoryContainer');
+  if (!container) return;
+  if (container.dataset.loaded) {
+    container.style.display = container.style.display === 'none' ? '' : 'none';
+    return;
+  }
+  container.innerHTML = '<div class="card-body" style="text-align:center;padding:20px"><div class="loading" style="width:24px;height:24px;border-width:3px;display:inline-block"></div></div>';
+  container.style.display = '';
+  var r = await sb.from('lots').select('*').eq('site_id', S.currentSiteId).in('status', ['consumed','discarded']).order('recorded_at', {ascending:false}).limit(100);
+  var lots = r.data || [];
+  if (lots.length === 0) {
+    container.innerHTML = '<div class="card-body"><div class="empty"><div class="empty-icon">📋</div><div class="empty-title">Aucun lot dans l\'historique</div><div class="empty-text">Les lots consommés ou jetés apparaissent ici. Ils sont inclus dans le rapport quotidien.</div></div></div>';
+  } else {
+    var html = '';
+    lots.forEach(function(l) {
+      var statusIcon = l.status === 'consumed' ? '✅' : '🗑️';
+      var statusLabel = l.status === 'consumed' ? 'Utilisé' : 'Jeté';
+      var badgeClass = l.status === 'consumed' ? 'badge-green' : 'badge-red';
+      var qty = l.quantity && l.quantity > 1 ? ' x' + l.quantity : '';
+      html += '<div class="list-item" style="opacity:.75"><div class="list-icon">' + statusIcon + '</div><div class="list-content">';
+      html += '<div class="list-title">' + esc(l.product_name) + qty + ' — <span class="v2-font-mono">' + esc(l.lot_number) + '</span> <span class="badge ' + badgeClass + '">' + statusLabel + '</span></div>';
+      html += '<div class="list-sub">';
+      if (l.supplier_name) html += '🏭 ' + esc(l.supplier_name) + ' · ';
+      if (l.dlc_date) html += '📅 DLC: ' + fmtD(l.dlc_date) + ' · ';
+      html += '⏰ ' + fmtDT(l.recorded_at);
+      html += '</div></div></div>';
+    });
+    container.innerHTML = html;
+  }
+  container.dataset.loaded = '1';
+};
 
 // ── DLC SECONDAIRE (ouverture) ──
 

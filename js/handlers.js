@@ -388,20 +388,22 @@ window.dashMarkReceived = async function(id) {
 };
 window.markConsigneRead = async function(id) {
   try {
-    // 1. Save dismissed ID in localStorage per site (survives refresh)
-    var key = 'haccp_dismissed_consignes_' + (S.currentSiteId || 'global');
-    var dismissed = [];
-    try { dismissed = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) {}
-    if (dismissed.indexOf(id) === -1) dismissed.push(id);
-    localStorage.setItem(key, JSON.stringify(dismissed));
-
-    // 2. Remove from local state + render immediately
+    // 1. Remove from local state + render immediately (UI responsive)
     S.data.consignes = S.data.consignes.filter(function(c) { return c.id !== id; });
     render();
-    showToast('Consigne traitée', 'success');
+    showToast('Consigne traitée ✓', 'success');
 
-    // 3. Try to persist in DB (may fail due to RLS, that's OK — localStorage is the primary store)
-    sb.from('consignes').update({ is_read: true }).eq('id', id).then(null, function() {});
+    // 2. Persist in DB (RLS now allows all members to update is_read)
+    var r = await sb.from('consignes').update({ is_read: true, read_at: new Date().toISOString() }).eq('id', id);
+
+    // 3. Fallback: save in localStorage in case DB update fails
+    if (r.error) {
+      var key = 'haccp_dismissed_consignes_' + (S.currentSiteId || 'global');
+      var dismissed = [];
+      try { dismissed = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e2) {}
+      if (dismissed.indexOf(id) === -1) dismissed.push(id);
+      localStorage.setItem(key, JSON.stringify(dismissed));
+    }
   } catch(e) { console.warn('markConsigneRead:', e); }
 };
 window.closeModal = closeModal;
