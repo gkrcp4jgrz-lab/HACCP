@@ -351,7 +351,7 @@ function appConfirm(title, message, opts) {
     var h = '<div class="modal-header"><div class="modal-title">' + esc(title) + '</div><button class="modal-close" onclick="window._modalResolve(false);window._modalResolve=null;closeModal()" aria-label="Fermer">✕</button></div>';
     h += '<div class="modal-body" style="text-align:center;padding:28px 24px">';
     h += '<div style="width:56px;height:56px;border-radius:50%;background:' + (danger ? 'var(--af-err-bg)' : 'var(--af-teal-bg)') + ';display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 16px">' + icon + '</div>';
-    h += '<p style="font-size:15px;line-height:1.6;color:var(--ink);font-weight:500;margin:0">' + message + '</p>';
+    h += '<p style="font-size:15px;line-height:1.6;color:var(--ink);font-weight:500;margin:0">' + esc(message) + '</p>';
     h += '</div>';
     h += '<div class="modal-footer" style="justify-content:center;gap:12px;padding:18px 24px">';
     h += '<button class="btn btn-ghost btn-lg" style="min-width:120px" onclick="window._modalResolve(false);window._modalResolve=null;closeModal()">' + esc(cancelLabel) + '</button>';
@@ -373,7 +373,7 @@ function appPrompt(title, message, defaultVal, opts) {
     window._modalResolve = resolve;
     var h = '<div class="modal-header"><div class="modal-title">' + esc(title) + '</div><button class="modal-close" onclick="window._modalResolve(null);window._modalResolve=null;closeModal()">✕</button></div>';
     h += '<div class="modal-body">';
-    if (message) h += '<p style="font-size:14px;line-height:1.6;color:var(--ink-muted);margin:0 0 16px;font-weight:500">' + message + '</p>';
+    if (message) h += '<p style="font-size:14px;line-height:1.6;color:var(--ink-muted);margin:0 0 16px;font-weight:500">' + esc(message) + '</p>';
     if (multiline) {
       h += '<textarea class="form-textarea" id="_appPromptInput" rows="3" placeholder="' + esc(placeholder) + '" style="font-size:15px">' + esc(defaultVal || '') + '</textarea>';
     } else {
@@ -524,6 +524,7 @@ async function generateTempPDF() {
     var dayStart = new Date(dateStr + 'T00:00:00').toISOString();
     var dayEnd = new Date(dateStr + 'T23:59:59').toISOString();
     var r = await sb.from('temperatures').select('*').eq('site_id', S.currentSiteId).gte('recorded_at', dayStart).lte('recorded_at', dayEnd).order('recorded_at', {ascending: false});
+    if (r.error) throw r.error;
     temps = r.data || [];
   }
 
@@ -649,6 +650,7 @@ async function generateIncidentPDF() {
       .eq('site_id', S.currentSiteId)
       .gte('created_at', sinceDate.toISOString())
       .order('created_at', { ascending: false });
+    if (r.error) throw r.error;
 
     var reports = r.data || [];
     var open = reports.filter(function(r) { return r.status === 'open'; });
@@ -708,6 +710,7 @@ async function generateFullPDF() {
     var dayStart = new Date(dateStr + 'T00:00:00').toISOString();
     var dayEnd = new Date(dateStr + 'T23:59:59').toISOString();
     var r = await sb.from('temperatures').select('*').eq('site_id', S.currentSiteId).gte('recorded_at', dayStart).lte('recorded_at', dayEnd).order('recorded_at', {ascending: false});
+    if (r.error) throw r.error;
     temps = r.data || [];
   }
 
@@ -808,6 +811,7 @@ async function generateFullPDF() {
   // ── 4b. COMMANDES RÉCEPTIONNÉES ──
   try {
     var recvResult = await sb.from('orders').select('*').eq('site_id', S.currentSiteId).eq('status', 'received').order('received_at', {ascending: false}).limit(20);
+    if (recvResult.error) throw recvResult.error;
     var receivedOrders = recvResult.data || [];
     html += '<div class="section"><h3>4b. ✅ Commandes réceptionnées (' + receivedOrders.length + ')</h3>';
     if (receivedOrders.length > 0) {
