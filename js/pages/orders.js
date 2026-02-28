@@ -3,9 +3,9 @@ function renderOrders() {
   if (!S.ordersTab) S.ordersTab = 'active';
 
   // Tabs
-  h += '<div class="tabs v2-mb-20">';
-  h += '<button class="tab' + (S.ordersTab==='active'?' active':'') + '" onclick="S.ordersTab=\'active\';render()">🛒 Commandes en cours</button>';
-  h += '<button class="tab' + (S.ordersTab==='history'?' active':'') + '" onclick="S.ordersTab=\'history\';loadOrderHistory()">📋 Historique</button>';
+  h += '<div class="tabs v2-mb-20" style="overflow:visible">';
+  h += '<button class="tab' + (S.ordersTab==='active'?' active':'') + '" onclick="S.ordersTab=\'active\';render()" style="flex:1;text-align:center">🛒 Commandes en cours</button>';
+  h += '<button class="tab' + (S.ordersTab==='history'?' active':'') + '" onclick="S.ordersTab=\'history\';loadOrderHistory()" style="flex:1;text-align:center">📋 Historique</button>';
   h += '</div>';
 
   if (S.ordersTab === 'active') {

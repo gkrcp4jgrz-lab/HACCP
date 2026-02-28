@@ -84,8 +84,8 @@ function renderSidebar() {
     if (moduleEnabled('temperatures')) pages.push({ id:'temperatures', icon:'🌡️', label:'Températures' });
     if (moduleEnabled('dlc') || moduleEnabled('lots')) pages.push({ id:'dlc', icon:'📋', label:'DLC & Traçabilité' });
     if (moduleEnabled('orders')) pages.push({ id:'orders', icon:'🛒', label:'Commandes' });
-    if (moduleEnabled('consignes')) pages.push({ id:'consignes', icon:'💬', label:'Consignes' });
     if (moduleEnabled('cleaning')) pages.push({ id:'cleaning', icon:'🧹', label:'Nettoyage' });
+    if (moduleEnabled('consignes')) pages.push({ id:'consignes', icon:'💬', label:'Consignes' });
     pages.push({ id:'reports', icon:'📄', label:'Rapports PDF' });
 
     pages.forEach(function(p) {

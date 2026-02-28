@@ -78,29 +78,30 @@ function renderCleaningToday(schedules, completedIds) {
   var pending = schedules.filter(function(s) { return !completedIds[s.id]; });
   var done = schedules.filter(function(s) { return completedIds[s.id]; });
 
-  if (pending.length > 0) {
-    h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">⏳</span> À faire <span class="badge badge-blue">' + pending.length + '</span></div>';
-    pending.forEach(function(s) {
-      h += '<div class="list-item"><div class="list-icon" style="font-size:24px">🧹</div>';
-      h += '<div class="list-content"><div class="list-title">' + esc(s.name) + '</div>';
-      h += '<div class="list-sub">' + esc(s.zone || 'Sans zone') + ' · ' + (freqLabels[s.frequency] || s.frequency) + '</div></div>';
-      h += '<div class="list-actions"><button class="btn btn-primary" onclick="openCleaningRecordModal(' + JSON.stringify(s.id) + ',' + JSON.stringify(s.name) + ')">✅ Fait</button></div>';
-      h += '</div>';
-    });
-    h += '</div>';
-  }
+  // Checklist — all tasks in one card
+  h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">📋</span> Checklist du jour <span class="badge ' + (pending.length === 0 && done.length > 0 ? 'badge-green' : 'badge-blue') + '">' + done.length + '/' + schedules.length + '</span></div>';
 
-  if (done.length > 0) {
-    h += '<div class="card v2-mt-16"><div class="card-header"><span class="v2-text-2xl">✅</span> Terminées <span class="badge badge-green">' + done.length + '</span></div>';
-    done.forEach(function(s) {
-      var rec = completedIds[s.id];
-      h += '<div class="list-item" style="opacity:.7"><div class="list-icon" style="font-size:24px">✅</div>';
-      h += '<div class="list-content"><div class="list-title" style="text-decoration:line-through">' + esc(s.name) + '</div>';
-      h += '<div class="list-sub">' + esc(s.zone || '') + (rec ? ' · par ' + esc(rec.performed_by_name) + ' à ' + fmtTime(rec.performed_at) : '') + '</div></div>';
-      h += '</div>';
-    });
+  // Pending tasks (unchecked)
+  pending.forEach(function(s) {
+    h += '<div class="list-item" style="cursor:pointer" onclick="quickCleaningDone(' + JSON.stringify(s.id) + ',' + JSON.stringify(s.name) + ')">';
+    h += '<div style="width:28px;height:28px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s"></div>';
+    h += '<div class="list-content"><div class="list-title">' + esc(s.name) + '</div>';
+    h += '<div class="list-sub">' + esc(s.zone || 'Sans zone') + ' · ' + (freqLabels[s.frequency] || s.frequency) + '</div></div>';
+    h += '<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openCleaningRecordModal(' + JSON.stringify(s.id) + ',' + JSON.stringify(s.name) + ')" title="Notes & photo">📝</button>';
     h += '</div>';
-  }
+  });
+
+  // Done tasks (checked)
+  done.forEach(function(s) {
+    var rec = completedIds[s.id];
+    h += '<div class="list-item" style="opacity:.6">';
+    h += '<div style="width:28px;height:28px;border-radius:50%;background:var(--af-ok);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>';
+    h += '<div class="list-content"><div class="list-title" style="text-decoration:line-through">' + esc(s.name) + '</div>';
+    h += '<div class="list-sub">' + esc(s.zone || '') + (rec ? ' · par ' + esc(rec.performed_by_name) + ' à ' + fmtTime(rec.performed_at) : '') + '</div></div>';
+    h += '</div>';
+  });
+
+  h += '</div>';
 
   return h;
 }
@@ -122,12 +123,12 @@ function renderCleaningOverdue(todayScheds, completedIds) {
   h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">⚠️</span> Tâches en retard <span class="badge badge-red">' + pending.length + '</span></div>';
   pending.forEach(function(s) {
     var level = hour >= 18 ? 'danger' : hour >= 14 ? 'warning' : 'info';
-    var borderColor = level === 'danger' ? 'var(--danger)' : level === 'warning' ? 'var(--warning)' : 'var(--primary)';
-    h += '<div class="list-item" style="border-left:3px solid ' + borderColor + '">';
-    h += '<div class="list-icon" style="font-size:24px">🧹</div>';
+    var borderColor = level === 'danger' ? 'var(--af-err)' : level === 'warning' ? 'var(--af-warn)' : 'var(--af-teal)';
+    h += '<div class="list-item" style="border-left:3px solid ' + borderColor + ';cursor:pointer" onclick="quickCleaningDone(' + JSON.stringify(s.id) + ',' + JSON.stringify(s.name) + ')">';
+    h += '<div style="width:28px;height:28px;border-radius:50%;border:2px solid ' + borderColor + ';display:flex;align-items:center;justify-content:center;flex-shrink:0"></div>';
     h += '<div class="list-content"><div class="list-title">' + esc(s.name) + '</div>';
     h += '<div class="list-sub">' + esc(s.zone || 'Sans zone') + '</div></div>';
-    h += '<div class="list-actions"><button class="btn btn-primary" onclick="openCleaningRecordModal(' + JSON.stringify(s.id) + ',' + JSON.stringify(s.name) + ')">✅ Fait</button></div>';
+    h += '<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openCleaningRecordModal(' + JSON.stringify(s.id) + ',' + JSON.stringify(s.name) + ')" title="Notes & photo">📝</button>';
     h += '</div>';
   });
   h += '</div>';
@@ -212,6 +213,10 @@ window.openCleaningRecordModal = function(scheduleId, scheduleName) {
   h += '<button class="btn btn-primary btn-lg" onclick="handleCleaningRecord(' + JSON.stringify(scheduleId) + ',\'completed\')">✅ Terminé</button>';
   h += '</div>';
   openModal(h);
+};
+
+window.quickCleaningDone = function(scheduleId, scheduleName) {
+  addCleaningLog(scheduleId, 'completed', '');
 };
 
 window.deleteCleaningSchedule = function(id) {

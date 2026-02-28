@@ -17,7 +17,9 @@ var NAV_ICONS = {
   users: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
   usersFill: '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2h16z"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><circle cx="17" cy="7" r="3" opacity=".6"/></svg>',
   gear: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
-  gearFill: '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/><circle cx="12" cy="12" r="3" fill="var(--af-bg-page,#F9FAFB)"/></svg>'
+  gearFill: '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/><circle cx="12" cy="12" r="3" fill="var(--af-bg-page,#F9FAFB)"/></svg>',
+  broom: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L12 10"/><path d="M6 10h12l-1 12H7L6 10z"/><path d="M9 10V6"/><path d="M15 10V6"/></svg>',
+  broomFill: '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M11.25 2a.75.75 0 0 1 1.5 0v4h2.25V4a.75.75 0 0 1 1.5 0v6h-9V4a.75.75 0 0 1 1.5 0v2h2.25V2z"/><path d="M6 10h12l-1 12H7L6 10z"/></svg>'
 };
 
 function renderBottomNav() {
@@ -42,7 +44,7 @@ function renderBottomNav() {
     h += bnavItem('dashboard', 'home', 'Accueil');
     h += bnavItem('temperatures', 'thermo', 'Temp.');
     h += bnavItem('dlc', 'calendar', 'DLC');
-    h += bnavItem('consignes', 'message', 'Consignes');
+    h += bnavItem('cleaning', 'broom', 'Nettoyage');
   }
 
   // Avatar tab (5th)
@@ -92,7 +94,7 @@ function renderRightSidebar(alertCount) {
     h += rsidebarItem('profile', '👤', 'Mon profil');
   } else if (isManager()) {
     h += rsidebarItem('orders', '🛒', 'Commandes');
-    if (moduleEnabled('cleaning')) h += rsidebarItem('cleaning', '🧹', 'Nettoyage');
+    if (moduleEnabled('consignes')) h += rsidebarItem('consignes', '💬', 'Consignes');
     h += rsidebarItem('reports', '📄', 'Rapports');
     h += '<div class="rsidebar-divider"></div>';
     h += rsidebarItem('team', '👥', 'Personnel');
@@ -103,7 +105,7 @@ function renderRightSidebar(alertCount) {
   } else {
     // Employee
     h += rsidebarItem('orders', '🛒', 'Commandes');
-    if (moduleEnabled('cleaning')) h += rsidebarItem('cleaning', '🧹', 'Nettoyage');
+    if (moduleEnabled('consignes')) h += rsidebarItem('consignes', '💬', 'Consignes');
     h += rsidebarItem('reports', '📄', 'Rapports');
     h += rsidebarItem('notifications', '🔔', 'Notifications', alertCount);
     h += '<div class="rsidebar-divider"></div>';

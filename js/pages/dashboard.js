@@ -71,7 +71,9 @@ function renderDashboard() {
     var cCompIds = {};
     cRecs.forEach(function(r) { cCompIds[r.schedule_id] = true; });
     var cDone = cScheds.filter(function(s) { return cCompIds[s.id]; }).length;
-    h += '<div class="stat-card v2-clickable' + (cDone >= cScheds.length && cScheds.length > 0 ? ' success' : '') + '" onclick="navigate(\'cleaning\')">';
+    var cOverdue = cScheds.length - cDone;
+    var cState = cScheds.length === 0 ? '' : cDone >= cScheds.length ? ' success' : new Date().getHours() >= 14 && cOverdue > 0 ? ' danger' : cOverdue > 0 ? ' warning' : '';
+    h += '<div class="stat-card v2-clickable' + cState + '" onclick="navigate(\'cleaning\')">';
     h += '<div class="v2-mb-8"><span class="v2-text-5xl">🧹</span></div>';
     h += '<div class="stat-value">' + cDone + '/' + cScheds.length + '</div><div class="stat-label">Nettoyage</div></div>';
   }
