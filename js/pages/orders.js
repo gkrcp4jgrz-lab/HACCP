@@ -256,7 +256,7 @@ window.markSupplierOrdered = async function(supplierName) {
   var toMark = S.data.orders.filter(function(o) { return o.status === 'to_order' && (o.supplier_name || '— Sans fournisseur —') === supplierName; });
   var errors = 0;
   for (var i = 0; i < toMark.length; i++) {
-    var r = await sb.from('orders').update({ status: 'ordered' }).eq('id', toMark[i].id);
+    var r = await sb.from('orders').update({ status: 'ordered', ordered_at: new Date().toISOString() }).eq('id', toMark[i].id);
     if (r.error) errors++;
   }
   await loadSiteData();
@@ -268,7 +268,7 @@ window.markSupplierOrdered = async function(supplierName) {
 window.viewBLPhoto = function(orderId) {
   sb.from('orders').select('bl_photo,product_name').eq('id', orderId).single().then(function(r) {
     if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
-    if (r.data && r.data.bl_photo && /^data:image\//.test(r.data.bl_photo)) {
+    if (r.data && r.data.bl_photo && /^data:image\/(jpeg|png|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(r.data.bl_photo)) {
       var html = '<div class="modal-header"><div class="modal-title">📸 BL : ' + esc(r.data.product_name) + '</div><button class="modal-close" onclick="closeModal()">✕</button></div>';
       html += '<div class="modal-body v2-text-center"><img src="' + r.data.bl_photo + '" alt="Bon de livraison ' + esc(r.data.product_name) + '" style="max-width:100%;max-height:70vh;border-radius:12px"></div>';
       openModal(html);
