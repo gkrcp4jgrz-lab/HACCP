@@ -2,44 +2,51 @@
 -- HACCP Pro — Step 9: Plan de nettoyage
 -- ============================================
 
--- Taches de nettoyage recurrentes configurees par le gerant
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Taches de nettoyage recurrentes
 CREATE TABLE cleaning_schedules (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  site_id UUID REFERENCES sites(id) ON DELETE CASCADE NOT NULL,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  site_id UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   zone TEXT NOT NULL DEFAULT '',
-  frequency TEXT NOT NULL CHECK (frequency IN ('daily','weekly','monthly')),
-  assigned_role TEXT NOT NULL DEFAULT 'employee',
-  active BOOLEAN DEFAULT true,
+  description TEXT DEFAULT '',
+  frequency TEXT NOT NULL, -- daily / weekly / monthly / custom
+  day_of_week INTEGER,
+  day_of_month INTEGER,
+  custom_interval_days INTEGER,
+  active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Logs des nettoyages effectues
+CREATE TABLE cleaning_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  schedule_id UUID NOT NULL REFERENCES cleaning_schedules(id) ON DELETE CASCADE,
+  site_id UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  performed_by UUID REFERENCES auth.users(id),
+  performed_by_name TEXT DEFAULT '',
+  performed_at TIMESTAMPTZ DEFAULT now(),
+  status TEXT DEFAULT 'completed', -- completed / missed / partial
+  notes TEXT DEFAULT '',
+  photo_data TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Index
 CREATE INDEX idx_cleaning_schedules_site ON cleaning_schedules(site_id);
+CREATE INDEX idx_cleaning_logs_site ON cleaning_logs(site_id);
+CREATE INDEX idx_cleaning_logs_schedule ON cleaning_logs(schedule_id);
 
+-- RLS
 ALTER TABLE cleaning_schedules ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "cleaning_schedules_select" ON cleaning_schedules FOR SELECT USING (true);
 CREATE POLICY "cleaning_schedules_insert" ON cleaning_schedules FOR INSERT WITH CHECK (true);
 CREATE POLICY "cleaning_schedules_update" ON cleaning_schedules FOR UPDATE USING (true);
 CREATE POLICY "cleaning_schedules_delete" ON cleaning_schedules FOR DELETE USING (true);
 
--- Enregistrements de nettoyage effectues par les employes
-CREATE TABLE cleaning_records (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  site_id UUID REFERENCES sites(id) ON DELETE CASCADE NOT NULL,
-  schedule_id UUID REFERENCES cleaning_schedules(id) ON DELETE CASCADE NOT NULL,
-  status TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('completed','skipped')),
-  notes TEXT DEFAULT '',
-  photo_data TEXT,
-  recorded_by UUID NOT NULL,
-  recorded_by_name TEXT DEFAULT '',
-  recorded_at TIMESTAMPTZ DEFAULT now()
-);
-
-CREATE INDEX idx_cleaning_records_site ON cleaning_records(site_id);
-CREATE INDEX idx_cleaning_records_schedule ON cleaning_records(schedule_id);
-CREATE INDEX idx_cleaning_records_date ON cleaning_records(recorded_at);
-
-ALTER TABLE cleaning_records ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "cleaning_records_select" ON cleaning_records FOR SELECT USING (true);
-CREATE POLICY "cleaning_records_insert" ON cleaning_records FOR INSERT WITH CHECK (true);
-CREATE POLICY "cleaning_records_update" ON cleaning_records FOR UPDATE USING (true);
+ALTER TABLE cleaning_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "cleaning_logs_select" ON cleaning_logs FOR SELECT USING (true);
+CREATE POLICY "cleaning_logs_insert" ON cleaning_logs FOR INSERT WITH CHECK (true);
+CREATE POLICY "cleaning_logs_update" ON cleaning_logs FOR UPDATE USING (true);

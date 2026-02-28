@@ -17,7 +17,7 @@ function getTodayCleaningSchedules() {
 function renderCleaning() {
   var h = '';
   var schedules = S.data.cleaning_schedules || [];
-  var records = S.data.cleaning_records || [];
+  var records = S.data.cleaning_logs || [];
   var todayScheds = getTodayCleaningSchedules();
   var completedIds = {};
   records.forEach(function(r) { completedIds[r.schedule_id] = r; });
@@ -43,6 +43,17 @@ function renderCleaning() {
     h += '<div class="progress" style="height:6px"><div class="progress-bar" style="width:' + pct + '%;background:' + (pct >= 100 ? 'var(--success)' : 'var(--primary)') + '"></div></div>';
     h += '</div></div>';
   }
+
+  // Quick add form (all roles)
+  h += '<div class="card v2-mb-16"><div class="card-header"><span class="v2-text-2xl">➕</span> Ajouter une tâche rapide</div><div class="card-body">';
+  h += '<form onsubmit="handleCleaningSchedule(event)">';
+  h += '<div class="form-row"><div class="form-group" style="flex:2"><label class="form-label">Nom <span class="req">*</span></label><input type="text" class="form-input" id="cleanName" required placeholder="Ex: Nettoyage plan de travail"></div>';
+  h += '<div class="form-group"><label class="form-label">Zone</label><input type="text" class="form-input" id="cleanZone" placeholder="Cuisine, Salle..."></div></div>';
+  h += '<div class="form-row"><div class="form-group"><label class="form-label">Fréquence</label>';
+  h += '<select class="form-select" id="cleanFreq"><option value="daily">Quotidien</option><option value="weekly">Hebdomadaire</option><option value="monthly">Mensuel</option></select></div>';
+  h += '<div class="form-group" style="display:flex;align-items:flex-end"><button type="submit" class="btn btn-primary" style="width:100%">✓ Ajouter</button></div></div>';
+  h += '<input type="hidden" id="cleanRole" value="employee">';
+  h += '</form></div></div>';
 
   // Content by filter
   if (S.cleaningFilter === 'today') {
@@ -91,7 +102,7 @@ function renderCleaningToday(schedules, completedIds) {
       var rec = completedIds[s.id];
       h += '<div class="list-item" style="opacity:.7"><div class="list-icon" style="font-size:24px">✅</div>';
       h += '<div class="list-content"><div class="list-title" style="text-decoration:line-through">' + esc(s.name) + '</div>';
-      h += '<div class="list-sub">' + esc(s.zone || '') + (rec ? ' · par ' + esc(rec.recorded_by_name) + ' à ' + fmtTime(rec.recorded_at) : '') + '</div></div>';
+      h += '<div class="list-sub">' + esc(s.zone || '') + (rec ? ' · par ' + esc(rec.performed_by_name) + ' à ' + fmtTime(rec.performed_at) : '') + '</div></div>';
       h += '</div>';
     });
     h += '</div>';
@@ -148,7 +159,7 @@ function renderCleaningCompleted(records) {
 
     h += '<div class="list-item"><div class="list-icon" style="font-size:24px">' + statusIcon + '</div>';
     h += '<div class="list-content"><div class="list-title">' + esc(name) + ' <span class="badge ' + (r.status === 'skipped' ? 'badge-yellow' : 'badge-green') + '">' + statusLabel + '</span></div>';
-    h += '<div class="list-sub">Par ' + esc(r.recorded_by_name) + ' à ' + fmtTime(r.recorded_at);
+    h += '<div class="list-sub">Par ' + esc(r.performed_by_name) + ' à ' + fmtTime(r.performed_at);
     if (r.notes) h += ' — ' + esc(r.notes);
     h += '</div></div>';
     if (r.photo_data) {
@@ -178,9 +189,7 @@ function renderCleaningAll(schedules) {
     h += '<div class="list-item"><div class="list-icon" style="font-size:24px">🧹</div>';
     h += '<div class="list-content"><div class="list-title">' + esc(s.name) + '</div>';
     h += '<div class="list-sub">' + esc(s.zone || 'Sans zone') + ' · ' + (freqLabels[s.frequency] || s.frequency) + ' · ' + (roleLabels[s.assigned_role] || s.assigned_role) + '</div></div>';
-    if (isManager()) {
-      h += '<div class="list-actions"><button class="btn btn-danger btn-sm" onclick="deleteCleaningSchedule(\'' + s.id + '\')">🗑️</button></div>';
-    }
+    h += '<div class="list-actions"><button class="btn btn-danger btn-sm" onclick="deleteCleaningSchedule(\'' + s.id + '\')">🗑️</button></div>';
     h += '</div>';
   });
   h += '</div>';

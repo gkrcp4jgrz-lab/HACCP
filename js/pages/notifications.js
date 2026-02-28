@@ -451,7 +451,7 @@ function buildAlerts() {
   // 9. Cleaning tasks not completed today
   if (moduleEnabled('cleaning') && typeof getTodayCleaningSchedules === 'function') {
     var cleanScheds = getTodayCleaningSchedules();
-    var cleanRecs = S.data.cleaning_records || [];
+    var cleanRecs = S.data.cleaning_logs || [];
     var cleanCompIds = {};
     cleanRecs.forEach(function(r) { cleanCompIds[r.schedule_id] = true; });
     var cleanOverdue = cleanScheds.filter(function(s) { return !cleanCompIds[s.id]; });

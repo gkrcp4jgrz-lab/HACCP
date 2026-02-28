@@ -48,7 +48,7 @@ async function loadSiteData() {
       sb.from('consignes').select('*').eq('site_id', sid).order('created_at', {ascending:false}).limit(50),
       sb.from('incident_reports').select('*').eq('site_id', sid).in('status', ['open','in_progress']).order('created_at', {ascending:false}),
       sb.from('cleaning_schedules').select('*').eq('site_id', sid).eq('active', true).order('name'),
-      sb.from('cleaning_records').select('*').eq('site_id', sid).gte('recorded_at', localMidnightISO).order('recorded_at', {ascending:false})
+      sb.from('cleaning_logs').select('*').eq('site_id', sid).gte('performed_at', localMidnightISO).order('performed_at', {ascending:false})
     ]);
     S.data.temperatures = results[0].data || [];
     S.data.dlcs = results[1].data || [];
@@ -64,7 +64,7 @@ async function loadSiteData() {
 
     S.data.incident_reports = results[5].data || [];
     S.data.cleaning_schedules = results[6].data || [];
-    S.data.cleaning_records = results[7].data || [];
+    S.data.cleaning_logs = results[7].data || [];
   } catch(e) { console.error('Load data error:', e); }
 }
 
@@ -275,14 +275,14 @@ async function deleteCleaningSchedule(id) {
   await loadSiteData(); render();
 }
 
-async function addCleaningRecord(scheduleId, status, notes) {
+async function addCleaningLog(scheduleId, status, notes) {
   var rec = {
     site_id: S.currentSiteId, schedule_id: scheduleId,
     status: status || 'completed', notes: notes || '',
     photo_data: S.photoCleaningData || null,
-    recorded_by: S.user.id, recorded_by_name: userName()
+    performed_by: S.user.id, performed_by_name: userName()
   };
-  var r = await sb.from('cleaning_records').insert(rec);
+  var r = await sb.from('cleaning_logs').insert(rec);
   if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
   showToast(status === 'skipped' ? 'Tâche passée' : 'Nettoyage enregistré', 'success');
   S.photoCleaningData = null;

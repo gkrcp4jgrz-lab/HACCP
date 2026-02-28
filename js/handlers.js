@@ -433,7 +433,7 @@ window.loadAndDisplayUsers = loadAndDisplayUsers;
 window.handleCleaningRecord = async function(scheduleId, status) {
   var notes = $('cleanNotes') ? $('cleanNotes').value.trim() : '';
   closeModal();
-  await addCleaningRecord(scheduleId, status, notes);
+  await addCleaningLog(scheduleId, status, notes);
 };
 
 window.handleCleaningSchedule = async function(e) {

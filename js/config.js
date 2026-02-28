@@ -29,7 +29,7 @@ var S = {
   sites: [],
   currentSiteId: null,
   siteConfig: { equipment: [], products: [], suppliers: [], modules: [] },
-  data: { temperatures: [], dlcs: [], lots: [], orders: [], consignes: [], incident_reports: [], cleaning_schedules: [], cleaning_records: [] },
+  data: { temperatures: [], dlcs: [], lots: [], orders: [], consignes: [], incident_reports: [], cleaning_schedules: [], cleaning_logs: [] },
   cleaningFilter: 'today',
   photoCleaningData: null,
   filter: 'all',
