@@ -1,5 +1,5 @@
 // HACCP Pro — Service Worker (Offline + Cache)
-var CACHE_NAME = 'haccp-pro-v22';
+var CACHE_NAME = 'haccp-pro-v23';
 var STATIC_ASSETS = [
   '/',
   '/index.html',

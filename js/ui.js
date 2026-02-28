@@ -956,7 +956,7 @@ async function triggerEmailNotification(eventType, data) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + (await sb.auth.getSession()).data.session.access_token
+        'Authorization': 'Bearer ' + ((await sb.auth.getSession()).data.session || {}).access_token
       },
       body: JSON.stringify({ to: emailTo, subject: subject, body: body })
     });

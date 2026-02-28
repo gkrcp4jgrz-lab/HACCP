@@ -119,7 +119,14 @@ serve(async (req) => {
       });
     }
 
-    const result = JSON.parse(jsonMatch[0]);
+    let result;
+    try { result = JSON.parse(jsonMatch[0]); }
+    catch (_) {
+      return new Response(JSON.stringify({ error: "Format de réponse OCR invalide" }), {
+        status: 422,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     return new Response(JSON.stringify({ result }), {
       status: 200,
