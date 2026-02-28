@@ -57,14 +57,6 @@ function renderDashboard() {
   h += '<div class="v2-mb-8"><span class="v2-text-5xl">📅</span></div>';
   h += '<div class="stat-value">' + dlcWarnings.length + '</div><div class="stat-label">DLC à surveiller</div></div>';
 
-  h += '<div class="stat-card v2-clickable' + (dlcExpired.length > 0 ? ' danger' : ' success') + '" onclick="navigate(\'dlc\')">';
-  h += '<div class="v2-mb-8"><span class="v2-text-5xl">❌</span></div>';
-  h += '<div class="stat-value">' + dlcExpired.length + '</div><div class="stat-label">DLC expirées</div></div>';
-
-  h += '<div class="stat-card v2-clickable' + (ordersToOrder.length > 0 ? ' warning' : ' success') + '" onclick="navigate(\'orders\')">';
-  h += '<div class="v2-mb-8"><span class="v2-text-5xl">🛒</span></div>';
-  h += '<div class="stat-value">' + ordersToOrder.length + '</div><div class="stat-label">À commander</div></div>';
-
   if (moduleEnabled('cleaning') && typeof getTodayCleaningSchedules === 'function') {
     var cScheds = getTodayCleaningSchedules();
     var cRecs = S.data.cleaning_logs || [];
@@ -77,6 +69,10 @@ function renderDashboard() {
     h += '<div class="v2-mb-8"><span class="v2-text-5xl">🧹</span></div>';
     h += '<div class="stat-value">' + cDone + '/' + cScheds.length + '</div><div class="stat-label">Nettoyage</div></div>';
   }
+
+  h += '<div class="stat-card v2-clickable' + (ordersToOrder.length > 0 ? ' warning' : ' success') + '" onclick="navigate(\'orders\')">';
+  h += '<div class="v2-mb-8"><span class="v2-text-5xl">🛒</span></div>';
+  h += '<div class="stat-value">' + ordersToOrder.length + '</div><div class="stat-label">À commander</div></div>';
 
   h += '</div>';
 
