@@ -48,7 +48,7 @@ function renderOrdersActive() {
       h += '<div class="v2-supplier-group">';
       h += '<div class="v2-supplier-group__header">';
       h += '<h4 class="v2-supplier-group__title"><span class="v2-text-3xl">🏭</span> ' + esc(supplier) + ' <span class="badge badge-blue">' + items.length + ' article' + (items.length > 1 ? 's' : '') + '</span></h4>';
-      h += '<button class="btn btn-primary" onclick="markSupplierOrdered(' + JSON.stringify(supplier) + ')">📞 Tout commandé</button>';
+      h += '<button class="btn btn-primary" onclick="markSupplierOrdered(\'' + supplier.replace(/\\/g,'\\\\').replace(/'/g,"\\'") + '\')">📞 Tout commandé</button>';
       h += '</div>';
 
       items.forEach(function(o) {
@@ -85,7 +85,7 @@ function renderOrdersActive() {
         h += '<div class="v2-order-row">';
         h += '<div><strong class="v2-order-row__name">' + esc(o.product_name) + '</strong><span class="v2-order-row__qty">' + (o.quantity||1) + ' ' + esc(o.unit||'unité') + '</span>';
         h += '<div class="v2-text-sm v2-text-muted v2-font-500 v2-mt-2">Commandé le ' + fmtD(o.ordered_at) + '</div></div>';
-        h += '<button class="btn btn-success" onclick="openReceiveModal(\'' + o.id + '\',' + JSON.stringify(o.product_name) + ')">✅ Réceptionner</button>';
+        h += '<button class="btn btn-success" onclick="openReceiveModal(\'' + o.id + '\',\'' + (o.product_name||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'") + '\')">✅ Réceptionner</button>';
         h += '</div>';
       });
       h += '</div>';

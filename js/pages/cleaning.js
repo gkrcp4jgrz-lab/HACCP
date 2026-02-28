@@ -92,11 +92,11 @@ function renderCleaningToday(schedules, completedIds) {
 
   // Pending tasks (unchecked)
   pending.forEach(function(s) {
-    h += '<div class="list-item" style="cursor:pointer" onclick="quickCleaningDone(' + JSON.stringify(s.id) + ',' + JSON.stringify(s.name) + ')">';
+    h += '<div class="list-item" style="cursor:pointer" onclick="quickCleaningDone(\'' + s.id + '\')">';
     h += '<div style="width:28px;height:28px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s"></div>';
     h += '<div class="list-content"><div class="list-title">' + esc(s.name) + '</div>';
     h += '<div class="list-sub">' + esc(s.zone || 'Sans zone') + ' · ' + getFreqLabel(s) + '</div></div>';
-    h += '<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openCleaningRecordModal(' + JSON.stringify(s.id) + ',' + JSON.stringify(s.name) + ')" title="Notes">📝</button>';
+    h += '<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openCleaningRecordModal(\'' + s.id + '\')" title="Notes">📝</button>';
     h += '</div>';
   });
 
@@ -133,11 +133,11 @@ function renderCleaningOverdue(todayScheds, completedIds) {
   pending.forEach(function(s) {
     var level = hour >= 18 ? 'danger' : hour >= 14 ? 'warning' : 'info';
     var borderColor = level === 'danger' ? 'var(--af-err)' : level === 'warning' ? 'var(--af-warn)' : 'var(--af-teal)';
-    h += '<div class="list-item" style="border-left:3px solid ' + borderColor + ';cursor:pointer" onclick="quickCleaningDone(' + JSON.stringify(s.id) + ',' + JSON.stringify(s.name) + ')">';
+    h += '<div class="list-item" style="border-left:3px solid ' + borderColor + ';cursor:pointer" onclick="quickCleaningDone(\'' + s.id + '\')">';
     h += '<div style="width:28px;height:28px;border-radius:50%;border:2px solid ' + borderColor + ';display:flex;align-items:center;justify-content:center;flex-shrink:0"></div>';
     h += '<div class="list-content"><div class="list-title">' + esc(s.name) + '</div>';
     h += '<div class="list-sub">' + esc(s.zone || 'Sans zone') + '</div></div>';
-    h += '<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openCleaningRecordModal(' + JSON.stringify(s.id) + ',' + JSON.stringify(s.name) + ')" title="Notes & photo">📝</button>';
+    h += '<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openCleaningRecordModal(\'' + s.id + '\')" title="Notes & photo">📝</button>';
     h += '</div>';
   });
   h += '</div>';
@@ -214,16 +214,17 @@ function fmtTime(isoStr) {
   return (d.getHours() < 10 ? '0' : '') + d.getHours() + ':' + (d.getMinutes() < 10 ? '0' : '') + d.getMinutes();
 }
 
-window.openCleaningRecordModal = function(scheduleId, scheduleName) {
-  var safeName = esc(scheduleName);
+window.openCleaningRecordModal = function(scheduleId) {
+  var sched = (S.data.cleaning_schedules || []).find(function(s) { return s.id === scheduleId; });
+  var safeName = esc(sched ? sched.name : '');
   var h = '<div class="modal-header"><div class="modal-title">🧹 ' + safeName + '</div><button class="modal-close" onclick="closeModal()">✕</button></div>';
   h += '<div class="modal-body">';
   h += '<div class="form-group"><label class="form-label">Notes (optionnel)</label>';
   h += '<textarea class="form-textarea" id="cleanNotes" rows="2" placeholder="Observations, remarques..."></textarea></div>';
   h += '</div>';
   h += '<div class="modal-footer" style="gap:12px">';
-  h += '<button class="btn btn-ghost" onclick="handleCleaningRecord(' + JSON.stringify(scheduleId) + ',\'skipped\')">⏭️ Passer</button>';
-  h += '<button class="btn btn-primary btn-lg" onclick="handleCleaningRecord(' + JSON.stringify(scheduleId) + ',\'completed\')">✅ Terminé</button>';
+  h += '<button class="btn btn-ghost" onclick="handleCleaningRecord(\'' + scheduleId + '\',\'skipped\')">⏭️ Passer</button>';
+  h += '<button class="btn btn-primary btn-lg" onclick="handleCleaningRecord(\'' + scheduleId + '\',\'completed\')">✅ Terminé</button>';
   h += '</div>';
   openModal(h);
 };
