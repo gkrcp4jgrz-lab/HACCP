@@ -8,15 +8,18 @@ function renderDLC() {
   // Unified reception form
   h += renderReceptionForm();
 
-  // Tabbed view: DLC / Lots
+  // Tabbed view: DLC / Lots / Stock
   var activeTab = S.dlcTab || 'dlc';
   h += '<div class="tabs">';
-  h += '<button class="tab' + (activeTab === 'dlc' ? ' active' : '') + '" onclick="S.dlcTab=\'dlc\';render()">📅 DLC en cours</button>';
-  h += '<button class="tab' + (activeTab === 'lots' ? ' active' : '') + '" onclick="S.dlcTab=\'lots\';render()">📦 Traçabilité</button>';
+  h += '<button class="tab' + (activeTab === 'dlc' ? ' active' : '') + '" onclick="S.dlcTab=\'dlc\';render()">📅 DLC</button>';
+  h += '<button class="tab' + (activeTab === 'lots' ? ' active' : '') + '" onclick="S.dlcTab=\'lots\';render()">📦 Lots</button>';
+  h += '<button class="tab' + (activeTab === 'stock' ? ' active' : '') + '" onclick="S.dlcTab=\'stock\';render()">📊 Stock</button>';
   h += '</div>';
 
   if (activeTab === 'lots') {
     h += renderLotsTabContent();
+  } else if (activeTab === 'stock') {
+    h += renderStockTabContent();
   } else {
     h += renderDlcTabContent();
   }
@@ -37,7 +40,8 @@ function renderReceptionForm() {
   // Row 1: Product + Lot
   h += '<div class="form-row">';
   h += '<div class="form-group"><label class="form-label">Produit <span class="req">*</span></label>';
-  h += '<div class="product-input-wrapper"><input type="text" class="form-input" id="recProduct" list="productList" required placeholder="Nom du produit" autocomplete="off"></div>';
+  h += '<div style="display:flex;gap:8px"><div style="flex:1"><input type="text" class="form-input" id="recProduct" list="productList" required placeholder="Nom du produit" autocomplete="off"></div>';
+  h += '<button type="button" class="btn btn-outline" style="flex-shrink:0;height:var(--input-h)" onclick="openQuickAddProductModal()">+</button></div>';
   h += '<datalist id="productList">';
   products.forEach(function(p) { h += '<option value="' + esc(p) + '">'; });
   h += '</datalist></div>';
@@ -141,15 +145,16 @@ function renderDlcTabContent() {
         }
       }
 
+      var dQty = d.quantity && d.quantity > 1 ? ' x' + d.quantity : '';
       var borderClass = (status === 'valid' && !dlc2Expired) ? 'v2-list-item--border-left-ok' : 'v2-list-item--border-left-nok';
-      h += '<div class="list-item ' + borderClass + '"><div class="list-content"><div class="list-title">' + esc(d.product_name) + '</div><div class="list-sub">DLC : <strong>' + fmtD(d.dlc_date) + '</strong> <span class="badge ' + badgeClass + '">' + statusLabel + '</span>' + dlc2Info + '</div>';
+      h += '<div class="list-item ' + borderClass + '"><div class="list-content"><div class="list-title">' + esc(d.product_name) + dQty + '</div><div class="list-sub">DLC : <strong>' + fmtD(d.dlc_date) + '</strong> <span class="badge ' + badgeClass + '">' + statusLabel + '</span>' + dlc2Info + '</div>';
       if (d.lot_number) h += '<div class="list-sub">Lot : ' + esc(d.lot_number) + '</div>';
       h += '</div><div class="list-actions" style="flex-wrap:wrap;gap:4px">';
       if (!d.opened_at) {
         h += '<button class="btn btn-outline btn-sm" onclick="openDlcOpenModal(\'' + d.id + '\')">📂 Ouvrir</button>';
       }
-      if (status === 'expired' || dlc2Expired) h += '<button class="btn btn-danger btn-sm" onclick="updateDlcStatus(\'' + d.id + '\',\'discarded\')">🗑️ Jeté</button>';
-      h += '<button class="btn btn-success btn-sm" onclick="updateDlcStatus(\'' + d.id + '\',\'consumed\')">Utilisé</button>';
+      if (status === 'expired' || dlc2Expired) h += '<button class="btn btn-danger btn-sm" onclick="openConsumeModal(\'dlc\',\'' + d.id + '\',' + (d.quantity||1) + ',\'discarded\')">🗑️ Jeté</button>';
+      h += '<button class="btn btn-success btn-sm" onclick="openConsumeModal(\'dlc\',\'' + d.id + '\',' + (d.quantity||1) + ',\'consumed\')">Utilisé</button>';
       h += '<button class="btn btn-ghost btn-sm" onclick="deleteDlc(\'' + d.id + '\')">🗑️</button>';
       h += '</div></div>';
     });
@@ -177,8 +182,8 @@ function renderLotsTabContent() {
       if (l.dlc_date) h += '📅 DLC: ' + fmtD(l.dlc_date) + ' · ';
       h += '⏰ ' + fmtDT(l.recorded_at) + ' par ' + esc(l.recorded_by_name);
       h += '</div></div><div class="list-actions">';
-      h += '<button class="btn btn-success btn-sm" onclick="updateLotStatus(\'' + l.id + '\',\'consumed\')">Utilisé</button>';
-      h += '<button class="btn btn-danger btn-sm" onclick="updateLotStatus(\'' + l.id + '\',\'discarded\')">Jeté</button>';
+      h += '<button class="btn btn-success btn-sm" onclick="openConsumeModal(\'lot\',\'' + l.id + '\',' + (l.quantity||1) + ',\'consumed\')">Utilisé</button>';
+      h += '<button class="btn btn-danger btn-sm" onclick="openConsumeModal(\'lot\',\'' + l.id + '\',' + (l.quantity||1) + ',\'discarded\')">Jeté</button>';
       h += '<button class="btn btn-ghost btn-sm" onclick="deleteLot(\'' + l.id + '\')">🗑️</button>';
       h += '</div></div>';
     });
@@ -233,6 +238,134 @@ window.confirmDlcOpen = async function(dlcId) {
   closeModal();
   showToast('Produit marqué ouvert — DLC2 : ' + days + ' jours', 'success');
   await loadSiteData(); render();
+};
+
+// ── STOCK (calculé) ──
+
+function renderStockTabContent() {
+  var h = '';
+  var stock = {};
+
+  // Aggregate from active DLCs
+  S.data.dlcs.forEach(function(d) {
+    if (d.status === 'consumed' || d.status === 'discarded') return;
+    var name = d.product_name;
+    if (!stock[name]) stock[name] = { qty: 0, dlcMin: null, lastEntry: null };
+    stock[name].qty += (d.quantity || 1);
+    if (d.dlc_date && (!stock[name].dlcMin || d.dlc_date < stock[name].dlcMin)) stock[name].dlcMin = d.dlc_date;
+    if (d.recorded_at && (!stock[name].lastEntry || d.recorded_at > stock[name].lastEntry)) stock[name].lastEntry = d.recorded_at;
+  });
+
+  // Aggregate from active Lots
+  S.data.lots.forEach(function(l) {
+    if (l.status === 'consumed' || l.status === 'discarded') return;
+    var name = l.product_name;
+    if (!stock[name]) stock[name] = { qty: 0, dlcMin: null, lastEntry: null };
+    stock[name].qty += (l.quantity || 1);
+    if (l.dlc_date && (!stock[name].dlcMin || l.dlc_date < stock[name].dlcMin)) stock[name].dlcMin = l.dlc_date;
+    if (l.recorded_at && (!stock[name].lastEntry || l.recorded_at > stock[name].lastEntry)) stock[name].lastEntry = l.recorded_at;
+  });
+
+  var products = Object.keys(stock).sort();
+  var totalItems = products.reduce(function(sum, p) { return sum + stock[p].qty; }, 0);
+
+  // Summary card
+  h += '<div class="stats-grid v2-mb-16">';
+  h += '<div class="stat-card"><div class="stat-value">' + products.length + '</div><div class="stat-label">Produits</div></div>';
+  h += '<div class="stat-card"><div class="stat-value">' + totalItems + '</div><div class="stat-label">Unités en stock</div></div>';
+  h += '</div>';
+
+  h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">📊</span> Stock actuel <span class="badge badge-blue v2-badge-lg v2-ml-auto">' + products.length + '</span></div>';
+
+  if (products.length === 0) {
+    h += '<div class="card-body"><div class="empty"><div class="empty-icon">📊</div><div class="empty-title">Aucun stock</div><div class="empty-text">Ajoutez des produits via le formulaire de réception.</div></div></div>';
+  } else {
+    products.forEach(function(name) {
+      var s = stock[name];
+      var badgeClass = s.qty > 0 ? 'badge-green' : 'badge-red';
+      var dlcInfo = '';
+      if (s.dlcMin) {
+        var days = daysUntil(s.dlcMin);
+        if (days < 0) dlcInfo = ' <span class="badge badge-red">DLC expirée</span>';
+        else if (days <= 2) dlcInfo = ' <span class="badge badge-yellow">DLC J-' + days + '</span>';
+      }
+      h += '<div class="list-item"><div class="list-content"><div class="list-title">' + esc(name) + '</div>';
+      h += '<div class="list-sub">';
+      if (s.dlcMin) h += 'DLC la plus proche : ' + fmtD(s.dlcMin);
+      if (s.lastEntry) h += (s.dlcMin ? ' · ' : '') + 'Dernière entrée : ' + fmtDT(s.lastEntry);
+      h += dlcInfo + '</div></div>';
+      h += '<div class="list-actions"><span class="badge ' + badgeClass + '" style="font-size:14px;padding:6px 14px">' + s.qty + '</span></div>';
+      h += '</div>';
+    });
+  }
+  h += '</div>';
+
+  return h;
+}
+
+// ── CONSOMMATION PARTIELLE ──
+
+window.openConsumeModal = function(type, id, currentQty, action) {
+  var actionLabel = action === 'consumed' ? 'utiliser' : 'jeter';
+  var actionBtn = action === 'consumed' ? 'Utiliser' : 'Jeter';
+  var btnClass = action === 'consumed' ? 'btn-success' : 'btn-danger';
+
+  // If quantity is 1, just do it directly
+  if (currentQty <= 1) {
+    if (type === 'dlc') updateDlcStatus(id, action);
+    else updateLotStatus(id, action);
+    return;
+  }
+
+  var h = '<div class="modal-header"><div class="modal-title">Combien ' + actionLabel + ' ?</div><button class="modal-close" onclick="closeModal()">✕</button></div>';
+  h += '<div class="modal-body">';
+  h += '<p style="margin-bottom:12px;color:var(--ink-muted)">Quantité actuelle : <strong>' + currentQty + '</strong></p>';
+  h += '<div class="form-group"><label class="form-label">Quantité à ' + actionLabel + '</label>';
+  h += '<input type="number" class="form-input" id="consumeQty" min="1" max="' + currentQty + '" value="' + currentQty + '"></div>';
+  h += '</div>';
+  h += '<div class="modal-footer">';
+  h += '<button class="btn btn-ghost" onclick="closeModal()">Annuler</button>';
+  h += '<button class="btn ' + btnClass + ' btn-lg" onclick="confirmConsume(\'' + type + '\',\'' + id + '\',' + currentQty + ',\'' + action + '\')">' + actionBtn + '</button>';
+  h += '</div>';
+  openModal(h);
+};
+
+window.confirmConsume = function(type, id, maxQty, action) {
+  var qty = parseInt($('consumeQty') ? $('consumeQty').value : maxQty);
+  if (!qty || qty < 1) { showToast('Quantité invalide', 'error'); return; }
+  if (qty > maxQty) qty = maxQty;
+  closeModal();
+  if (type === 'dlc') partialConsumeDlc(id, qty, action);
+  else partialConsumeLot(id, qty, action);
+};
+
+// ── AJOUT RAPIDE PRODUIT ──
+
+window.openQuickAddProductModal = function() {
+  var h = '<div class="modal-header"><div class="modal-title">📦 Nouveau produit</div><button class="modal-close" onclick="closeModal()">✕</button></div>';
+  h += '<div class="modal-body">';
+  h += '<div class="form-group"><label class="form-label">Nom du produit <span class="req">*</span></label>';
+  h += '<input type="text" class="form-input" id="quickProductName" required placeholder="Ex: Dinde, Saumon fumé..."></div>';
+  h += '</div>';
+  h += '<div class="modal-footer">';
+  h += '<button class="btn btn-ghost" onclick="closeModal()">Annuler</button>';
+  h += '<button class="btn btn-primary btn-lg" onclick="confirmQuickAddProduct()">Ajouter</button>';
+  h += '</div>';
+  openModal(h);
+  setTimeout(function() { var el = $('quickProductName'); if (el) el.focus(); }, 100);
+};
+
+window.confirmQuickAddProduct = async function() {
+  var name = $('quickProductName') ? $('quickProductName').value.trim() : '';
+  if (!name) { showToast('Nom requis', 'error'); return; }
+  try {
+    await addProduct(name, 'autre', null, null, '📦');
+    closeModal();
+    // Set the product name in the reception form
+    setTimeout(function() { var el = $('recProduct'); if (el) el.value = name; }, 100);
+  } catch(e) {
+    showToast('Erreur: ' + (e.message || e), 'error');
+  }
 };
 
 // renderLots kept as alias for backward compatibility

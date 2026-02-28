@@ -130,11 +130,12 @@ async function addTemperature(type, refId, value, corrAction, corrNote) {
 }
 
 // -- Internal insert helpers (no loadSiteData/render) --
-async function _insertDlcRecord(productName, dlcDate, lotNumber, notes, photoData) {
+async function _insertDlcRecord(productName, dlcDate, lotNumber, notes, photoData, quantity) {
   var rec = {
     site_id: S.currentSiteId, product_name: productName, dlc_date: dlcDate,
     lot_number: lotNumber || '', photo_data: photoData || null,
-    notes: notes || '', recorded_by: S.user.id, recorded_by_name: userName()
+    notes: notes || '', quantity: parseInt(quantity) || 1,
+    recorded_by: S.user.id, recorded_by_name: userName()
   };
   var r = await sb.from('dlcs').insert(rec);
   if (r.error) throw new Error(r.error.message);
@@ -200,6 +201,48 @@ async function updateLotStatus(id, status) {
   var r = await sbExec(sb.from('lots').update({ status: status }).eq('id', id), 'Mise à jour lot');
   if (!r) return;
   showToast(status === 'consumed' ? 'Lot marqué utilisé' : 'Lot marqué jeté', 'success');
+  await loadSiteData(); render();
+}
+
+// -- Partial consumption (DLC + Lots) --
+async function partialConsumeDlc(id, qty, status) {
+  var dlc = S.data.dlcs.find(function(d) { return d.id === id; });
+  if (!dlc) return;
+  var currentQty = dlc.quantity || 1;
+  if (qty >= currentQty) { return updateDlcStatus(id, status); }
+  // Reduce original
+  var r1 = await sbExec(sb.from('dlcs').update({ quantity: currentQty - qty }).eq('id', id), 'Mise à jour quantité DLC');
+  if (!r1) return;
+  // Insert consumed/discarded copy
+  var rec = {
+    site_id: dlc.site_id, product_name: dlc.product_name, dlc_date: dlc.dlc_date,
+    lot_number: dlc.lot_number || '', notes: dlc.notes || '',
+    quantity: qty, status: status,
+    opened_at: dlc.opened_at || null, shelf_life_days: dlc.shelf_life_days || null,
+    recorded_by: S.user.id, recorded_by_name: userName()
+  };
+  await sbExec(sb.from('dlcs').insert(rec), 'Insert DLC partiel');
+  showToast(qty + ' unité(s) ' + (status === 'consumed' ? 'utilisée(s)' : 'jetée(s)'), 'success');
+  await loadSiteData(); render();
+}
+
+async function partialConsumeLot(id, qty, status) {
+  var lot = S.data.lots.find(function(l) { return l.id === id; });
+  if (!lot) return;
+  var currentQty = lot.quantity || 1;
+  if (qty >= currentQty) { return updateLotStatus(id, status); }
+  // Reduce original
+  var r1 = await sbExec(sb.from('lots').update({ quantity: currentQty - qty }).eq('id', id), 'Mise à jour quantité lot');
+  if (!r1) return;
+  // Insert consumed/discarded copy
+  var rec = {
+    site_id: lot.site_id, product_name: lot.product_name, lot_number: lot.lot_number,
+    supplier_name: lot.supplier_name || '', dlc_date: lot.dlc_date || null,
+    notes: lot.notes || '', quantity: qty, status: status,
+    recorded_by: S.user.id, recorded_by_name: userName()
+  };
+  await sbExec(sb.from('lots').insert(rec), 'Insert lot partiel');
+  showToast(qty + ' unité(s) ' + (status === 'consumed' ? 'utilisée(s)' : 'jetée(s)'), 'success');
   await loadSiteData(); render();
 }
 

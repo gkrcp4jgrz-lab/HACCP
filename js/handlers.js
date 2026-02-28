@@ -132,7 +132,7 @@ window.handleReception = async function(e) {
 
   try {
     if (saveDlc) {
-      await _insertDlcRecord(product, dlcDate, lotNum, notes, photoData);
+      await _insertDlcRecord(product, dlcDate, lotNum, notes, photoData, qty);
     }
     if (saveLot && lotNum) {
       await _insertLotRecord(product, lotNum, supplier, dlcDate, notes, photoData, qty);
@@ -413,8 +413,10 @@ window.clearPhotoDlc = clearPhotoDlc;
 window.clearPhotoLot = clearPhotoLot;
 window.deleteDlc = deleteDlc;
 window.updateDlcStatus = updateDlcStatus;
+window.partialConsumeDlc = partialConsumeDlc;
 window.deleteLot = deleteLot;
 window.updateLotStatus = updateLotStatus;
+window.partialConsumeLot = partialConsumeLot;
 window.addOrder = addOrder;
 window.updateOrderStatus = updateOrderStatus;
 window.deleteOrder = deleteOrder;
