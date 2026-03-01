@@ -29,45 +29,104 @@ function renderDLC() {
   return h;
 }
 
-// ── CONSOMMATION QUOTIDIENNE (FIFO) ──
+// ── CONSOMMATION QUOTIDIENNE — Colis entamés ──
 
 function renderConsommationTab() {
   var h = '';
-  var products = getProductSuggestions();
 
-  // Formulaire de saisie rapide
-  h += '<div class="card card-accent"><div class="card-header"><span class="v2-text-2xl">🍽️</span> Saisir une consommation</div><div class="card-body">';
-  h += '<form onsubmit="handleConsommation(event)">';
+  var openPkgs = S.data.dlcs.filter(function(d) { return d.opened_at; });
+  var unopenedPkgs = S.data.dlcs.filter(function(d) { return !d.opened_at; });
+  var now = new Date();
 
-  h += '<div class="form-row">';
-  h += '<div class="form-group" style="flex:2"><label class="form-label">Produit <span class="req">*</span></label>';
-  h += '<input type="text" class="form-input" id="consoProduct" list="consoProductList" required placeholder="Ex: Œufs, Saucisses..." autocomplete="off" oninput="updateConsoPreview()">';
-  h += '<datalist id="consoProductList">';
-  products.forEach(function(p) { h += '<option value="' + esc(p) + '">'; });
-  h += '</datalist></div>';
-  h += '<div class="form-group" style="flex:1"><label class="form-label">Quantité <span class="req">*</span></label>';
-  h += '<input type="number" class="form-input" id="consoQty" min="0.1" step="0.1" value="1" required oninput="updateConsoPreview()"></div>';
-  h += '<div class="form-group" style="flex:1"><label class="form-label">Unité</label>';
-  h += '<select class="form-select" id="consoUnit"><option>unité</option><option>kg</option><option>g</option><option>L</option><option>boîte</option><option>paquet</option><option>portion</option></select></div>';
+  // ── Section 1 : Colis en cours d'utilisation ──
+  h += '<div class="card card-accent">';
+  h += '<div class="card-header"><span class="v2-text-2xl">🔴</span> En cours d\'utilisation';
+  h += '<span class="badge badge-red v2-badge-lg v2-ml-auto">' + openPkgs.length + '</span></div>';
+
+  if (openPkgs.length === 0) {
+    h += '<div class="card-body"><div class="empty"><div class="empty-icon">📦</div>';
+    h += '<div class="empty-title">Aucun colis ouvert</div>';
+    h += '<div class="empty-sub">Ouvrez un colis depuis votre stock ci-dessous</div></div></div>';
+  } else {
+    openPkgs.forEach(function(d) {
+      var effDlc = dlcApresOuverture(d);
+      var daysLeft = effDlc ? Math.ceil((effDlc - now) / 86400000) : null;
+      var effDlcStr = effDlc ? effDlc.toLocaleDateString('fr-FR') : fmtD(d.dlc_date);
+      var statusIcon = (daysLeft === null) ? '📅' : (daysLeft < 0 ? '🚫' : (daysLeft <= 1 ? '⚠️' : '✅'));
+      var statusColor = (daysLeft === null) ? 'var(--text)' : (daysLeft < 0 ? 'var(--err)' : (daysLeft <= 1 ? '#f59e0b' : 'var(--ok,#16a34a)'));
+      var qtyInpId = 'qtyPkg_' + d.id.replace(/-/g, '');
+      var borderColor = daysLeft !== null && daysLeft < 0 ? 'border-left:4px solid var(--err)' : (daysLeft !== null && daysLeft <= 1 ? 'border-left:4px solid #f59e0b' : '');
+
+      h += '<div style="padding:12px 16px;border-bottom:1px solid var(--border);' + borderColor + '">';
+      h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">';
+      h += '<div>';
+      h += '<div style="font-weight:600;font-size:15px">' + esc(d.product_name) + '</div>';
+      if (d.lot_number) h += '<div style="font-size:12px;color:var(--muted)">Lot : ' + esc(d.lot_number) + '</div>';
+      h += '<div style="font-size:12px;color:var(--muted)">Ouvert le ' + fmtD(d.opened_at) + '</div>';
+      h += '</div>';
+      h += '<div style="text-align:right">';
+      h += '<div style="font-weight:700;font-size:18px;color:var(--primary)">' + (d.quantity || 1) + ' ' + esc(d.unit || 'u') + '</div>';
+      h += '<div style="font-size:12px;color:' + statusColor + ';font-weight:600">' + statusIcon + ' DLC ' + effDlcStr;
+      if (daysLeft !== null && daysLeft >= 0) h += ' (' + daysLeft + 'j)';
+      else if (daysLeft !== null && daysLeft < 0) h += ' — EXPIRÉ';
+      h += '</div></div></div>';
+
+      h += '<div style="display:flex;gap:8px;align-items:center">';
+      h += '<input type="number" id="' + qtyInpId + '" class="form-input" style="flex:0 0 110px" min="0.1" step="0.1" placeholder="Qté ' + esc(d.unit || '') + '">';
+      h += '<button class="btn btn-primary" style="flex:1" onclick="handleConsumeFromPackage(\'' + d.id + '\',\'' + qtyInpId + '\')">➖ Consommer</button>';
+      if (daysLeft !== null && daysLeft < 0) {
+        h += '<button class="btn btn-danger btn-sm" onclick="discardPackage(\'' + d.id + '\')">🗑️ Jeter</button>';
+      }
+      h += '</div></div>';
+    });
+  }
   h += '</div>';
 
-  h += '<div class="form-group"><label class="form-label">Notes (optionnel)</label>';
-  h += '<input type="text" class="form-input" id="consoNotes" placeholder="Ex: Service du midi, petit-déjeuner..."></div>';
+  // ── Section 2 : Ouvrir un nouveau colis ──
+  h += '<div class="card">';
+  h += '<div class="card-header" style="cursor:pointer" onclick="S.showOpenPkgList=!S.showOpenPkgList;render()">';
+  h += '<span class="v2-text-2xl">📦</span> Ouvrir un nouveau colis';
+  h += '<span class="badge badge-blue v2-badge-lg v2-ml-auto">' + unopenedPkgs.length + ' en stock</span>';
+  h += '<span style="margin-left:8px;color:var(--muted)">' + (S.showOpenPkgList ? '▲' : '▼') + '</span>';
+  h += '</div>';
 
-  // Preview FIFO
-  h += '<div id="consoFifoPreview"></div>';
+  if (S.showOpenPkgList) {
+    if (unopenedPkgs.length === 0) {
+      h += '<div class="card-body"><div class="empty"><div class="empty-icon">📭</div><div class="empty-title">Aucun stock disponible</div></div></div>';
+    } else {
+      // Group by product, FIFO order (oldest DLC first)
+      var byProduct = {};
+      unopenedPkgs.forEach(function(d) {
+        if (!byProduct[d.product_name]) byProduct[d.product_name] = [];
+        byProduct[d.product_name].push(d);
+      });
+      Object.keys(byProduct).sort().forEach(function(prod) {
+        var lots = byProduct[prod].sort(function(a, b) { return a.dlc_date < b.dlc_date ? -1 : 1; });
+        lots.forEach(function(d, idx) {
+          h += '<div class="list-item" style="padding:10px 16px">';
+          h += '<div class="list-content">';
+          h += '<div class="list-title">' + (idx === 0 ? '🟢 ' : '') + esc(d.product_name);
+          if (d.lot_number) h += ' <span class="badge badge-gray" style="font-size:11px">Lot ' + esc(d.lot_number) + '</span>';
+          h += '</div>';
+          h += '<div class="list-sub">DLC ' + fmtD(d.dlc_date) + ' · ' + (d.quantity || 1) + ' ' + esc(d.unit || 'u');
+          if (d.supplier_name) h += ' · ' + esc(d.supplier_name);
+          h += '</div></div>';
+          h += '<button class="btn btn-outline btn-sm" onclick="openPackageModal(\'' + d.id + '\')">📂 Ouvrir</button>';
+          h += '</div>';
+        });
+      });
+    }
+  }
+  h += '</div>';
 
-  h += '<button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:8px">🍽️ Enregistrer la consommation</button>';
-  h += '</form></div></div>';
-
-  // Journal des consommations du jour
+  // ── Section 3 : Journal du jour ──
   var logs = S.data.consumption_logs || [];
-  h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">📋</span> Consommations du jour <span class="badge badge-blue v2-badge-lg v2-ml-auto">' + logs.length + '</span></div>';
+  h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">📋</span> Consommations du jour';
+  h += '<span class="badge badge-blue v2-badge-lg v2-ml-auto">' + logs.length + '</span></div>';
 
   if (logs.length === 0) {
     h += '<div class="card-body"><div class="empty"><div class="empty-icon">🍽️</div><div class="empty-title">Aucune consommation saisie aujourd\'hui</div></div></div>';
   } else {
-    // Total par produit
     var totals = {};
     logs.forEach(function(l) {
       var k = l.product_name + '|' + l.unit;

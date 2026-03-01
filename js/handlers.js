@@ -484,6 +484,63 @@ window.handleCleaningPhoto = function(input) {
   reader.readAsDataURL(input.files[0]);
 };
 
+// -- Colis entamés --
+
+// Consommer depuis un colis ouvert (appel depuis card inline)
+window.handleConsumeFromPackage = async function(dlcId, inputId) {
+  var input = document.getElementById(inputId);
+  if (!input) return;
+  var qty = parseFloat(input.value);
+  if (!qty || qty <= 0) { showToast('Entrez une quantité valide', 'warning'); return; }
+  input.value = '';
+  await consumeFromPackage(dlcId, qty, '');
+};
+
+// Ouvrir le modal d'ouverture d'un colis
+window.openPackageModal = function(dlcId) {
+  var d = S.data.dlcs.find(function(x) { return x.id === dlcId; });
+  if (!d) return;
+  var h = '<div style="padding:20px">';
+  h += '<h3 style="margin:0 0 4px">📂 Ouvrir un colis</h3>';
+  h += '<div style="color:var(--muted);margin-bottom:20px">' + esc(d.product_name);
+  if (d.lot_number) h += ' · Lot ' + esc(d.lot_number);
+  h += ' · DLC fabricant ' + fmtD(d.dlc_date) + '</div>';
+  h += '<label class="form-label">Durée de conservation après ouverture</label>';
+  h += '<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">';
+  [3, 5, 7].forEach(function(n) {
+    h += '<button type="button" class="btn btn-outline btn-sm" onclick="setShelfLifePreset(' + n + ')">' + n + ' jours</button>';
+  });
+  h += '</div>';
+  h += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">';
+  h += '<input type="number" id="openShelfLife" class="form-input" value="3" min="1" max="30" style="width:80px">';
+  h += '<span style="color:var(--muted)">jours après ouverture</span></div>';
+  h += '<input type="hidden" id="openPackageDlcId" value="' + dlcId + '">';
+  h += '<button class="btn btn-primary" style="width:100%" onclick="confirmOpenPackage()">✅ Confirmer l\'ouverture</button>';
+  h += '</div>';
+  openModal(h);
+};
+
+window.setShelfLifePreset = function(n) {
+  var el = $('openShelfLife');
+  if (el) el.value = n;
+};
+
+window.confirmOpenPackage = async function() {
+  var dlcId = $('openPackageDlcId') ? $('openPackageDlcId').value : '';
+  var days = parseFloat($('openShelfLife') ? $('openShelfLife').value : '3') || 3;
+  if (!dlcId) { showToast('Erreur interne', 'error'); return; }
+  closeModal();
+  await openPackage(dlcId, days);
+};
+
+window.discardPackage = async function(dlcId) {
+  if (!(await appConfirm('Jeter', 'Confirmer la mise au rebut de ce produit expiré ?', { danger: true, icon: '🗑️', confirmLabel: 'Jeter' }))) return;
+  var r = await sbExec(sb.from('dlcs').update({ status: 'discarded' }).eq('id', dlcId), 'Mise au rebut');
+  if (!r) return;
+  showToast('Produit jeté', 'success');
+  await loadSiteData(); render();
+};
+
 // -- Consommation FIFO --
 window.handleConsommation = async function(e) {
   e.preventDefault();

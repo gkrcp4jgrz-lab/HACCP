@@ -256,7 +256,64 @@ async function deleteLot(id) {
   await loadSiteData(); render();
 }
 
-// -- Consommation FIFO --
+// -- Consommation : colis entamés --
+
+// Calcule la DLC effective après ouverture (retourne une Date ou null)
+function dlcApresOuverture(d) {
+  if (!d.opened_at) return null;
+  var openDate = new Date(d.opened_at);
+  var days = d.shelf_life_days || 3;
+  var dlcAfterOpen = new Date(openDate);
+  dlcAfterOpen.setDate(dlcAfterOpen.getDate() + days);
+  var originalDlc = new Date(d.dlc_date + 'T23:59:59');
+  return dlcAfterOpen < originalDlc ? dlcAfterOpen : originalDlc;
+}
+window.dlcApresOuverture = dlcApresOuverture;
+
+// Marquer un colis comme ouvert
+async function openPackage(dlcId, shelfLifeDays) {
+  var r = await sbExec(
+    sb.from('dlcs').update({ opened_at: new Date().toISOString(), shelf_life_days: shelfLifeDays || 3 }).eq('id', dlcId),
+    'Ouverture colis'
+  );
+  if (!r) return;
+  showToast('Colis ouvert ✓', 'success');
+  await loadSiteData(); render();
+}
+window.openPackage = openPackage;
+
+// Consommer une quantité depuis un colis déjà ouvert (ciblé par ID)
+async function consumeFromPackage(dlcId, qty, notes) {
+  var d = S.data.dlcs.find(function(x) { return x.id === dlcId; });
+  if (!d) { showToast('Produit introuvable', 'error'); return; }
+  var available = d.quantity || 1;
+  if (qty > available) { showToast('Quantité insuffisante — reste : ' + available + ' ' + (d.unit || ''), 'warning'); return; }
+  var newQty = available - qty;
+  if (newQty <= 0) {
+    var r1 = await sbExec(sb.from('dlcs').update({ status: 'consumed' }).eq('id', dlcId), 'Clôture colis');
+    if (!r1) return;
+  } else {
+    var r2 = await sbExec(sb.from('dlcs').update({ quantity: newQty }).eq('id', dlcId), 'Mise à jour quantité');
+    if (!r2) return;
+  }
+  var rec = {
+    site_id: S.currentSiteId,
+    product_name: d.product_name,
+    quantity_consumed: qty,
+    unit: d.unit || 'unité',
+    consumed_by: S.user.id,
+    consumed_by_name: userName(),
+    consumed_at: new Date().toISOString(),
+    notes: notes || '',
+    dlc_entries: [{ dlc_id: d.id, lot_number: d.lot_number || '', dlc_date: d.dlc_date, qty_taken: qty }]
+  };
+  await sbExec(sb.from('consumption_logs').insert(rec), 'Enregistrement consommation');
+  showToast('Consommation enregistrée ✓', 'success');
+  await loadSiteData(); render();
+}
+window.consumeFromPackage = consumeFromPackage;
+
+// -- Consommation FIFO (produits consommés en 1 fois, sans notion de colis ouvert) --
 async function recordConsumption(productName, qtyToConsume, unit, notes) {
   // 1. Trouver les entrées DLC actives pour ce produit, triées par DLC (FIFO = plus ancienne en premier)
   var matches = S.data.dlcs
