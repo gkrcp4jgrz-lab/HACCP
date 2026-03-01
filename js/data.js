@@ -301,14 +301,22 @@ async function openPackage(dlcId, shelfLifeDays) {
       shelf_life_days: days
     };
     var r2 = await sbExec(sb.from('dlcs').insert(openedEntry), 'Création paquet entamé');
-    if (!r2) return;
+    if (!r2) {
+      // Rollback : restaurer la quantité d'origine si l'insert échoue
+      await sbExec(sb.from('dlcs').update({ quantity: d.quantity || 1 }).eq('id', dlcId), 'Rollback stock');
+      showToast('Erreur — stock restauré. Vérifiez que le SQL a été exécuté dans Supabase.', 'error');
+      return;
+    }
   } else {
     // Paquet unique : ouvrir directement
     var r = await sbExec(
       sb.from('dlcs').update({ opened_at: now, shelf_life_days: days }).eq('id', dlcId),
       'Ouverture colis'
     );
-    if (!r) return;
+    if (!r) {
+      showToast('Erreur — vérifiez que le SQL a été exécuté dans Supabase (colonnes opened_at / shelf_life_days).', 'error');
+      return;
+    }
   }
 
   showToast('Paquet ouvert ✓', 'success');

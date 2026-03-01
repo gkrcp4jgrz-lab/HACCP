@@ -6,11 +6,11 @@ function renderDLC() {
   var h = '';
   var activeTab = S.dlcTab || 'reception';
 
-  h += '<div class="tabs" style="overflow:visible;flex-wrap:wrap">';
-  h += '<button class="tab' + (activeTab === 'reception' ? ' active' : '') + '" onclick="S.dlcTab=\'reception\';render()" style="flex:1;text-align:center;min-width:80px">📥 Réception</button>';
-  h += '<button class="tab' + (activeTab === 'conso' ? ' active' : '') + '" onclick="S.dlcTab=\'conso\';render()" style="flex:1;text-align:center;min-width:80px">🍽️ Conso</button>';
-  h += '<button class="tab' + (activeTab === 'dlc' ? ' active' : '') + '" onclick="S.dlcTab=\'dlc\';render()" style="flex:1;text-align:center;min-width:80px">📅 DLC</button>';
-  h += '<button class="tab' + (activeTab === 'lots' ? ' active' : '') + '" onclick="S.dlcTab=\'lots\';render()" style="flex:1;text-align:center;min-width:80px">📦 Lots</button>';
+  h += '<div class="tabs" style="overflow-x:auto;overflow-y:visible;flex-wrap:nowrap;-webkit-overflow-scrolling:touch">';
+  h += '<button class="tab' + (activeTab === 'reception' ? ' active' : '') + '" onclick="S.dlcTab=\'reception\';render()" style="flex:1 0 auto;white-space:nowrap">📥 Réception</button>';
+  h += '<button class="tab' + (activeTab === 'conso' ? ' active' : '') + '" onclick="S.dlcTab=\'conso\';render()" style="flex:1 0 auto;white-space:nowrap">🍽️ Conso</button>';
+  h += '<button class="tab' + (activeTab === 'dlc' ? ' active' : '') + '" onclick="S.dlcTab=\'dlc\';render()" style="flex:1 0 auto;white-space:nowrap">📅 DLC</button>';
+  h += '<button class="tab' + (activeTab === 'lots' ? ' active' : '') + '" onclick="S.dlcTab=\'lots\';render()" style="flex:1 0 auto;white-space:nowrap">📦 Lots</button>';
   h += '</div>';
 
   if (activeTab === 'reception') {
@@ -104,21 +104,14 @@ function renderConsommationTab() {
         h += '</span></div>';
       }
 
-      // Si déjà utilisé aujourd'hui : confirmation verte + option d'en utiliser encore
       if (usedLogs.length > 0) {
+        // Déjà loggué aujourd'hui : confirmation simple, pas de re-saisie
         h += '<div style="background:var(--success-bg,#f0fdf4);border:1px solid var(--ok,#16a34a);border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:13px;color:var(--ok,#16a34a);font-weight:600">';
         h += '✅ ' + totalUsedToday + ' ' + esc(unit) + ' utilisé(s) ce matin';
-        if (usedLogs[0]) h += ' à ' + fmtTime(usedLogs[0].consumed_at) + ' par ' + esc(usedLogs[0].consumed_by_name);
+        if (usedLogs[0]) h += ' · ' + fmtTime(usedLogs[0].consumed_at) + ' · ' + esc(usedLogs[0].consumed_by_name);
         h += '</div>';
-        // Permettre d'en logguer encore si besoin
-        h += '<div style="display:flex;gap:8px;align-items:center">';
-        h += '<input type="number" id="' + inputId + '" class="form-input" style="flex:0 0 70px" min="1" step="1" value="1">';
-        h += '<span style="font-size:13px;color:var(--muted);flex-shrink:0">' + esc(unit) + '</span>';
-        h += '<button class="btn btn-outline" style="flex:1" onclick="handleUseWhole(' + idx + ',\'' + inputId + '\')">+ Utiliser encore</button>';
         h += '<button class="btn btn-outline btn-sm" onclick="openPackageModal(\'' + oldest.id + '\')">📂 Entamer</button>';
-        h += '</div>';
       } else {
-        // Pas encore utilisé : bouton principal
         h += '<div style="display:flex;gap:8px;align-items:center">';
         h += '<input type="number" id="' + inputId + '" class="form-input" style="flex:0 0 70px" min="1" step="1" value="1">';
         h += '<span style="font-size:13px;color:var(--muted);flex-shrink:0">' + esc(unit) + '</span>';
