@@ -11,7 +11,6 @@ function renderDLC() {
   h += '<button class="tab' + (activeTab === 'conso' ? ' active' : '') + '" onclick="S.dlcTab=\'conso\';render()" style="flex:1;text-align:center;min-width:80px">🍽️ Conso</button>';
   h += '<button class="tab' + (activeTab === 'dlc' ? ' active' : '') + '" onclick="S.dlcTab=\'dlc\';render()" style="flex:1;text-align:center;min-width:80px">📅 DLC</button>';
   h += '<button class="tab' + (activeTab === 'lots' ? ' active' : '') + '" onclick="S.dlcTab=\'lots\';render()" style="flex:1;text-align:center;min-width:80px">📦 Lots</button>';
-  h += '<button class="tab' + (activeTab === 'stock' ? ' active' : '') + '" onclick="S.dlcTab=\'stock\';render()" style="flex:1;text-align:center;min-width:80px">📊 Stock</button>';
   h += '</div>';
 
   if (activeTab === 'reception') {
@@ -20,8 +19,6 @@ function renderDLC() {
     h += renderConsommationTab();
   } else if (activeTab === 'lots') {
     h += renderLotsTabContent();
-  } else if (activeTab === 'stock') {
-    h += renderStockTabContent();
   } else {
     h += renderDlcTabContent();
   }
@@ -129,7 +126,7 @@ function renderConsommationTab() {
 
   // ══ SECTION 2 : Colis entamés (rosette, dinde, fromage…) ══
   h += '<div class="card">';
-  h += '<div class="card-header"><span class="v2-text-2xl">🍽️</span> Colis entamés — buffet';
+  h += '<div class="card-header"><span class="v2-text-2xl">🍽️</span> Produits entamés';
   h += '<span class="badge ' + (openPkgs.length ? 'badge-red' : 'badge-blue') + ' v2-badge-lg v2-ml-auto">' + openPkgs.length + '</span></div>';
 
   if (openPkgs.length === 0) {

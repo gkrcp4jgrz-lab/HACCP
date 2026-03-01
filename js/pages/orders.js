@@ -4,7 +4,7 @@ function renderOrders() {
 
   // Tabs
   h += '<div class="tabs v2-mb-20" style="overflow:visible">';
-  h += '<button class="tab' + (S.ordersTab==='active'?' active':'') + '" onclick="S.ordersTab=\'active\';render()" style="flex:1;text-align:center">🛒 Commandes en cours</button>';
+  h += '<button class="tab' + (S.ordersTab==='active'?' active':'') + '" onclick="S.ordersTab=\'active\';render()" style="flex:1;text-align:center">🛍️ Liste en cours</button>';
   h += '<button class="tab' + (S.ordersTab==='history'?' active':'') + '" onclick="S.ordersTab=\'history\';loadOrderHistory()" style="flex:1;text-align:center">📋 Historique</button>';
   h += '</div>';
 
@@ -21,13 +21,13 @@ function renderOrdersActive() {
   var h = '';
 
   // Form
-  h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">➕</span> Nouvelle commande</div><div class="card-body"><form onsubmit="handleOrder(event)">';
+  h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">➕</span> Ajouter un besoin</div><div class="card-body"><form onsubmit="handleOrder(event)">';
   h += '<div class="form-row"><div class="form-group"><label class="form-label">Produit <span class="req">*</span></label><input type="text" class="form-input" id="ordProd" required placeholder="Nom du produit"></div>';
   h += '<div class="form-group"><label class="form-label">Quantité</label><div class="v2-flex v2-gap-8"><input type="number" class="form-input v2-flex-1" id="ordQty" value="1" min="0.1" step="0.1"><select class="form-select v2-flex-1" id="ordUnit"><option>unité</option><option>kg</option><option>L</option><option>carton</option><option>paquet</option></select></div></div></div>';
   h += '<div class="form-row"><div class="form-group"><label class="form-label">Fournisseur <span class="req">*</span></label><select class="form-select" id="ordSupp" required><option value="">Sélectionner...</option>';
   S.siteConfig.suppliers.forEach(function(s) { h += '<option value="' + esc(s.name) + '">' + esc(s.name) + '</option>'; });
   h += '</select></div><div class="form-group"><label class="form-label">Notes</label><input type="text" class="form-input" id="ordNotes" placeholder="Optionnel"></div></div>';
-  h += '<button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:8px">✓ Ajouter à la commande</button></form></div></div>';
+  h += '<button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:8px">✓ Ajouter à la liste</button></form></div></div>';
 
   // À commander — groupé par fournisseur
   var toOrder = S.data.orders.filter(function(o) { return o.status === 'to_order'; });
@@ -41,7 +41,7 @@ function renderOrdersActive() {
       bySupplier[key].push(o);
     });
 
-    h += '<div class="card v2-card--warning-left"><div class="card-header v2-card-header--warning"><span class="v2-text-2xl">🛒</span> À commander <span class="badge badge-yellow v2-badge-lg v2-ml-auto">' + toOrder.length + '</span></div><div class="card-body">';
+    h += '<div class="card v2-card--warning-left"><div class="card-header v2-card-header--warning"><span class="v2-text-2xl">🛍️</span> À acheter <span class="badge badge-yellow v2-badge-lg v2-ml-auto">' + toOrder.length + '</span></div><div class="card-body">';
 
     Object.keys(bySupplier).forEach(function(supplier) {
       var items = bySupplier[supplier];
@@ -75,7 +75,7 @@ function renderOrdersActive() {
       bySupplier2[key].push(o);
     });
 
-    h += '<div class="card v2-card--primary-left"><div class="card-header"><span class="v2-text-2xl">📦</span> En attente de livraison <span class="badge badge-blue v2-badge-lg v2-ml-auto">' + ordered.length + '</span></div><div class="card-body">';
+    h += '<div class="card v2-card--primary-left"><div class="card-header"><span class="v2-text-2xl">📦</span> Commandé — en attente de réception <span class="badge badge-blue v2-badge-lg v2-ml-auto">' + ordered.length + '</span></div><div class="card-body">';
 
     Object.keys(bySupplier2).forEach(function(supplier) {
       var items = bySupplier2[supplier];
@@ -94,7 +94,7 @@ function renderOrdersActive() {
   }
 
   if (toOrder.length === 0 && ordered.length === 0) {
-    h += '<div class="card"><div class="card-body"><div class="empty"><div class="empty-icon">🛒</div><div class="empty-title">Aucune commande en cours</div><div class="empty-text">Ajoutez des produits à commander ci-dessus.</div></div></div></div>';
+    h += '<div class="card"><div class="card-body"><div class="empty"><div class="empty-icon">🛍️</div><div class="empty-title">Liste vide</div><div class="empty-text">Ajoutez des produits à acheter ci-dessus.</div></div></div></div>';
   }
 
   return h;

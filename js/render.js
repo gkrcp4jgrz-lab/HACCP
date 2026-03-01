@@ -136,7 +136,7 @@ function renderSidebar() {
 function renderMainContent() {
   var titles = {
     dashboard:'Tableau de bord', temperatures:'Températures', dlc:'DLC & Traçabilité',
-    lots:'DLC & Traçabilité', orders:'Commandes', consignes:'Consignes',
+    lots:'DLC & Traçabilité', stock:'Stock', orders:'Liste de courses', consignes:'Consignes',
     reports:'Rapports PDF', settings:'Paramètres du site', sites:'Gestion des sites',
     admin:'Gestion utilisateurs', profile:'Mon profil', team:'Personnel',
     cleaning:'Plan de nettoyage', notifications:'Notifications', legal:'Mentions légales', about:'À propos'
@@ -148,6 +148,7 @@ function renderMainContent() {
     case 'temperatures': content = renderTemperatures(); break;
     case 'dlc': content = renderDLC(); break;
     case 'lots': content = renderLots(); break;
+    case 'stock': content = renderStockTabContent(); break;
     case 'orders': content = renderOrders(); break;
     case 'consignes': content = renderConsignes(); break;
     case 'cleaning': content = renderCleaning(); break;

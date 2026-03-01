@@ -93,7 +93,8 @@ function renderRightSidebar(alertCount) {
     h += rsidebarItem('notifications', '🔔', 'Notifications', alertCount);
     h += rsidebarItem('profile', '👤', 'Mon profil');
   } else if (isManager()) {
-    h += rsidebarItem('orders', '🛒', 'Commandes');
+    h += rsidebarItem('stock', '📊', 'Stock');
+    h += rsidebarItem('orders', '🛍️', 'Liste de courses');
     if (moduleEnabled('consignes')) h += rsidebarItem('consignes', '💬', 'Consignes');
     h += rsidebarItem('reports', '📄', 'Rapports');
     h += '<div class="rsidebar-divider"></div>';
@@ -104,7 +105,8 @@ function renderRightSidebar(alertCount) {
     h += rsidebarItem('profile', '👤', 'Mon profil');
   } else {
     // Employee
-    h += rsidebarItem('orders', '🛒', 'Commandes');
+    h += rsidebarItem('stock', '📊', 'Stock');
+    h += rsidebarItem('orders', '🛍️', 'Liste de courses');
     if (moduleEnabled('consignes')) h += rsidebarItem('consignes', '💬', 'Consignes');
     h += rsidebarItem('reports', '📄', 'Rapports');
     h += rsidebarItem('notifications', '🔔', 'Notifications', alertCount);
