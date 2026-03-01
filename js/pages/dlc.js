@@ -29,55 +29,86 @@ function renderDLC() {
   return h;
 }
 
-// ── CONSOMMATION QUOTIDIENNE — Colis entamés ──
+// ── BUFFET — Colis entamés (ouverture + suivi quotidien) ──
 
 function renderConsommationTab() {
   var h = '';
-
+  var now = new Date();
   var openPkgs = S.data.dlcs.filter(function(d) { return d.opened_at; });
   var unopenedPkgs = S.data.dlcs.filter(function(d) { return !d.opened_at; });
-  var now = new Date();
+  var logs = S.data.consumption_logs || [];
 
-  // ── Section 1 : Colis en cours d'utilisation ──
+  // Index des confirmations buffet du jour : dlc_id → log entry
+  var confirmedToday = {};
+  logs.forEach(function(l) {
+    var entries = Array.isArray(l.dlc_entries) ? l.dlc_entries : [];
+    entries.forEach(function(e) {
+      if (!confirmedToday[e.dlc_id]) confirmedToday[e.dlc_id] = l;
+    });
+  });
+
+  // ── Section 1 : Colis en cours ──
   h += '<div class="card card-accent">';
-  h += '<div class="card-header"><span class="v2-text-2xl">🔴</span> En cours d\'utilisation';
-  h += '<span class="badge badge-red v2-badge-lg v2-ml-auto">' + openPkgs.length + '</span></div>';
+  h += '<div class="card-header"><span class="v2-text-2xl">🍽️</span> Buffet — colis en cours';
+  h += '<span class="badge ' + (openPkgs.length ? 'badge-red' : 'badge-blue') + ' v2-badge-lg v2-ml-auto">' + openPkgs.length + '</span></div>';
 
   if (openPkgs.length === 0) {
     h += '<div class="card-body"><div class="empty"><div class="empty-icon">📦</div>';
     h += '<div class="empty-title">Aucun colis ouvert</div>';
-    h += '<div class="empty-sub">Ouvrez un colis depuis votre stock ci-dessous</div></div></div>';
+    h += '<div class="empty-sub">Ouvrez un colis depuis le stock ci-dessous</div></div></div>';
   } else {
     openPkgs.forEach(function(d) {
       var effDlc = dlcApresOuverture(d);
       var daysLeft = effDlc ? Math.ceil((effDlc - now) / 86400000) : null;
       var effDlcStr = effDlc ? effDlc.toLocaleDateString('fr-FR') : fmtD(d.dlc_date);
-      var statusIcon = (daysLeft === null) ? '📅' : (daysLeft < 0 ? '🚫' : (daysLeft <= 1 ? '⚠️' : '✅'));
-      var statusColor = (daysLeft === null) ? 'var(--text)' : (daysLeft < 0 ? 'var(--err)' : (daysLeft <= 1 ? '#f59e0b' : 'var(--ok,#16a34a)'));
-      var qtyInpId = 'qtyPkg_' + d.id.replace(/-/g, '');
-      var borderColor = daysLeft !== null && daysLeft < 0 ? 'border-left:4px solid var(--err)' : (daysLeft !== null && daysLeft <= 1 ? 'border-left:4px solid #f59e0b' : '');
+      var isExpired = daysLeft !== null && daysLeft < 0;
+      var isWarning = daysLeft !== null && daysLeft <= 1 && !isExpired;
+      var statusIcon = isExpired ? '🚫' : (isWarning ? '⚠️' : '✅');
+      var statusColor = isExpired ? 'var(--err)' : (isWarning ? '#f59e0b' : 'var(--ok,#16a34a)');
+      var borderLeft = isExpired ? 'border-left:4px solid var(--err)' : (isWarning ? 'border-left:4px solid #f59e0b' : 'border-left:4px solid var(--ok,#16a34a)');
+      var confirmed = confirmedToday[d.id];
 
-      h += '<div style="padding:12px 16px;border-bottom:1px solid var(--border);' + borderColor + '">';
-      h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">';
+      h += '<div style="padding:14px 16px;border-bottom:1px solid var(--border);' + borderLeft + '">';
+
+      // En-tête produit + DLC
+      h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">';
       h += '<div>';
-      h += '<div style="font-weight:600;font-size:15px">' + esc(d.product_name) + '</div>';
-      if (d.lot_number) h += '<div style="font-size:12px;color:var(--muted)">Lot : ' + esc(d.lot_number) + '</div>';
-      h += '<div style="font-size:12px;color:var(--muted)">Ouvert le ' + fmtD(d.opened_at) + '</div>';
+      h += '<div style="font-weight:700;font-size:16px">' + esc(d.product_name) + '</div>';
+      h += '<div style="font-size:12px;color:var(--muted);margin-top:2px">';
+      if (d.lot_number) h += 'Lot ' + esc(d.lot_number) + ' · ';
+      h += 'Ouvert le ' + fmtD(d.opened_at) + '</div>';
       h += '</div>';
       h += '<div style="text-align:right">';
-      h += '<div style="font-weight:700;font-size:18px;color:var(--primary)">' + (d.quantity || 1) + ' ' + esc(d.unit || 'u') + '</div>';
-      h += '<div style="font-size:12px;color:' + statusColor + ';font-weight:600">' + statusIcon + ' DLC ' + effDlcStr;
-      if (daysLeft !== null && daysLeft >= 0) h += ' (' + daysLeft + 'j)';
-      else if (daysLeft !== null && daysLeft < 0) h += ' — EXPIRÉ';
-      h += '</div></div></div>';
-
-      h += '<div style="display:flex;gap:8px;align-items:center">';
-      h += '<input type="number" id="' + qtyInpId + '" class="form-input" style="flex:0 0 110px" min="0.1" step="0.1" placeholder="Qté ' + esc(d.unit || '') + '">';
-      h += '<button class="btn btn-primary" style="flex:1" onclick="handleConsumeFromPackage(\'' + d.id + '\',\'' + qtyInpId + '\')">➖ Consommer</button>';
-      if (daysLeft !== null && daysLeft < 0) {
-        h += '<button class="btn btn-danger btn-sm" onclick="discardPackage(\'' + d.id + '\')">🗑️ Jeter</button>';
+      h += '<div style="font-size:13px;color:' + statusColor + ';font-weight:700">' + statusIcon + ' ' + effDlcStr + '</div>';
+      if (daysLeft !== null) {
+        h += '<div style="font-size:11px;color:' + statusColor + '">';
+        h += isExpired ? 'EXPIRÉ' : (daysLeft === 0 ? 'Expire aujourd\'hui' : daysLeft + ' jour' + (daysLeft > 1 ? 's' : '') + ' restant' + (daysLeft > 1 ? 's' : ''));
+        h += '</div>';
       }
       h += '</div></div>';
+
+      // Boutons action
+      if (confirmed) {
+        // Déjà confirmé aujourd'hui
+        h += '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">';
+        h += '<div style="flex:1;background:var(--success-bg,#f0fdf4);border:1px solid var(--ok,#16a34a);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--ok,#16a34a);font-weight:600">';
+        h += '✅ Buffet fait à ' + fmtTime(confirmed.consumed_at) + ' par ' + esc(confirmed.consumed_by_name) + '</div>';
+        h += '<button class="btn btn-outline btn-sm" onclick="markPackageEmpty(\'' + d.id + '\')">📦 Paquet vide</button>';
+        if (isExpired) h += '<button class="btn btn-danger btn-sm" onclick="discardPackage(\'' + d.id + '\')">🗑️ Jeter</button>';
+        h += '</div>';
+      } else if (isExpired) {
+        h += '<div style="display:flex;gap:8px;flex-wrap:wrap">';
+        h += '<div style="flex:1;background:#fef2f2;border:1px solid var(--err);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--err);font-weight:600">🚫 Ce colis est expiré — ne pas servir</div>';
+        h += '<button class="btn btn-danger" onclick="discardPackage(\'' + d.id + '\')">🗑️ Jeter</button>';
+        h += '</div>';
+      } else {
+        h += '<div style="display:flex;gap:8px;flex-wrap:wrap">';
+        h += '<button class="btn btn-primary" style="flex:1" onclick="confirmBuffetRefill(\'' + d.id + '\')">✅ Buffet fait ce matin</button>';
+        h += '<button class="btn btn-outline" onclick="markPackageEmpty(\'' + d.id + '\')">📦 Paquet vide</button>';
+        h += '</div>';
+      }
+
+      h += '</div>';
     });
   }
   h += '</div>';
@@ -92,9 +123,8 @@ function renderConsommationTab() {
 
   if (S.showOpenPkgList) {
     if (unopenedPkgs.length === 0) {
-      h += '<div class="card-body"><div class="empty"><div class="empty-icon">📭</div><div class="empty-title">Aucun stock disponible</div></div></div>';
+      h += '<div class="card-body"><div class="empty"><div class="empty-icon">📭</div><div class="empty-title">Aucun stock disponible — pensez à commander</div></div></div>';
     } else {
-      // Group by product, FIFO order (oldest DLC first)
       var byProduct = {};
       unopenedPkgs.forEach(function(d) {
         if (!byProduct[d.product_name]) byProduct[d.product_name] = [];
@@ -107,8 +137,9 @@ function renderConsommationTab() {
           h += '<div class="list-content">';
           h += '<div class="list-title">' + (idx === 0 ? '🟢 ' : '') + esc(d.product_name);
           if (d.lot_number) h += ' <span class="badge badge-gray" style="font-size:11px">Lot ' + esc(d.lot_number) + '</span>';
+          if (idx === 0) h += ' <span class="badge badge-blue" style="font-size:10px">FIFO</span>';
           h += '</div>';
-          h += '<div class="list-sub">DLC ' + fmtD(d.dlc_date) + ' · ' + (d.quantity || 1) + ' ' + esc(d.unit || 'u');
+          h += '<div class="list-sub">DLC ' + fmtD(d.dlc_date);
           if (d.supplier_name) h += ' · ' + esc(d.supplier_name);
           h += '</div></div>';
           h += '<button class="btn btn-outline btn-sm" onclick="openPackageModal(\'' + d.id + '\')">📂 Ouvrir</button>';
@@ -120,43 +151,21 @@ function renderConsommationTab() {
   h += '</div>';
 
   // ── Section 3 : Journal du jour ──
-  var logs = S.data.consumption_logs || [];
-  h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">📋</span> Consommations du jour';
+  h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">📋</span> Suivi du jour';
   h += '<span class="badge badge-blue v2-badge-lg v2-ml-auto">' + logs.length + '</span></div>';
 
   if (logs.length === 0) {
-    h += '<div class="card-body"><div class="empty"><div class="empty-icon">🍽️</div><div class="empty-title">Aucune consommation saisie aujourd\'hui</div></div></div>';
+    h += '<div class="card-body"><div class="empty"><div class="empty-icon">📋</div><div class="empty-title">Aucune action enregistrée aujourd\'hui</div></div></div>';
   } else {
-    var totals = {};
     logs.forEach(function(l) {
-      var k = l.product_name + '|' + l.unit;
-      if (!totals[k]) totals[k] = { name: l.product_name, unit: l.unit, qty: 0 };
-      totals[k].qty += (l.quantity_consumed || 0);
-    });
-    h += '<div class="card-body v2-card-body--compact" style="padding:10px 16px;background:var(--bg-off);border-bottom:1px solid var(--border)">';
-    h += '<div style="display:flex;gap:12px;flex-wrap:wrap">';
-    Object.values(totals).forEach(function(t) {
-      h += '<span class="badge badge-blue" style="font-size:13px;padding:6px 12px">' + esc(t.name) + ' : <strong>' + t.qty + ' ' + esc(t.unit) + '</strong></span>';
-    });
-    h += '</div></div>';
-
-    logs.forEach(function(l) {
-      var entries = l.dlc_entries || [];
-      h += '<div class="list-item"><div class="list-icon" style="font-size:22px">🍽️</div>';
-      h += '<div class="list-content"><div class="list-title">' + esc(l.product_name) + ' — <strong>' + l.quantity_consumed + ' ' + esc(l.unit) + '</strong></div>';
-      h += '<div class="list-sub">Par ' + esc(l.consumed_by_name) + ' à ' + fmtTime(l.consumed_at);
-      if (l.notes) h += ' · ' + esc(l.notes);
-      h += '</div>';
-      if (entries.length > 0) {
-        h += '<div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap">';
-        entries.forEach(function(e) {
-          h += '<span class="badge badge-gray" style="font-size:11px">';
-          if (e.lot_number) h += 'Lot ' + esc(e.lot_number) + ' · ';
-          h += 'DLC ' + fmtD(e.dlc_date) + ' · ' + e.qty_taken + ' ' + esc(l.unit) + '</span>';
-        });
-        h += '</div>';
-      }
-      h += '</div></div>';
+      var entries = Array.isArray(l.dlc_entries) ? l.dlc_entries : [];
+      var icon = l.notes === 'Paquet vide' ? '📦' : (l.notes === 'Jeté' ? '🗑️' : '✅');
+      h += '<div class="list-item"><div class="list-icon" style="font-size:22px">' + icon + '</div>';
+      h += '<div class="list-content"><div class="list-title">' + esc(l.product_name) + '</div>';
+      h += '<div class="list-sub">' + esc(l.notes || 'Buffet remis') + ' · Par ' + esc(l.consumed_by_name) + ' à ' + fmtTime(l.consumed_at);
+      if (entries[0] && entries[0].lot_number) h += ' · Lot ' + esc(entries[0].lot_number);
+      if (entries[0]) h += ' · DLC ' + fmtD(entries[0].dlc_date);
+      h += '</div></div></div>';
     });
   }
   h += '</div>';

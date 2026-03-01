@@ -282,6 +282,52 @@ async function openPackage(dlcId, shelfLifeDays) {
 }
 window.openPackage = openPackage;
 
+// Confirmer que le buffet a été remis ce matin (sans quantité)
+async function confirmBuffetRefill(dlcId) {
+  var d = S.data.dlcs.find(function(x) { return x.id === dlcId; });
+  if (!d) { showToast('Produit introuvable', 'error'); return; }
+  var rec = {
+    site_id: S.currentSiteId,
+    product_name: d.product_name,
+    quantity_consumed: 1,
+    unit: 'service',
+    consumed_by: S.user.id,
+    consumed_by_name: userName(),
+    consumed_at: new Date().toISOString(),
+    notes: 'Buffet remis',
+    dlc_entries: [{ dlc_id: d.id, lot_number: d.lot_number || '', dlc_date: d.dlc_date, qty_taken: 1 }]
+  };
+  var r = await sbExec(sb.from('consumption_logs').insert(rec), 'Confirmation buffet');
+  if (!r) return;
+  showToast('Buffet confirmé ✓', 'success');
+  await loadSiteData(); render();
+}
+window.confirmBuffetRefill = confirmBuffetRefill;
+
+// Marquer un colis comme vide (consommé)
+async function markPackageEmpty(dlcId) {
+  var d = S.data.dlcs.find(function(x) { return x.id === dlcId; });
+  if (!d) return;
+  var r = await sbExec(sb.from('dlcs').update({ status: 'consumed' }).eq('id', dlcId), 'Paquet vide');
+  if (!r) return;
+  // Log l'événement "paquet vide"
+  var rec = {
+    site_id: S.currentSiteId,
+    product_name: d.product_name,
+    quantity_consumed: 0,
+    unit: 'service',
+    consumed_by: S.user.id,
+    consumed_by_name: userName(),
+    consumed_at: new Date().toISOString(),
+    notes: 'Paquet vide',
+    dlc_entries: [{ dlc_id: d.id, lot_number: d.lot_number || '', dlc_date: d.dlc_date, qty_taken: 0 }]
+  };
+  await sbExec(sb.from('consumption_logs').insert(rec), 'Enregistrement paquet vide');
+  showToast('Paquet marqué vide ✓', 'success');
+  await loadSiteData(); render();
+}
+window.markPackageEmpty = markPackageEmpty;
+
 // Consommer une quantité depuis un colis déjà ouvert (ciblé par ID)
 async function consumeFromPackage(dlcId, qty, notes) {
   var d = S.data.dlcs.find(function(x) { return x.id === dlcId; });
