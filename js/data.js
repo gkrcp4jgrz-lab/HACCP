@@ -270,14 +270,48 @@ function dlcApresOuverture(d) {
 }
 window.dlcApresOuverture = dlcApresOuverture;
 
-// Marquer un colis comme ouvert
+// Marquer un colis comme ouvert.
+// Si l'entrée DLC représente plusieurs paquets (quantity > 1) :
+//   → on crée une nouvelle entrée pour le paquet ouvert (qty=1, opened_at)
+//   → on décrémente l'entrée originale (qty-1) — les autres paquets restent en stock
+// Si quantity === 1 : on ouvre directement l'entrée existante.
 async function openPackage(dlcId, shelfLifeDays) {
-  var r = await sbExec(
-    sb.from('dlcs').update({ opened_at: new Date().toISOString(), shelf_life_days: shelfLifeDays || 3 }).eq('id', dlcId),
-    'Ouverture colis'
-  );
-  if (!r) return;
-  showToast('Colis ouvert ✓', 'success');
+  var d = S.data.dlcs.find(function(x) { return x.id === dlcId; });
+  if (!d) { showToast('Produit introuvable', 'error'); return; }
+  var days = shelfLifeDays || 3;
+  var now = new Date().toISOString();
+
+  if ((d.quantity || 1) > 1) {
+    // Scinder : décrémenter l'original + créer une entrée pour le paquet ouvert
+    var r1 = await sbExec(
+      sb.from('dlcs').update({ quantity: (d.quantity || 1) - 1 }).eq('id', dlcId),
+      'Déduction stock'
+    );
+    if (!r1) return;
+    var openedEntry = {
+      site_id: d.site_id,
+      product_name: d.product_name,
+      lot_number: d.lot_number || '',
+      dlc_date: d.dlc_date,
+      supplier_name: d.supplier_name || '',
+      unit: d.unit || 'unité',
+      quantity: 1,
+      status: 'active',
+      opened_at: now,
+      shelf_life_days: days
+    };
+    var r2 = await sbExec(sb.from('dlcs').insert(openedEntry), 'Création paquet entamé');
+    if (!r2) return;
+  } else {
+    // Paquet unique : ouvrir directement
+    var r = await sbExec(
+      sb.from('dlcs').update({ opened_at: now, shelf_life_days: days }).eq('id', dlcId),
+      'Ouverture colis'
+    );
+    if (!r) return;
+  }
+
+  showToast('Paquet ouvert ✓', 'success');
   await loadSiteData(); render();
 }
 window.openPackage = openPackage;

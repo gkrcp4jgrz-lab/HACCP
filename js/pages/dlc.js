@@ -87,15 +87,22 @@ function renderConsommationTab() {
 
       h += '<div style="padding:12px 16px;border-bottom:1px solid var(--border)">';
       // Header: product name + stock
-      h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
+      h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">';
       h += '<div>';
       h += '<div style="font-weight:700;font-size:15px">' + esc(prod) + '</div>';
-      h += '<div style="font-size:12px;color:var(--muted)">Stock : ' + totalQty + ' ' + esc(unit);
-      if (group.length > 1) h += ' sur ' + group.length + ' lots';
-      h += '</div></div>';
-      h += '<div style="font-size:12px;color:' + (dlcExpired ? 'var(--err)' : 'var(--muted)') + ';text-align:right">';
-      h += (dlcExpired ? '🚫 ' : '📅 ') + 'DLC ' + fmtD(oldest.dlc_date) + '</div>';
+      h += '<div style="font-size:12px;color:var(--muted)">Stock : ' + totalQty + ' ' + esc(unit) + '</div>';
       h += '</div>';
+      h += '<div style="text-align:right;font-size:12px;color:' + (dlcExpired ? 'var(--err)' : 'var(--muted)') + '">';
+      h += (dlcExpired ? '🚫 ' : '📅 ') + 'DLC ' + fmtD(oldest.dlc_date);
+      if (oldest.lot_number) h += '<br><span style="color:var(--muted)">Lot ' + esc(oldest.lot_number) + '</span>';
+      h += '</div></div>';
+      // Indicateur FIFO si plusieurs lots
+      if (group.length > 1) {
+        h += '<div style="background:var(--bg-off);border:1px solid var(--border);border-radius:6px;padding:6px 10px;margin-bottom:8px;font-size:12px;display:flex;gap:6px;align-items:center">';
+        h += '<span>📌</span><span><strong>FIFO</strong> — ' + group.length + ' lots · Commencer par ';
+        h += oldest.lot_number ? '<strong>Lot ' + esc(oldest.lot_number) + '</strong> (DLC ' + fmtD(oldest.dlc_date) + ')' : 'le plus ancien (DLC ' + fmtD(oldest.dlc_date) + ')';
+        h += '</span></div>';
+      }
 
       // Si déjà utilisé aujourd'hui : confirmation verte + option d'en utiliser encore
       if (usedLogs.length > 0) {
@@ -131,7 +138,7 @@ function renderConsommationTab() {
 
   if (openPkgs.length === 0) {
     h += '<div class="card-body"><div class="empty"><div class="empty-icon">📦</div>';
-    h += '<div class="empty-title">Aucun colis ouvert</div>';
+    h += '<div class="empty-title">Aucun produit entamé</div>';
     h += '<div class="empty-sub">Utilisez le bouton 📂 Entamer sur un produit ci-dessus</div></div></div>';
   } else {
     openPkgs.forEach(function(d) {
@@ -140,28 +147,34 @@ function renderConsommationTab() {
       var effDlcStr = effDlc ? effDlc.toLocaleDateString('fr-FR') : fmtD(d.dlc_date);
       var isExpired = daysLeft !== null && daysLeft < 0;
       var isWarning = !isExpired && daysLeft !== null && daysLeft <= 1;
-      var statusIcon = isExpired ? '🚫' : (isWarning ? '⚠️' : '✅');
       var statusColor = isExpired ? 'var(--err)' : (isWarning ? '#f59e0b' : 'var(--ok,#16a34a)');
       var borderLeft = isExpired ? 'border-left:4px solid var(--err)' : (isWarning ? 'border-left:4px solid #f59e0b' : 'border-left:4px solid var(--ok,#16a34a)');
       var confirmed = confirmedBuffet[d.id];
 
       h += '<div style="padding:14px 16px;border-bottom:1px solid var(--border);' + borderLeft + '">';
-      h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">';
-      h += '<div>';
-      h += '<div style="font-weight:700;font-size:16px">' + esc(d.product_name) + '</div>';
-      h += '<div style="font-size:12px;color:var(--muted);margin-top:2px">';
-      if (d.lot_number) h += 'Lot ' + esc(d.lot_number) + ' · ';
-      h += 'Ouvert le ' + fmtD(d.opened_at) + '</div>';
-      h += '</div>';
-      h += '<div style="text-align:right">';
-      h += '<div style="font-size:13px;font-weight:700;color:' + statusColor + '">' + statusIcon + ' ' + effDlcStr + '</div>';
-      if (daysLeft !== null) {
-        h += '<div style="font-size:11px;color:' + statusColor + '">';
-        h += isExpired ? 'EXPIRÉ' : (daysLeft === 0 ? 'Expire aujourd\'hui' : daysLeft + 'j restant' + (daysLeft > 1 ? 's' : ''));
-        h += '</div>';
-      }
-      h += '</div></div>';
 
+      // ── Ligne 1 : Nom + Lot ──
+      h += '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">';
+      h += '<span style="font-weight:700;font-size:16px">' + esc(d.product_name) + '</span>';
+      if (d.lot_number) h += '<span class="badge badge-gray" style="font-size:12px;padding:3px 8px">Lot ' + esc(d.lot_number) + '</span>';
+      h += '</div>';
+
+      // ── Ligne 2 : Traçabilité DLC ──
+      h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;margin-bottom:10px;font-size:12px">';
+      h += '<div style="color:var(--muted)">📅 DLC fabricant</div>';
+      h += '<div style="color:var(--muted)">🕐 Ouvert le</div>';
+      h += '<div style="font-weight:600">' + fmtD(d.dlc_date) + '</div>';
+      h += '<div style="font-weight:600">' + fmtD(d.opened_at) + ' (' + (d.shelf_life_days || 3) + 'j)</div>';
+      h += '<div style="color:var(--muted)">⏳ DLC après ouverture</div>';
+      h += '<div></div>';
+      h += '<div style="font-weight:700;color:' + statusColor + ';font-size:13px">' + effDlcStr;
+      if (daysLeft !== null) {
+        h += '  <span style="font-weight:400;font-size:11px">' + (isExpired ? '— EXPIRÉ' : (daysLeft === 0 ? '— expire aujourd\'hui' : '— ' + daysLeft + 'j restant' + (daysLeft > 1 ? 's' : ''))) + '</span>';
+      }
+      h += '</div>';
+      h += '</div>';
+
+      // ── Ligne 3 : Actions ──
       if (isExpired) {
         h += '<div style="display:flex;gap:8px;flex-wrap:wrap">';
         h += '<div style="flex:1;background:#fef2f2;border:1px solid var(--err);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--err);font-weight:600">🚫 Expiré — ne pas servir</div>';
@@ -170,12 +183,12 @@ function renderConsommationTab() {
       } else if (confirmed) {
         h += '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">';
         h += '<div style="flex:1;background:var(--success-bg,#f0fdf4);border:1px solid var(--ok,#16a34a);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--ok,#16a34a);font-weight:600">';
-        h += '✅ Buffet fait à ' + fmtTime(confirmed.consumed_at) + ' par ' + esc(confirmed.consumed_by_name) + '</div>';
+        h += '✅ Servi à ' + fmtTime(confirmed.consumed_at) + ' par ' + esc(confirmed.consumed_by_name) + '</div>';
         h += '<button class="btn btn-outline btn-sm" onclick="markPackageEmpty(\'' + d.id + '\')">📦 Vide</button>';
         h += '</div>';
       } else {
         h += '<div style="display:flex;gap:8px;flex-wrap:wrap">';
-        h += '<button class="btn btn-primary" style="flex:1" onclick="confirmBuffetRefill(\'' + d.id + '\')">✅ Buffet fait ce matin</button>';
+        h += '<button class="btn btn-primary" style="flex:1" onclick="confirmBuffetRefill(\'' + d.id + '\')">✅ Servi ce matin</button>';
         h += '<button class="btn btn-outline" onclick="markPackageEmpty(\'' + d.id + '\')">📦 Paquet vide</button>';
         h += '</div>';
       }
