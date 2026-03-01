@@ -229,7 +229,7 @@ window.handleAddProd = async function(e) {
   e.preventDefault();
   var btn = e.target.querySelector('button[type="submit"]');
   withLoading(btn, async function() {
-    await addProduct($('prName').value, $('prCat').value, parseFloat($('prMin').value), parseFloat($('prMax').value), $('prEmoji').value);
+    await addProduct($('prName').value, $('prCat').value, parseFloat($('prMin').value), parseFloat($('prMax').value), $('prEmoji').value, $('prConsoMode') ? $('prConsoMode').value : 'whole');
     $('prName').value = '';
   });
 };

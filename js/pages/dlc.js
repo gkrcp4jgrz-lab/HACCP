@@ -62,10 +62,10 @@ function renderConsommationTab() {
     });
   });
 
-  // ══ SECTION 1 : Produits utilisés entiers (œufs, saucisses…) ══
+  // ══ SECTION 1 : Stock non entamé ══
   var prodNames = Object.keys(prodGroups).sort();
   h += '<div class="card card-accent">';
-  h += '<div class="card-header"><span class="v2-text-2xl">🍳</span> Produits utilisés entiers';
+  h += '<div class="card-header"><span class="v2-text-2xl">🍳</span> Consommation du jour';
   h += '<span class="badge badge-blue v2-badge-lg v2-ml-auto">' + prodNames.length + '</span></div>';
 
   if (prodNames.length === 0) {
@@ -106,6 +106,10 @@ function renderConsommationTab() {
         h += '</span></div>';
       }
 
+      // Déterminer le mode de consommation du produit
+      var prodConfig = S.siteConfig.products.find(function(p) { return p.name === prod; });
+      var isOpenable = prodConfig && prodConfig.consumption_mode === 'openable';
+
       if (usedLogs.length > 0) {
         // Déjà loggué aujourd'hui : afficher résumé + permettre d'en utiliser encore
         h += '<div style="background:var(--success-bg,#f0fdf4);border:1px solid var(--ok,#16a34a);border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:13px;color:var(--ok,#16a34a);font-weight:600">';
@@ -117,7 +121,7 @@ function renderConsommationTab() {
           h += '<input type="number" id="' + inputId + '" class="form-input" style="flex:0 0 70px" min="1" step="1" value="1">';
           h += '<span style="font-size:13px;color:var(--muted);flex-shrink:0">' + esc(unit) + '</span>';
           h += '<button class="btn btn-outline" style="flex:1" onclick="handleUseWhole(' + idx + ',\'' + inputId + '\')">+ Utiliser encore</button>';
-          h += '<button class="btn btn-ghost btn-sm" onclick="openPackageModal(\'' + oldest.id + '\')" title="Entamer pour usage multi-jours">📂</button>';
+          if (isOpenable) h += '<button class="btn btn-ghost btn-sm" onclick="openPackageModal(\'' + oldest.id + '\')" title="Entamer pour usage multi-jours">📂</button>';
           h += '</div>';
         }
       } else {
@@ -125,7 +129,7 @@ function renderConsommationTab() {
         h += '<input type="number" id="' + inputId + '" class="form-input" style="flex:0 0 70px" min="1" step="1" value="1">';
         h += '<span style="font-size:13px;color:var(--muted);flex-shrink:0">' + esc(unit) + '</span>';
         h += '<button class="btn btn-primary" style="flex:1" onclick="handleUseWhole(' + idx + ',\'' + inputId + '\')">✅ Utilisé ce matin</button>';
-        h += '<button class="btn btn-ghost btn-sm" onclick="openPackageModal(\'' + oldest.id + '\')" title="Entamer pour usage multi-jours">📂</button>';
+        if (isOpenable) h += '<button class="btn btn-ghost btn-sm" onclick="openPackageModal(\'' + oldest.id + '\')" title="Entamer pour usage multi-jours">📂</button>';
         h += '</div>';
       }
       h += '</div>';
@@ -560,6 +564,11 @@ window.openQuickAddProductModal = function() {
   h += '<div class="modal-body">';
   h += '<div class="form-group"><label class="form-label">Nom du produit <span class="req">*</span></label>';
   h += '<input type="text" class="form-input" id="quickProductName" required placeholder="Ex: Dinde, Saumon fumé..."></div>';
+  h += '<div class="form-group"><label class="form-label">Mode de consommation</label>';
+  h += '<select class="form-select" id="quickProductMode">';
+  h += '<option value="whole">📦 Entier (oeufs, saucisses...)</option>';
+  h += '<option value="openable">📂 Entamable (rosette, fromage...)</option>';
+  h += '</select></div>';
   h += '</div>';
   h += '<div class="modal-footer">';
   h += '<button class="btn btn-ghost" onclick="closeModal()">Annuler</button>';
@@ -572,8 +581,9 @@ window.openQuickAddProductModal = function() {
 window.confirmQuickAddProduct = async function() {
   var name = $('quickProductName') ? $('quickProductName').value.trim() : '';
   if (!name) { showToast('Nom requis', 'error'); return; }
+  var mode = $('quickProductMode') ? $('quickProductMode').value : 'whole';
   try {
-    await addProduct(name, 'autre', null, null, '📦');
+    await addProduct(name, 'autre', null, null, '📦', mode);
     closeModal();
     // Set the product name in the reception form
     setTimeout(function() { var el = $('recProduct'); if (el) el.value = name; }, 100);

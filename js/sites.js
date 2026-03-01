@@ -68,9 +68,11 @@ async function deleteEquipment(id) {
   await loadSiteConfig(); render();
 }
 
-async function addProduct(name, category, tempMin, tempMax, emoji) {
+async function addProduct(name, category, tempMin, tempMax, emoji, consumptionMode) {
   var maxSort = S.siteConfig.products.reduce(function(m,p){return Math.max(m,p.sort_order||0);},0);
-  var r = await sb.from('site_products').insert({ site_id:S.currentSiteId, name:name, category:category, temp_min:tempMin, temp_max:tempMax, emoji:emoji||'📦', sort_order:maxSort+1 });
+  var rec = { site_id:S.currentSiteId, name:name, category:category, temp_min:tempMin, temp_max:tempMax, emoji:emoji||'📦', sort_order:maxSort+1 };
+  if (consumptionMode) rec.consumption_mode = consumptionMode;
+  var r = await sb.from('site_products').insert(rec);
   if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
   showToast('Produit ajouté', 'success');
   await loadSiteConfig(); render();

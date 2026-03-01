@@ -45,12 +45,14 @@ function renderSettingsProducts() {
   h += '<div class="form-group"><label class="form-label">Catégorie</label><select class="form-select" id="prCat"><option value="frigo">Frigo</option><option value="congel">Congélateur</option><option value="chaud">Chaud</option><option value="autre">Autre</option></select></div></div>';
   h += '<div class="form-row"><div class="form-group"><label class="form-label">Temp. min °C</label><input type="number" step="0.1" class="form-input" id="prMin" value="0"></div>';
   h += '<div class="form-group"><label class="form-label">Temp. max °C</label><input type="number" step="0.1" class="form-input" id="prMax" value="4"></div></div>';
-  h += '<div class="form-group"><label class="form-label">Emoji</label><input type="text" class="form-input" id="prEmoji" value="📦" maxlength="4"></div>';
+  h += '<div class="form-row"><div class="form-group"><label class="form-label">Emoji</label><input type="text" class="form-input" id="prEmoji" value="📦" maxlength="4"></div>';
+  h += '<div class="form-group"><label class="form-label">Mode de consommation</label><select class="form-select" id="prConsoMode"><option value="whole">Entier (oeufs, saucisses...)</option><option value="openable">Entamable (rosette, fromage...)</option></select></div></div>';
   h += '<button type="submit" class="btn btn-primary">✓ Ajouter</button></form></div></div>';
 
   h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">📋</span> Produits actifs <span class="badge badge-blue v2-badge-lg v2-ml-auto">' + S.siteConfig.products.length + '</span></div>';
   S.siteConfig.products.forEach(function(p) {
-    h += '<div class="list-item"><div class="list-icon v2-list-icon--ok">' + p.emoji + '</div><div class="list-content"><div class="list-title">' + esc(p.name) + '</div><div class="list-sub">' + p.temp_min + '°C → ' + p.temp_max + '°C · ' + ({frigo:'Frigo',congel:'Congélateur',chaud:'Chaud',autre:'Autre'}[p.category] || p.category) + '</div></div><div class="list-actions"><button class="btn btn-danger btn-sm" onclick="deleteProduct(\'' + p.id + '\')">🗑️</button></div></div>';
+    var modeLabel = p.consumption_mode === 'openable' ? ' · 📂 Entamable' : ' · 📦 Entier';
+    h += '<div class="list-item"><div class="list-icon v2-list-icon--ok">' + p.emoji + '</div><div class="list-content"><div class="list-title">' + esc(p.name) + '</div><div class="list-sub">' + p.temp_min + '°C → ' + p.temp_max + '°C · ' + ({frigo:'Frigo',congel:'Congélateur',chaud:'Chaud',autre:'Autre'}[p.category] || p.category) + modeLabel + '</div></div><div class="list-actions"><button class="btn btn-danger btn-sm" onclick="deleteProduct(\'' + p.id + '\')">🗑️</button></div></div>';
   });
   if (S.siteConfig.products.length === 0) h += '<div class="card-body"><div class="empty"><div class="empty-title">Aucun produit</div></div></div>';
   h += '</div>';
