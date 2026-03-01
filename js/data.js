@@ -48,7 +48,8 @@ async function loadSiteData() {
       sb.from('consignes').select('*').eq('site_id', sid).gte('created_at', new Date(Date.now() - 7 * 86400000).toISOString()).order('created_at', {ascending:false}).limit(50),
       sb.from('incident_reports').select('*').eq('site_id', sid).in('status', ['open','in_progress']).order('created_at', {ascending:false}),
       sb.from('cleaning_schedules').select('*').eq('site_id', sid).eq('active', true).order('name'),
-      sb.from('cleaning_logs').select('*').eq('site_id', sid).gte('performed_at', localMidnightISO).order('performed_at', {ascending:false})
+      sb.from('cleaning_logs').select('*').eq('site_id', sid).gte('performed_at', localMidnightISO).order('performed_at', {ascending:false}),
+      sb.from('consumption_logs').select('*').eq('site_id', sid).gte('consumed_at', localMidnightISO).order('consumed_at', {ascending:false})
     ]);
     S.data.temperatures = results[0].data || [];
     S.data.dlcs = results[1].data || [];
@@ -65,6 +66,7 @@ async function loadSiteData() {
     S.data.incident_reports = results[5].data || [];
     S.data.cleaning_schedules = results[6].data || [];
     S.data.cleaning_logs = results[7].data || [];
+    S.data.consumption_logs = results[8].data || [];
   } catch(e) { console.error('Load data error:', e); }
 }
 
@@ -253,6 +255,77 @@ async function deleteLot(id) {
   showToast('Lot supprimé', 'success');
   await loadSiteData(); render();
 }
+
+// -- Consommation FIFO --
+async function recordConsumption(productName, qtyToConsume, unit, notes) {
+  // 1. Trouver les entrées DLC actives pour ce produit, triées par DLC (FIFO = plus ancienne en premier)
+  var matches = S.data.dlcs
+    .filter(function(d) { return d.product_name === productName; })
+    .sort(function(a, b) { return a.dlc_date < b.dlc_date ? -1 : 1; });
+
+  var totalAvailable = matches.reduce(function(sum, d) { return sum + (d.quantity || 1); }, 0);
+  if (totalAvailable < qtyToConsume) {
+    throw new Error('Stock insuffisant — disponible : ' + totalAvailable + ' ' + unit);
+  }
+
+  // 2. Déduire en FIFO
+  var remaining = qtyToConsume;
+  var dlcEntries = [];
+  for (var i = 0; i < matches.length; i++) {
+    if (remaining <= 0) break;
+    var d = matches[i];
+    var available = d.quantity || 1;
+    var taken = Math.min(available, remaining);
+    var newQty = available - taken;
+    if (newQty <= 0) {
+      var r1 = await sbExec(sb.from('dlcs').update({ status: 'consumed' }).eq('id', d.id), 'Mise à jour DLC');
+      if (!r1) throw new Error('Erreur mise à jour DLC');
+    } else {
+      var r2 = await sbExec(sb.from('dlcs').update({ quantity: newQty }).eq('id', d.id), 'Mise à jour quantité DLC');
+      if (!r2) throw new Error('Erreur mise à jour quantité DLC');
+    }
+    dlcEntries.push({ dlc_id: d.id, lot_number: d.lot_number || '', dlc_date: d.dlc_date, qty_taken: taken });
+    remaining -= taken;
+  }
+
+  // 3. Enregistrer la consommation
+  var rec = {
+    site_id: S.currentSiteId,
+    product_name: productName,
+    quantity_consumed: qtyToConsume,
+    unit: unit || 'unité',
+    consumed_by: S.user.id,
+    consumed_by_name: userName(),
+    consumed_at: new Date().toISOString(),
+    notes: notes || '',
+    dlc_entries: dlcEntries
+  };
+  var r3 = await sbExec(sb.from('consumption_logs').insert(rec), 'Enregistrement consommation');
+  if (!r3) throw new Error('Erreur enregistrement consommation');
+
+  showToast('Consommation enregistrée ✓', 'success');
+  await loadSiteData(); render();
+}
+window.recordConsumption = recordConsumption;
+
+// Calcule l'aperçu FIFO sans modifier les données (pour preview)
+function previewFifo(productName, qtyToConsume) {
+  var matches = S.data.dlcs
+    .filter(function(d) { return d.product_name === productName; })
+    .sort(function(a, b) { return a.dlc_date < b.dlc_date ? -1 : 1; });
+  var totalAvailable = matches.reduce(function(sum, d) { return sum + (d.quantity || 1); }, 0);
+  var preview = [];
+  var remaining = qtyToConsume;
+  for (var i = 0; i < matches.length; i++) {
+    if (remaining <= 0) break;
+    var d = matches[i];
+    var taken = Math.min(d.quantity || 1, remaining);
+    preview.push({ lot_number: d.lot_number, dlc_date: d.dlc_date, qty_taken: taken, supplier_name: d.supplier_name });
+    remaining -= taken;
+  }
+  return { preview: preview, totalAvailable: totalAvailable, ok: remaining <= 0 };
+}
+window.previewFifo = previewFifo;
 
 // -- Orders --
 async function addOrder(productName, qty, unit, supplierName, notes) {

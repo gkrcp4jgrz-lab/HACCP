@@ -4,25 +4,103 @@
 
 function renderDLC() {
   var h = '';
+  var activeTab = S.dlcTab || 'reception';
 
-  // Unified reception form
-  h += renderReceptionForm();
-
-  // Tabbed view: DLC / Lots / Stock
-  var activeTab = S.dlcTab || 'dlc';
-  h += '<div class="tabs" style="overflow:visible">';
-  h += '<button class="tab' + (activeTab === 'dlc' ? ' active' : '') + '" onclick="S.dlcTab=\'dlc\';render()" style="flex:1;text-align:center">📅 DLC</button>';
-  h += '<button class="tab' + (activeTab === 'lots' ? ' active' : '') + '" onclick="S.dlcTab=\'lots\';render()" style="flex:1;text-align:center">📦 Lots</button>';
-  h += '<button class="tab' + (activeTab === 'stock' ? ' active' : '') + '" onclick="S.dlcTab=\'stock\';render()" style="flex:1;text-align:center">📊 Stock</button>';
+  h += '<div class="tabs" style="overflow:visible;flex-wrap:wrap">';
+  h += '<button class="tab' + (activeTab === 'reception' ? ' active' : '') + '" onclick="S.dlcTab=\'reception\';render()" style="flex:1;text-align:center;min-width:80px">📥 Réception</button>';
+  h += '<button class="tab' + (activeTab === 'conso' ? ' active' : '') + '" onclick="S.dlcTab=\'conso\';render()" style="flex:1;text-align:center;min-width:80px">🍽️ Conso</button>';
+  h += '<button class="tab' + (activeTab === 'dlc' ? ' active' : '') + '" onclick="S.dlcTab=\'dlc\';render()" style="flex:1;text-align:center;min-width:80px">📅 DLC</button>';
+  h += '<button class="tab' + (activeTab === 'lots' ? ' active' : '') + '" onclick="S.dlcTab=\'lots\';render()" style="flex:1;text-align:center;min-width:80px">📦 Lots</button>';
+  h += '<button class="tab' + (activeTab === 'stock' ? ' active' : '') + '" onclick="S.dlcTab=\'stock\';render()" style="flex:1;text-align:center;min-width:80px">📊 Stock</button>';
   h += '</div>';
 
-  if (activeTab === 'lots') {
+  if (activeTab === 'reception') {
+    h += renderReceptionForm();
+  } else if (activeTab === 'conso') {
+    h += renderConsommationTab();
+  } else if (activeTab === 'lots') {
     h += renderLotsTabContent();
   } else if (activeTab === 'stock') {
     h += renderStockTabContent();
   } else {
     h += renderDlcTabContent();
   }
+
+  return h;
+}
+
+// ── CONSOMMATION QUOTIDIENNE (FIFO) ──
+
+function renderConsommationTab() {
+  var h = '';
+  var products = getProductSuggestions();
+
+  // Formulaire de saisie rapide
+  h += '<div class="card card-accent"><div class="card-header"><span class="v2-text-2xl">🍽️</span> Saisir une consommation</div><div class="card-body">';
+  h += '<form onsubmit="handleConsommation(event)">';
+
+  h += '<div class="form-row">';
+  h += '<div class="form-group" style="flex:2"><label class="form-label">Produit <span class="req">*</span></label>';
+  h += '<input type="text" class="form-input" id="consoProduct" list="consoProductList" required placeholder="Ex: Œufs, Saucisses..." autocomplete="off" oninput="updateConsoPreview()">';
+  h += '<datalist id="consoProductList">';
+  products.forEach(function(p) { h += '<option value="' + esc(p) + '">'; });
+  h += '</datalist></div>';
+  h += '<div class="form-group" style="flex:1"><label class="form-label">Quantité <span class="req">*</span></label>';
+  h += '<input type="number" class="form-input" id="consoQty" min="0.1" step="0.1" value="1" required oninput="updateConsoPreview()"></div>';
+  h += '<div class="form-group" style="flex:1"><label class="form-label">Unité</label>';
+  h += '<select class="form-select" id="consoUnit"><option>unité</option><option>kg</option><option>g</option><option>L</option><option>boîte</option><option>paquet</option><option>portion</option></select></div>';
+  h += '</div>';
+
+  h += '<div class="form-group"><label class="form-label">Notes (optionnel)</label>';
+  h += '<input type="text" class="form-input" id="consoNotes" placeholder="Ex: Service du midi, petit-déjeuner..."></div>';
+
+  // Preview FIFO
+  h += '<div id="consoFifoPreview"></div>';
+
+  h += '<button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:8px">🍽️ Enregistrer la consommation</button>';
+  h += '</form></div></div>';
+
+  // Journal des consommations du jour
+  var logs = S.data.consumption_logs || [];
+  h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">📋</span> Consommations du jour <span class="badge badge-blue v2-badge-lg v2-ml-auto">' + logs.length + '</span></div>';
+
+  if (logs.length === 0) {
+    h += '<div class="card-body"><div class="empty"><div class="empty-icon">🍽️</div><div class="empty-title">Aucune consommation saisie aujourd\'hui</div></div></div>';
+  } else {
+    // Total par produit
+    var totals = {};
+    logs.forEach(function(l) {
+      var k = l.product_name + '|' + l.unit;
+      if (!totals[k]) totals[k] = { name: l.product_name, unit: l.unit, qty: 0 };
+      totals[k].qty += (l.quantity_consumed || 0);
+    });
+    h += '<div class="card-body v2-card-body--compact" style="padding:10px 16px;background:var(--bg-off);border-bottom:1px solid var(--border)">';
+    h += '<div style="display:flex;gap:12px;flex-wrap:wrap">';
+    Object.values(totals).forEach(function(t) {
+      h += '<span class="badge badge-blue" style="font-size:13px;padding:6px 12px">' + esc(t.name) + ' : <strong>' + t.qty + ' ' + esc(t.unit) + '</strong></span>';
+    });
+    h += '</div></div>';
+
+    logs.forEach(function(l) {
+      var entries = l.dlc_entries || [];
+      h += '<div class="list-item"><div class="list-icon" style="font-size:22px">🍽️</div>';
+      h += '<div class="list-content"><div class="list-title">' + esc(l.product_name) + ' — <strong>' + l.quantity_consumed + ' ' + esc(l.unit) + '</strong></div>';
+      h += '<div class="list-sub">Par ' + esc(l.consumed_by_name) + ' à ' + fmtTime(l.consumed_at);
+      if (l.notes) h += ' · ' + esc(l.notes);
+      h += '</div>';
+      if (entries.length > 0) {
+        h += '<div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap">';
+        entries.forEach(function(e) {
+          h += '<span class="badge badge-gray" style="font-size:11px">';
+          if (e.lot_number) h += 'Lot ' + esc(e.lot_number) + ' · ';
+          h += 'DLC ' + fmtD(e.dlc_date) + ' · ' + e.qty_taken + ' ' + esc(l.unit) + '</span>';
+        });
+        h += '</div>';
+      }
+      h += '</div></div>';
+    });
+  }
+  h += '</div>';
 
   return h;
 }
@@ -267,30 +345,20 @@ window.confirmDlcOpen = async function(dlcId) {
   await loadSiteData(); render();
 };
 
-// ── STOCK (calculé) ──
+// ── STOCK (calculé depuis DLC uniquement — source de vérité) ──
 
 function renderStockTabContent() {
   var h = '';
   var stock = {};
 
-  // Aggregate from active DLCs
+  // Source unique : table dlcs (lots = traçabilité uniquement, pas du stock)
   S.data.dlcs.forEach(function(d) {
     if (d.status === 'consumed' || d.status === 'discarded') return;
     var name = d.product_name;
-    if (!stock[name]) stock[name] = { qty: 0, dlcMin: null, lastEntry: null };
+    if (!stock[name]) stock[name] = { qty: 0, dlcMin: null, lastEntry: null, unit: d.unit || 'unité' };
     stock[name].qty += (d.quantity || 1);
     if (d.dlc_date && (!stock[name].dlcMin || d.dlc_date < stock[name].dlcMin)) stock[name].dlcMin = d.dlc_date;
     if (d.recorded_at && (!stock[name].lastEntry || d.recorded_at > stock[name].lastEntry)) stock[name].lastEntry = d.recorded_at;
-  });
-
-  // Aggregate from active Lots
-  S.data.lots.forEach(function(l) {
-    if (l.status === 'consumed' || l.status === 'discarded') return;
-    var name = l.product_name;
-    if (!stock[name]) stock[name] = { qty: 0, dlcMin: null, lastEntry: null };
-    stock[name].qty += (l.quantity || 1);
-    if (l.dlc_date && (!stock[name].dlcMin || l.dlc_date < stock[name].dlcMin)) stock[name].dlcMin = l.dlc_date;
-    if (l.recorded_at && (!stock[name].lastEntry || l.recorded_at > stock[name].lastEntry)) stock[name].lastEntry = l.recorded_at;
   });
 
   var products = Object.keys(stock).sort();

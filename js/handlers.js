@@ -483,3 +483,44 @@ window.handleCleaningPhoto = function(input) {
   };
   reader.readAsDataURL(input.files[0]);
 };
+
+// -- Consommation FIFO --
+window.handleConsommation = async function(e) {
+  e.preventDefault();
+  var productName = $('consoProduct') ? $('consoProduct').value.trim() : '';
+  var qty = parseFloat($('consoQty') ? $('consoQty').value : '1');
+  var unit = $('consoUnit') ? $('consoUnit').value : 'unité';
+  var notes = $('consoNotes') ? $('consoNotes').value.trim() : '';
+  if (!productName) { showToast('Sélectionnez un produit', 'warning'); return; }
+  if (!qty || qty <= 0) { showToast('Quantité invalide', 'warning'); return; }
+  var btn = e.target.querySelector('button[type="submit"]');
+  await withLoading(btn, async function() {
+    await recordConsumption(productName, qty, unit, notes);
+    if ($('consoProduct')) $('consoProduct').value = '';
+    if ($('consoQty')) $('consoQty').value = '1';
+    if ($('consoNotes')) $('consoNotes').value = '';
+    if ($('consoFifoPreview')) $('consoFifoPreview').innerHTML = '';
+  });
+};
+
+window.updateConsoPreview = function() {
+  var productName = $('consoProduct') ? $('consoProduct').value.trim() : '';
+  var qty = parseFloat($('consoQty') ? $('consoQty').value : '0');
+  var unit = $('consoUnit') ? $('consoUnit').value : 'unité';
+  var preview = $('consoFifoPreview');
+  if (!preview) return;
+  if (!productName || !qty || qty <= 0) { preview.innerHTML = ''; return; }
+  var result = previewFifo(productName, qty);
+  if (!result.ok) {
+    preview.innerHTML = '<div class="v2-callout" style="background:var(--err-light,#fef2f2);border-left:4px solid var(--err);padding:10px 14px;border-radius:6px;margin:8px 0;color:var(--err)">⚠️ Stock insuffisant — disponible : ' + result.totalAvailable + ' ' + esc(unit) + '</div>';
+    return;
+  }
+  var h = '<div style="background:var(--bg-off);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin:8px 0">';
+  h += '<div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px">📦 FIFO — lots qui seront consommés :</div>';
+  h += '<div style="display:flex;flex-wrap:wrap;gap:6px">';
+  result.preview.forEach(function(entry) {
+    h += '<span class="badge badge-blue" style="font-size:12px;padding:4px 10px">Lot ' + esc(entry.lot_number || '—') + ' · DLC ' + fmtD(entry.dlc_date) + ' · ' + entry.qty_taken + ' ' + esc(unit) + '</span>';
+  });
+  h += '</div></div>';
+  preview.innerHTML = h;
+};
