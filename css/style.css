@@ -243,7 +243,7 @@ img{max-width:100%;height:auto}
 .form-group{margin-bottom:16px}
 .form-label{display:block;font-weight:600;font-size:12px;color:var(--ink-muted);margin-bottom:6px;letter-spacing:.06em;text-transform:uppercase}
 .form-label .req{color:var(--af-err);font-weight:700}
-.form-input,.form-select,.form-textarea{width:100%;padding:12px 16px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:15px;transition:all var(--transition);background:var(--bg);outline:none;font-weight:500;color:var(--ink);min-height:var(--input-h)}
+.form-input,.form-select,.form-textarea{width:100%;padding:12px 16px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:16px;transition:all var(--transition);background:var(--bg);outline:none;font-weight:500;color:var(--ink);min-height:var(--input-h)}
 .form-input::placeholder,.form-textarea::placeholder{color:var(--muted);font-weight:400}
 .form-input:hover,.form-select:hover,.form-textarea:hover{border-color:#CBD5E1;background:#FAFBFC}
 .form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--af-teal);box-shadow:0 0 0 3px rgba(8,145,178,.1);background:#fff}

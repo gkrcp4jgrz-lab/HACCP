@@ -1,5 +1,5 @@
 // HACCP Pro — Service Worker (Offline + Cache)
-var CACHE_NAME = 'coni-v44';
+var CACHE_NAME = 'coni-v45';
 var STATIC_ASSETS = [
   '/',
   '/index.html',
