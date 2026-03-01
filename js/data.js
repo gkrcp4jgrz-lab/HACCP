@@ -361,9 +361,10 @@ window.consumeFromPackage = consumeFromPackage;
 
 // -- Consommation FIFO (produits consommés en 1 fois, sans notion de colis ouvert) --
 async function recordConsumption(productName, qtyToConsume, unit, notes) {
-  // 1. Trouver les entrées DLC actives pour ce produit, triées par DLC (FIFO = plus ancienne en premier)
+  // 1. Trouver les entrées DLC NON ENTAMÉES pour ce produit, triées FIFO
+  // (les colis entamés sont gérés via confirmBuffetRefill / markPackageEmpty)
   var matches = S.data.dlcs
-    .filter(function(d) { return d.product_name === productName; })
+    .filter(function(d) { return d.product_name === productName && !d.opened_at; })
     .sort(function(a, b) { return a.dlc_date < b.dlc_date ? -1 : 1; });
 
   var totalAvailable = matches.reduce(function(sum, d) { return sum + (d.quantity || 1); }, 0);

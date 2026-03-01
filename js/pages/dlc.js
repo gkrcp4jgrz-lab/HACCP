@@ -29,48 +29,126 @@ function renderDLC() {
   return h;
 }
 
-// ── BUFFET — Colis entamés (ouverture + suivi quotidien) ──
+// ── CONSOMMATION — Deux modes : entier vs entamé ──
 
 function renderConsommationTab() {
   var h = '';
   var now = new Date();
-  var openPkgs = S.data.dlcs.filter(function(d) { return d.opened_at; });
-  var unopenedPkgs = S.data.dlcs.filter(function(d) { return !d.opened_at; });
+  var todayStr = today();
   var logs = S.data.consumption_logs || [];
 
-  // Index des confirmations buffet du jour : dlc_id → log entry
-  var confirmedToday = {};
+  // Packages ouverts (colis entamés, multi-jours)
+  var openPkgs = S.data.dlcs.filter(function(d) { return d.opened_at; });
+
+  // Stock non entamé, groupé par produit, trié FIFO
+  var unopened = S.data.dlcs.filter(function(d) { return !d.opened_at; });
+  var prodGroups = {};
+  unopened.forEach(function(d) {
+    if (!prodGroups[d.product_name]) prodGroups[d.product_name] = [];
+    prodGroups[d.product_name].push(d);
+  });
+  Object.keys(prodGroups).forEach(function(p) {
+    prodGroups[p].sort(function(a, b) { return a.dlc_date < b.dlc_date ? -1 : 1; });
+  });
+
+  // Index logs du jour : par produit (pour "Utilisé entier") et par dlc_id (pour buffet)
+  var usedWholeByProd = {};  // productName → [logs]
+  var confirmedBuffet = {};  // dlcId → log
   logs.forEach(function(l) {
+    if (l.notes === 'Utilisé entier') {
+      if (!usedWholeByProd[l.product_name]) usedWholeByProd[l.product_name] = [];
+      usedWholeByProd[l.product_name].push(l);
+    }
     var entries = Array.isArray(l.dlc_entries) ? l.dlc_entries : [];
     entries.forEach(function(e) {
-      if (!confirmedToday[e.dlc_id]) confirmedToday[e.dlc_id] = l;
+      if (!confirmedBuffet[e.dlc_id]) confirmedBuffet[e.dlc_id] = l;
     });
   });
 
-  // ── Section 1 : Colis en cours ──
+  // ══ SECTION 1 : Produits utilisés entiers (œufs, saucisses…) ══
+  var prodNames = Object.keys(prodGroups).sort();
   h += '<div class="card card-accent">';
-  h += '<div class="card-header"><span class="v2-text-2xl">🍽️</span> Buffet — colis en cours';
+  h += '<div class="card-header"><span class="v2-text-2xl">🍳</span> Produits utilisés entiers';
+  h += '<span class="badge badge-blue v2-badge-lg v2-ml-auto">' + prodNames.length + '</span></div>';
+
+  if (prodNames.length === 0) {
+    h += '<div class="card-body"><div class="empty"><div class="empty-icon">📭</div>';
+    h += '<div class="empty-title">Aucun stock disponible</div></div></div>';
+  } else {
+    // Store product list for handler lookup (avoids quoting issues with product names)
+    S._consoProds = prodGroups;
+
+    prodNames.forEach(function(prod, idx) {
+      var group = prodGroups[prod];
+      var oldest = group[0];
+      var totalQty = group.reduce(function(s, d) { return s + (d.quantity || 1); }, 0);
+      var unit = oldest.unit || 'unité';
+      var dlcExpired = oldest.dlc_date < todayStr;
+      var inputId = 'useWhole_' + idx;
+      var usedLogs = usedWholeByProd[prod] || [];
+      var totalUsedToday = usedLogs.reduce(function(s, l) { return s + (l.quantity_consumed || 0); }, 0);
+
+      h += '<div style="padding:12px 16px;border-bottom:1px solid var(--border)">';
+      // Header: product name + stock
+      h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
+      h += '<div>';
+      h += '<div style="font-weight:700;font-size:15px">' + esc(prod) + '</div>';
+      h += '<div style="font-size:12px;color:var(--muted)">Stock : ' + totalQty + ' ' + esc(unit);
+      if (group.length > 1) h += ' sur ' + group.length + ' lots';
+      h += '</div></div>';
+      h += '<div style="font-size:12px;color:' + (dlcExpired ? 'var(--err)' : 'var(--muted)') + ';text-align:right">';
+      h += (dlcExpired ? '🚫 ' : '📅 ') + 'DLC ' + fmtD(oldest.dlc_date) + '</div>';
+      h += '</div>';
+
+      // Si déjà utilisé aujourd'hui : confirmation verte + option d'en utiliser encore
+      if (usedLogs.length > 0) {
+        h += '<div style="background:var(--success-bg,#f0fdf4);border:1px solid var(--ok,#16a34a);border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:13px;color:var(--ok,#16a34a);font-weight:600">';
+        h += '✅ ' + totalUsedToday + ' ' + esc(unit) + ' utilisé(s) ce matin';
+        if (usedLogs[0]) h += ' à ' + fmtTime(usedLogs[0].consumed_at) + ' par ' + esc(usedLogs[0].consumed_by_name);
+        h += '</div>';
+        // Permettre d'en logguer encore si besoin
+        h += '<div style="display:flex;gap:8px;align-items:center">';
+        h += '<input type="number" id="' + inputId + '" class="form-input" style="flex:0 0 70px" min="1" step="1" value="1">';
+        h += '<span style="font-size:13px;color:var(--muted);flex-shrink:0">' + esc(unit) + '</span>';
+        h += '<button class="btn btn-outline" style="flex:1" onclick="handleUseWhole(' + idx + ',\'' + inputId + '\')">+ Utiliser encore</button>';
+        h += '<button class="btn btn-outline btn-sm" onclick="openPackageModal(\'' + oldest.id + '\')">📂 Entamer</button>';
+        h += '</div>';
+      } else {
+        // Pas encore utilisé : bouton principal
+        h += '<div style="display:flex;gap:8px;align-items:center">';
+        h += '<input type="number" id="' + inputId + '" class="form-input" style="flex:0 0 70px" min="1" step="1" value="1">';
+        h += '<span style="font-size:13px;color:var(--muted);flex-shrink:0">' + esc(unit) + '</span>';
+        h += '<button class="btn btn-primary" style="flex:1" onclick="handleUseWhole(' + idx + ',\'' + inputId + '\')">✅ Utilisé ce matin</button>';
+        h += '<button class="btn btn-outline btn-sm" onclick="openPackageModal(\'' + oldest.id + '\')">📂 Entamer</button>';
+        h += '</div>';
+      }
+      h += '</div>';
+    });
+  }
+  h += '</div>';
+
+  // ══ SECTION 2 : Colis entamés (rosette, dinde, fromage…) ══
+  h += '<div class="card">';
+  h += '<div class="card-header"><span class="v2-text-2xl">🍽️</span> Colis entamés — buffet';
   h += '<span class="badge ' + (openPkgs.length ? 'badge-red' : 'badge-blue') + ' v2-badge-lg v2-ml-auto">' + openPkgs.length + '</span></div>';
 
   if (openPkgs.length === 0) {
     h += '<div class="card-body"><div class="empty"><div class="empty-icon">📦</div>';
     h += '<div class="empty-title">Aucun colis ouvert</div>';
-    h += '<div class="empty-sub">Ouvrez un colis depuis le stock ci-dessous</div></div></div>';
+    h += '<div class="empty-sub">Utilisez le bouton 📂 Entamer sur un produit ci-dessus</div></div></div>';
   } else {
     openPkgs.forEach(function(d) {
       var effDlc = dlcApresOuverture(d);
       var daysLeft = effDlc ? Math.ceil((effDlc - now) / 86400000) : null;
       var effDlcStr = effDlc ? effDlc.toLocaleDateString('fr-FR') : fmtD(d.dlc_date);
       var isExpired = daysLeft !== null && daysLeft < 0;
-      var isWarning = daysLeft !== null && daysLeft <= 1 && !isExpired;
+      var isWarning = !isExpired && daysLeft !== null && daysLeft <= 1;
       var statusIcon = isExpired ? '🚫' : (isWarning ? '⚠️' : '✅');
       var statusColor = isExpired ? 'var(--err)' : (isWarning ? '#f59e0b' : 'var(--ok,#16a34a)');
       var borderLeft = isExpired ? 'border-left:4px solid var(--err)' : (isWarning ? 'border-left:4px solid #f59e0b' : 'border-left:4px solid var(--ok,#16a34a)');
-      var confirmed = confirmedToday[d.id];
+      var confirmed = confirmedBuffet[d.id];
 
       h += '<div style="padding:14px 16px;border-bottom:1px solid var(--border);' + borderLeft + '">';
-
-      // En-tête produit + DLC
       h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">';
       h += '<div>';
       h += '<div style="font-weight:700;font-size:16px">' + esc(d.product_name) + '</div>';
@@ -79,27 +157,24 @@ function renderConsommationTab() {
       h += 'Ouvert le ' + fmtD(d.opened_at) + '</div>';
       h += '</div>';
       h += '<div style="text-align:right">';
-      h += '<div style="font-size:13px;color:' + statusColor + ';font-weight:700">' + statusIcon + ' ' + effDlcStr + '</div>';
+      h += '<div style="font-size:13px;font-weight:700;color:' + statusColor + '">' + statusIcon + ' ' + effDlcStr + '</div>';
       if (daysLeft !== null) {
         h += '<div style="font-size:11px;color:' + statusColor + '">';
-        h += isExpired ? 'EXPIRÉ' : (daysLeft === 0 ? 'Expire aujourd\'hui' : daysLeft + ' jour' + (daysLeft > 1 ? 's' : '') + ' restant' + (daysLeft > 1 ? 's' : ''));
+        h += isExpired ? 'EXPIRÉ' : (daysLeft === 0 ? 'Expire aujourd\'hui' : daysLeft + 'j restant' + (daysLeft > 1 ? 's' : ''));
         h += '</div>';
       }
       h += '</div></div>';
 
-      // Boutons action
-      if (confirmed) {
-        // Déjà confirmé aujourd'hui
+      if (isExpired) {
+        h += '<div style="display:flex;gap:8px;flex-wrap:wrap">';
+        h += '<div style="flex:1;background:#fef2f2;border:1px solid var(--err);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--err);font-weight:600">🚫 Expiré — ne pas servir</div>';
+        h += '<button class="btn btn-danger" onclick="discardPackage(\'' + d.id + '\')">🗑️ Jeter</button>';
+        h += '</div>';
+      } else if (confirmed) {
         h += '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">';
         h += '<div style="flex:1;background:var(--success-bg,#f0fdf4);border:1px solid var(--ok,#16a34a);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--ok,#16a34a);font-weight:600">';
         h += '✅ Buffet fait à ' + fmtTime(confirmed.consumed_at) + ' par ' + esc(confirmed.consumed_by_name) + '</div>';
-        h += '<button class="btn btn-outline btn-sm" onclick="markPackageEmpty(\'' + d.id + '\')">📦 Paquet vide</button>';
-        if (isExpired) h += '<button class="btn btn-danger btn-sm" onclick="discardPackage(\'' + d.id + '\')">🗑️ Jeter</button>';
-        h += '</div>';
-      } else if (isExpired) {
-        h += '<div style="display:flex;gap:8px;flex-wrap:wrap">';
-        h += '<div style="flex:1;background:#fef2f2;border:1px solid var(--err);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--err);font-weight:600">🚫 Ce colis est expiré — ne pas servir</div>';
-        h += '<button class="btn btn-danger" onclick="discardPackage(\'' + d.id + '\')">🗑️ Jeter</button>';
+        h += '<button class="btn btn-outline btn-sm" onclick="markPackageEmpty(\'' + d.id + '\')">📦 Vide</button>';
         h += '</div>';
       } else {
         h += '<div style="display:flex;gap:8px;flex-wrap:wrap">';
@@ -107,62 +182,25 @@ function renderConsommationTab() {
         h += '<button class="btn btn-outline" onclick="markPackageEmpty(\'' + d.id + '\')">📦 Paquet vide</button>';
         h += '</div>';
       }
-
       h += '</div>';
     });
   }
   h += '</div>';
 
-  // ── Section 2 : Ouvrir un nouveau colis ──
-  h += '<div class="card">';
-  h += '<div class="card-header" style="cursor:pointer" onclick="S.showOpenPkgList=!S.showOpenPkgList;render()">';
-  h += '<span class="v2-text-2xl">📦</span> Ouvrir un nouveau colis';
-  h += '<span class="badge badge-blue v2-badge-lg v2-ml-auto">' + unopenedPkgs.length + ' en stock</span>';
-  h += '<span style="margin-left:8px;color:var(--muted)">' + (S.showOpenPkgList ? '▲' : '▼') + '</span>';
-  h += '</div>';
-
-  if (S.showOpenPkgList) {
-    if (unopenedPkgs.length === 0) {
-      h += '<div class="card-body"><div class="empty"><div class="empty-icon">📭</div><div class="empty-title">Aucun stock disponible — pensez à commander</div></div></div>';
-    } else {
-      var byProduct = {};
-      unopenedPkgs.forEach(function(d) {
-        if (!byProduct[d.product_name]) byProduct[d.product_name] = [];
-        byProduct[d.product_name].push(d);
-      });
-      Object.keys(byProduct).sort().forEach(function(prod) {
-        var lots = byProduct[prod].sort(function(a, b) { return a.dlc_date < b.dlc_date ? -1 : 1; });
-        lots.forEach(function(d, idx) {
-          h += '<div class="list-item" style="padding:10px 16px">';
-          h += '<div class="list-content">';
-          h += '<div class="list-title">' + (idx === 0 ? '🟢 ' : '') + esc(d.product_name);
-          if (d.lot_number) h += ' <span class="badge badge-gray" style="font-size:11px">Lot ' + esc(d.lot_number) + '</span>';
-          if (idx === 0) h += ' <span class="badge badge-blue" style="font-size:10px">FIFO</span>';
-          h += '</div>';
-          h += '<div class="list-sub">DLC ' + fmtD(d.dlc_date);
-          if (d.supplier_name) h += ' · ' + esc(d.supplier_name);
-          h += '</div></div>';
-          h += '<button class="btn btn-outline btn-sm" onclick="openPackageModal(\'' + d.id + '\')">📂 Ouvrir</button>';
-          h += '</div>';
-        });
-      });
-    }
-  }
-  h += '</div>';
-
-  // ── Section 3 : Journal du jour ──
-  h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">📋</span> Suivi du jour';
+  // ══ SECTION 3 : Journal du jour ══
+  h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">📋</span> Journal du jour';
   h += '<span class="badge badge-blue v2-badge-lg v2-ml-auto">' + logs.length + '</span></div>';
-
   if (logs.length === 0) {
-    h += '<div class="card-body"><div class="empty"><div class="empty-icon">📋</div><div class="empty-title">Aucune action enregistrée aujourd\'hui</div></div></div>';
+    h += '<div class="card-body"><div class="empty"><div class="empty-icon">📋</div><div class="empty-title">Aucune action enregistrée</div></div></div>';
   } else {
     logs.forEach(function(l) {
       var entries = Array.isArray(l.dlc_entries) ? l.dlc_entries : [];
-      var icon = l.notes === 'Paquet vide' ? '📦' : (l.notes === 'Jeté' ? '🗑️' : '✅');
-      h += '<div class="list-item"><div class="list-icon" style="font-size:22px">' + icon + '</div>';
-      h += '<div class="list-content"><div class="list-title">' + esc(l.product_name) + '</div>';
-      h += '<div class="list-sub">' + esc(l.notes || 'Buffet remis') + ' · Par ' + esc(l.consumed_by_name) + ' à ' + fmtTime(l.consumed_at);
+      var icon = l.notes === 'Paquet vide' ? '📦' : (l.notes === 'Jeté' ? '🗑️' : (l.notes === 'Utilisé entier' ? '🍳' : '✅'));
+      h += '<div class="list-item"><div class="list-icon" style="font-size:20px">' + icon + '</div>';
+      h += '<div class="list-content"><div class="list-title">' + esc(l.product_name);
+      if (l.notes === 'Utilisé entier') h += ' <span class="badge badge-gray" style="font-size:11px">' + l.quantity_consumed + ' ' + esc(l.unit) + '</span>';
+      h += '</div>';
+      h += '<div class="list-sub">' + esc(l.notes || 'Buffet remis') + ' · ' + esc(l.consumed_by_name) + ' · ' + fmtTime(l.consumed_at);
       if (entries[0] && entries[0].lot_number) h += ' · Lot ' + esc(entries[0].lot_number);
       if (entries[0]) h += ' · DLC ' + fmtD(entries[0].dlc_date);
       h += '</div></div></div>';

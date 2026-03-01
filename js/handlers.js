@@ -484,6 +484,20 @@ window.handleCleaningPhoto = function(input) {
   reader.readAsDataURL(input.files[0]);
 };
 
+// -- Produit utilisé entier (œufs, saucisses…) --
+// prodIdx = index dans S._consoProds (évite les problèmes de quotes dans onclick)
+window.handleUseWhole = async function(prodIdx, inputId) {
+  var prodNames = S._consoProds ? Object.keys(S._consoProds).sort() : [];
+  var prod = prodNames[prodIdx];
+  if (!prod) { showToast('Produit introuvable', 'error'); return; }
+  var input = document.getElementById(inputId);
+  var qty = parseFloat(input ? input.value : '1') || 1;
+  if (qty <= 0) { showToast('Quantité invalide', 'warning'); return; }
+  var group = S._consoProds[prod];
+  var unit = group && group[0] ? (group[0].unit || 'unité') : 'unité';
+  await recordConsumption(prod, qty, unit, 'Utilisé entier');
+};
+
 // -- Colis entamés --
 
 // Ouvrir le modal d'ouverture d'un colis
