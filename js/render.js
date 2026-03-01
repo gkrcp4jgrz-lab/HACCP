@@ -18,6 +18,7 @@ function render() {
     return;
   }
 
+  S._renderToken = (S._renderToken || 0) + 1;
   app.innerHTML = renderSidebar() + renderMainContent() + renderBottomNav();
 
   if (S.page === 'temperatures') {
@@ -47,14 +48,14 @@ function renderChangePassword() {
   document.body.insertAdjacentHTML('beforeend',
     '<div class="pwd-overlay" id="pwdOverlay"><div class="pwd-card">' +
     '<h2>🔐 Changement de mot de passe requis</h2>' +
-    '<p>Votre mot de passe provisoire doit etre change avant de continuer.</p>' +
+    '<p>Votre mot de passe provisoire doit être changé avant de continuer.</p>' +
     '<form onsubmit="handleChangePassword(event)">' +
-    '<div class="form-group"><label class="form-label">Nouveau mot de passe</label><input type="password" class="form-input" id="newPass1" required minlength="8" placeholder="8 caracteres minimum" autocomplete="new-password" oninput="updatePwdStrength(this.value)"></div>' +
+    '<div class="form-group"><label class="form-label">Nouveau mot de passe</label><input type="password" class="form-input" id="newPass1" required minlength="8" placeholder="8 caractères minimum" autocomplete="new-password" oninput="updatePwdStrength(this.value)"></div>' +
     '<div id="pwdStrength"></div>' +
     '<div class="form-group"><label class="form-label">Confirmer le mot de passe</label><input type="password" class="form-input" id="newPass2" required minlength="8" placeholder="Confirmez votre mot de passe" autocomplete="new-password"></div>' +
     '<div id="pwdError" class="form-error"></div>' +
     '<button type="submit" class="btn btn-primary btn-block btn-lg v2-mt-8">Valider le nouveau mot de passe</button></form>' +
-    '<div class="pwd-hint">Le mot de passe doit contenir : 8+ caracteres, une majuscule, une minuscule, un chiffre</div>' +
+    '<div class="pwd-hint">Le mot de passe doit contenir : 8+ caractères, une majuscule, une minuscule, un chiffre</div>' +
     '</div></div>'
   );
 }
@@ -84,7 +85,7 @@ function renderSidebar() {
     if (moduleEnabled('temperatures')) pages.push({ id:'temperatures', icon:'🌡️', label:'Températures' });
     if (moduleEnabled('dlc') || moduleEnabled('lots')) pages.push({ id:'dlc', icon:'📋', label:'DLC & Traçabilité' });
     if (moduleEnabled('cleaning')) pages.push({ id:'cleaning', icon:'🧹', label:'Nettoyage' });
-    if (moduleEnabled('orders')) pages.push({ id:'orders', icon:'🛒', label:'Commandes' });
+    if (moduleEnabled('orders')) pages.push({ id:'orders', icon:'🛒', label:'Liste de courses' });
     if (moduleEnabled('consignes')) pages.push({ id:'consignes', icon:'💬', label:'Consignes' });
     pages.push({ id:'reports', icon:'📄', label:'Rapports PDF' });
 

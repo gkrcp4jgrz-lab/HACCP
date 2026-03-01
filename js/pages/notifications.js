@@ -257,9 +257,9 @@ function buildAlertsForSite(temperatures, dlcs, consignes, orders, incidents, eq
     var todayDate = new Date(today() + 'T00:00:00');
     var daysLeft = Math.ceil((expiryDate - todayDate) / 86400000);
     if (daysLeft < 0) {
-      alerts.push({ level: 'critical', icon: '📂', category: 'dlc2', title: 'DLC2 expirée : ' + d.product_name, message: 'Ouvert depuis ' + Math.ceil((todayDate - openDate) / 86400000) + 'j (max ' + d.shelf_life_days + 'j)' });
+      alerts.push({ level: 'critical', icon: '📂', category: 'dlc2', title: 'DLC après ouverture expirée : ' + d.product_name, message: 'Ouvert depuis ' + Math.ceil((todayDate - openDate) / 86400000) + 'j (max ' + d.shelf_life_days + 'j)' });
     } else if (daysLeft <= 1) {
-      alerts.push({ level: 'warning', icon: '📂', category: 'dlc2', title: 'DLC2 proche : ' + d.product_name, message: (daysLeft === 0 ? 'Expire aujourd\'hui' : 'Expire demain') });
+      alerts.push({ level: 'warning', icon: '📂', category: 'dlc2', title: 'DLC après ouverture proche : ' + d.product_name, message: (daysLeft === 0 ? 'Expire aujourd\'hui' : 'Expire demain') });
     }
   });
 
@@ -304,7 +304,7 @@ function buildAlertsForSite(temperatures, dlcs, consignes, orders, incidents, eq
       level: r.priority === 'urgent' ? 'critical' : 'warning',
       icon: '🚨', category: 'report',
       title: 'Signalement : ' + r.title,
-      message: r.description.substring(0, 100) + (r.description.length > 100 ? '...' : ''),
+      message: (r.description || '').substring(0, 100) + ((r.description || '').length > 100 ? '...' : ''),
       time: fmtDT(r.created_at) + ' — par ' + (r.reported_by_name || 'Inconnu')
     });
   });
@@ -318,7 +318,11 @@ function renderAlertItem(alert) {
   var color = levelColors[alert.level] || 'var(--gray)';
   var bg = levelBgs[alert.level] || 'var(--gray-light)';
 
-  var h = '<div class="list-item" style="border-left:3px solid ' + color + '">';
+  var catPages = { dlc:'dlc', dlc2:'dlc', temperature:'temperatures', consigne:'consignes', order:'orders', cleaning:'cleaning' };
+  var targetPage = catPages[alert.category] || '';
+  var clickAttr = targetPage ? ' onclick="alertItemClick(event,\'' + targetPage + '\')" style="border-left:3px solid ' + color + ';cursor:pointer"' : ' style="border-left:3px solid ' + color + '"';
+
+  var h = '<div class="list-item"' + clickAttr + '>';
   h += '<div class="list-icon" style="background:' + bg + ';color:' + color + ';font-size:18px">' + alert.icon + '</div>';
   h += '<div class="list-content">';
   h += '<div class="list-title">' + esc(alert.title) + '</div>';
@@ -328,9 +332,15 @@ function renderAlertItem(alert) {
   if (alert.action) {
     h += '<div class="list-actions">' + alert.action + '</div>';
   }
+  if (targetPage) h += '<span style="color:var(--ink-muted);font-size:18px;flex-shrink:0">›</span>';
   h += '</div>';
   return h;
 }
+
+window.alertItemClick = function(event, page) {
+  if (event.target.closest('button') || event.target.closest('.btn')) return;
+  if (page) navigate(page);
+};
 
 // ── CONSTRUCTION DES ALERTES AUTOMATIQUES ──
 
@@ -410,14 +420,14 @@ function buildAlerts() {
     if (daysLeft < 0) {
       alerts.push({
         level: 'critical', icon: '📂', category: 'dlc2',
-        title: 'DLC secondaire expirée : ' + d.product_name,
+        title: 'DLC après ouverture expirée : ' + d.product_name,
         message: 'Ouvert depuis ' + Math.ceil((todayDate - openDate) / 86400000) + 'j (max ' + d.shelf_life_days + 'j)',
         action: '<button class="btn btn-danger" onclick="updateDlcStatus(\'' + d.id + '\',\'discarded\')">🗑️ Jeter</button>'
       });
     } else if (daysLeft <= 1) {
       alerts.push({
         level: 'warning', icon: '📂', category: 'dlc2',
-        title: 'DLC secondaire proche : ' + d.product_name,
+        title: 'DLC après ouverture proche : ' + d.product_name,
         message: (daysLeft === 0 ? 'Expire aujourd\'hui' : 'Expire demain') + ' (ouvert ' + d.shelf_life_days + 'j max)',
         action: '<button class="btn btn-success" onclick="updateDlcStatus(\'' + d.id + '\',\'consumed\')">Utiliser</button>'
       });
@@ -482,7 +492,7 @@ function buildAlerts() {
       level: r.priority === 'urgent' ? 'critical' : 'warning',
       icon: '🚨', category: 'report',
       title: 'Signalement : ' + r.title,
-      message: r.description.substring(0, 100) + (r.description.length > 100 ? '...' : ''),
+      message: (r.description || '').substring(0, 100) + ((r.description || '').length > 100 ? '...' : ''),
       time: fmtDT(r.created_at) + ' — par ' + (r.reported_by_name || 'Inconnu'),
       action: isManager() ? '<button class="btn btn-success" onclick="resolveReport(\'' + r.id + '\')">✓ Résolu</button>' : ''
     });
@@ -511,10 +521,18 @@ function buildAlerts() {
   return alerts;
 }
 
-// Compteur global pour badge sidebar
+// Compteur global pour badge sidebar (cached per render cycle)
+var _alertsCache = null;
+var _alertsCacheToken = 0;
+function getCachedAlerts() {
+  var token = S._renderToken || 0;
+  if (_alertsCache && _alertsCacheToken === token) return _alertsCache;
+  _alertsCache = buildAlerts();
+  _alertsCacheToken = token;
+  return _alertsCache;
+}
 function getAlertCount() {
-  var alerts = buildAlerts();
-  return alerts.filter(function(a) { return a.level === 'critical' || a.level === 'warning'; }).length;
+  return getCachedAlerts().filter(function(a) { return a.level === 'critical' || a.level === 'warning'; }).length;
 }
 
 // ── ONGLET : SIGNALEMENTS ──
@@ -590,7 +608,7 @@ async function loadAndRenderReports() {
       h += '<div class="list-icon" style="background:' + prioBg + ';font-size:18px">' + (catEmojis[rep.category] || '📋') + '</div>';
       h += '<div class="list-content">';
       h += '<div class="list-title">' + esc(rep.title) + '</div>';
-      h += '<div class="list-sub">' + esc(rep.description.substring(0, 120)) + '</div>';
+      h += '<div class="list-sub">' + esc((rep.description || '').substring(0, 120)) + '</div>';
       h += '<div class="list-sub v2-mt-4 v2-text-xs">';
       h += '<span class="badge' + (rep.priority === 'urgent' ? ' badge-red' : ' badge-yellow') + '">' + (rep.priority === 'urgent' ? '🔴 Urgent' : '🟡 Normal') + '</span> ';
       h += '<span class="badge badge-gray">' + (statusLabels[rep.status] || rep.status) + '</span> ';
@@ -651,7 +669,7 @@ async function loadAndRenderReportHistory() {
       h += '<div class="list-icon v2-list-icon--ok v2-text-2xl">' + (catEmojis[rep.category] || '📋') + '</div>';
       h += '<div class="list-content">';
       h += '<div class="list-title" style="text-decoration:line-through;color:var(--gray)">' + esc(rep.title) + '</div>';
-      h += '<div class="list-sub">' + esc(rep.description.substring(0, 80)) + '</div>';
+      h += '<div class="list-sub">' + esc((rep.description || '').substring(0, 80)) + '</div>';
       h += '<div class="list-sub v2-text-xs v2-mt-4">';
       h += '<span class="badge badge-green">✓ Résolu</span> ';
       h += fmtDT(rep.resolved_at || rep.created_at) + ' — Signalé par ' + esc(rep.reported_by_name || 'Inconnu');
@@ -671,9 +689,7 @@ async function loadMultiSiteReportHistory() {
   var container = $('reportsHistoryContainer');
   if (!container) return;
 
-  var allHistory = [];
-  for (var i = 0; i < S.sites.length; i++) {
-    var site = S.sites[i];
+  var results = await Promise.all(S.sites.map(async function(site) {
     try {
       var r = await sb.from('incident_reports').select('*')
         .eq('site_id', site.id).eq('status', 'resolved')
@@ -681,10 +697,12 @@ async function loadMultiSiteReportHistory() {
       var reports = r.data || [];
       if (reports.length > 0) {
         var typeEmoji = { hotel:'🏨', restaurant:'🍽️', cuisine_centrale:'🏭', autre:'🏢' }[site.type] || '🏢';
-        allHistory.push({ site: site, emoji: typeEmoji, reports: reports });
+        return { site: site, emoji: typeEmoji, reports: reports };
       }
     } catch(e) { console.error('History error for', site.name, e); }
-  }
+    return null;
+  }));
+  var allHistory = results.filter(Boolean);
 
   if (allHistory.length === 0) {
     container.innerHTML = '<div class="empty" style="padding:36px"><div class="empty-icon">📋</div><div class="empty-title">Aucun historique</div></div>';
@@ -703,7 +721,7 @@ async function loadMultiSiteReportHistory() {
       h += '<div class="list-icon v2-list-icon--ok v2-text-2xl">' + (catEmojis[rep.category] || '📋') + '</div>';
       h += '<div class="list-content">';
       h += '<div class="list-title" style="text-decoration:line-through;color:var(--gray)">' + esc(rep.title) + '</div>';
-      h += '<div class="list-sub">' + esc(rep.description.substring(0, 80)) + '</div>';
+      h += '<div class="list-sub">' + esc((rep.description || '').substring(0, 80)) + '</div>';
       h += '<div class="list-sub v2-text-xs v2-mt-4">';
       h += '<span class="badge badge-green">✓ Résolu</span> ';
       h += fmtDT(rep.resolved_at || rep.created_at) + ' — Signalé par ' + esc(rep.reported_by_name || 'Inconnu');
@@ -758,7 +776,7 @@ async function loadMultiSiteReports() {
       h += '<div class="list-icon" style="background:' + prioBg + ';font-size:18px">' + (catEmojis[rep.category] || '📋') + '</div>';
       h += '<div class="list-content">';
       h += '<div class="list-title">' + esc(rep.title) + '</div>';
-      h += '<div class="list-sub">' + esc(rep.description.substring(0, 120)) + '</div>';
+      h += '<div class="list-sub">' + esc((rep.description || '').substring(0, 120)) + '</div>';
       h += '<div class="list-sub v2-mt-4 v2-text-xs">';
       h += '<span class="badge' + (rep.priority === 'urgent' ? ' badge-red' : ' badge-yellow') + '">' + (rep.priority === 'urgent' ? '🔴 Urgent' : '🟡 Normal') + '</span> ';
       h += '<span class="badge badge-gray">' + (statusLabels[rep.status] || rep.status) + '</span> ';
@@ -787,7 +805,7 @@ window.handleNewReport = async function(e) {
   var category = $('reportCategory').value;
   var priority = $('reportPriority').value;
 
-  if (!title || !desc) return;
+  if (!title || !desc) { showToast('Veuillez remplir le titre et la description', 'error'); return; }
 
   try {
     var rec = {

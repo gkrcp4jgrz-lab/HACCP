@@ -1,9 +1,10 @@
 // HACCP Pro — Service Worker (Offline + Cache)
-var CACHE_NAME = 'coni-v42';
+var CACHE_NAME = 'coni-v44';
 var STATIC_ASSETS = [
   '/',
   '/index.html',
   '/css/style.css',
+  '/js/supabase.min.js',
   '/js/config.js',
   '/js/auth.js',
   '/js/data.js',

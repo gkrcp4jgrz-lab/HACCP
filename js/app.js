@@ -35,8 +35,8 @@
 window.addEventListener('online', function() {
   var banner = document.getElementById('offlineBanner');
   if (banner) banner.remove();
-  showToast('Connexion retablie', 'success');
-  if (S.user) { loadSiteData().then(function() { render(); }); }
+  showToast('Connexion rétablie', 'success');
+  if (S.user) { loadSiteData().then(function() { render(); }).catch(function(e) { console.error('Online refresh error:', e); }); }
 });
 
 window.addEventListener('offline', function() {
@@ -44,7 +44,7 @@ window.addEventListener('offline', function() {
     var banner = document.createElement('div');
     banner.id = 'offlineBanner';
     banner.className = 'offline-banner';
-    banner.textContent = 'Hors ligne — Les donnees ne sont pas synchronisees';
+    banner.textContent = 'Hors ligne — Les données ne sont pas synchronisées';
     document.body.prepend(banner);
   }
 });
@@ -63,7 +63,7 @@ function startAutoRefresh() {
 
 document.addEventListener('visibilitychange', function() {
   if (document.visibilityState === 'visible' && S.user && S.currentSiteId) {
-    loadSiteData().then(function() { render(); });
+    loadSiteData().then(function() { render(); }).catch(function(e) { console.error('Visibility refresh error:', e); });
   }
 });
 

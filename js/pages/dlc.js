@@ -70,7 +70,9 @@ function renderConsommationTab() {
 
   if (prodNames.length === 0) {
     h += '<div class="card-body"><div class="empty"><div class="empty-icon">📭</div>';
-    h += '<div class="empty-title">Aucun stock disponible</div></div></div>';
+    h += '<div class="empty-title">Aucun stock disponible</div>';
+    h += '<div class="empty-text">Enregistrez des produits dans l\'onglet <strong>Réception</strong> pour commencer.</div>';
+    h += '<button class="btn btn-primary v2-mt-12" onclick="S.dlcTab=\'reception\';render()">📥 Aller à Réception</button></div></div>';
   } else {
     // Store product list for handler lookup (avoids quoting issues with product names)
     S._consoProds = prodGroups;
@@ -99,7 +101,7 @@ function renderConsommationTab() {
       // Indicateur FIFO si plusieurs lots
       if (group.length > 1) {
         h += '<div style="background:var(--bg-off);border:1px solid var(--border);border-radius:6px;padding:6px 10px;margin-bottom:8px;font-size:12px;display:flex;gap:6px;align-items:center">';
-        h += '<span>📌</span><span><strong>FIFO</strong> — ' + group.length + ' lots · Commencer par ';
+        h += '<span>📌</span><span><strong>Premier entré, premier sorti</strong> — ' + group.length + ' lots · Commencer par ';
         h += oldest.lot_number ? '<strong>Lot ' + esc(oldest.lot_number) + '</strong> (DLC ' + fmtD(oldest.dlc_date) + ')' : 'le plus ancien (DLC ' + fmtD(oldest.dlc_date) + ')';
         h += '</span></div>';
       }
@@ -323,10 +325,10 @@ function renderDlcTabContent() {
         var daysLeft = Math.ceil((expiryDate - todayDate) / 86400000);
         var daysSinceOpen = Math.ceil((todayDate - openDate) / 86400000);
         if (daysLeft < 0) {
-          dlc2Info = ' <span class="badge badge-red">DLC2 expirée (J+' + daysSinceOpen + ')</span>';
+          dlc2Info = ' <span class="badge badge-red">Ouvert — expiré (J+' + daysSinceOpen + ')</span>';
           dlc2Expired = true;
         } else if (daysLeft <= 1) {
-          dlc2Info = ' <span class="badge badge-yellow">DLC2 J+' + daysSinceOpen + '/' + d.shelf_life_days + 'j</span>';
+          dlc2Info = ' <span class="badge badge-yellow">Ouvert J+' + daysSinceOpen + '/' + d.shelf_life_days + 'j</span>';
         } else {
           dlc2Info = ' <span class="badge badge-blue">Ouvert J+' + daysSinceOpen + '/' + d.shelf_life_days + 'j</span>';
         }
@@ -342,6 +344,7 @@ function renderDlcTabContent() {
       }
       if (status === 'expired' || dlc2Expired) h += '<button class="btn btn-danger btn-sm" onclick="openConsumeModal(\'dlc\',\'' + d.id + '\',' + (d.quantity||1) + ',\'discarded\')">🗑️ Jeté</button>';
       h += '<button class="btn btn-success btn-sm" onclick="openConsumeModal(\'dlc\',\'' + d.id + '\',' + (d.quantity||1) + ',\'consumed\')">Utilisé</button>';
+      h += '<button class="btn btn-outline btn-sm" onclick="openEditDlcModal(\'' + d.id + '\')" title="Modifier">✏️</button>';
       h += '<button class="btn btn-ghost btn-sm" onclick="deleteDlc(\'' + d.id + '\')">🗑️</button>';
       h += '</div></div>';
     });
@@ -450,7 +453,7 @@ window.confirmDlcOpen = async function(dlcId) {
   }).eq('id', dlcId), 'Ouverture DLC');
   if (!r) return;
   closeModal();
-  showToast('Produit marqué ouvert — DLC2 : ' + days + ' jours', 'success');
+  showToast('Produit marqué ouvert — DLC après ouverture : ' + days + ' jours', 'success');
   await loadSiteData(); render();
 };
 
@@ -570,6 +573,41 @@ window.confirmQuickAddProduct = async function() {
   } catch(e) {
     showToast('Erreur: ' + (e.message || e), 'error');
   }
+};
+
+// ── ÉDITION DLC ──
+
+window.openEditDlcModal = function(dlcId) {
+  var d = S.data.dlcs.find(function(x) { return x.id === dlcId; });
+  if (!d) return;
+  var h = '<div class="modal-header"><div class="modal-title">✏️ Modifier DLC</div><button class="modal-close" onclick="closeModal()">✕</button></div>';
+  h += '<div class="modal-body">';
+  h += '<div class="form-group"><label class="form-label">Produit</label><input type="text" class="form-input" id="editDlcProduct" value="' + esc(d.product_name) + '"></div>';
+  h += '<div class="form-row">';
+  h += '<div class="form-group"><label class="form-label">Date DLC</label><input type="date" class="form-input" id="editDlcDate" value="' + (d.dlc_date || '') + '"></div>';
+  h += '<div class="form-group"><label class="form-label">N° de lot</label><input type="text" class="form-input" id="editDlcLot" value="' + esc(d.lot_number || '') + '" style="text-transform:uppercase"></div>';
+  h += '</div>';
+  h += '<div class="form-group"><label class="form-label">Quantité</label><input type="number" class="form-input" id="editDlcQty" value="' + (d.quantity || 1) + '" min="1"></div>';
+  h += '<div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="editDlcNotes" rows="2">' + esc(d.notes || '') + '</textarea></div>';
+  h += '</div>';
+  h += '<div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Annuler</button>';
+  h += '<button class="btn btn-primary btn-lg" onclick="confirmEditDlc(\'' + dlcId + '\')">Enregistrer</button></div>';
+  openModal(h);
+};
+
+window.confirmEditDlc = async function(dlcId) {
+  var product = $('editDlcProduct') ? $('editDlcProduct').value.trim() : '';
+  var dlcDate = $('editDlcDate') ? $('editDlcDate').value : '';
+  if (!product || !dlcDate) { showToast('Produit et date DLC requis', 'error'); return; }
+  var updates = {
+    product_name: product,
+    dlc_date: dlcDate,
+    lot_number: ($('editDlcLot') ? $('editDlcLot').value.trim() : ''),
+    quantity: parseInt($('editDlcQty') ? $('editDlcQty').value : '1') || 1,
+    notes: ($('editDlcNotes') ? $('editDlcNotes').value.trim() : '')
+  };
+  closeModal();
+  await updateDlc(dlcId, updates);
 };
 
 // renderLots kept as alias for backward compatibility

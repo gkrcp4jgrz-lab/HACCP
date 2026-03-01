@@ -23,7 +23,7 @@ function renderReports() {
     {icon:'📅',label:'DLC & Traçabilité',desc:'Contrôles DLC et lots',action:'generateDlcPDF()',color:'var(--af-warn-bg)'},
     {icon:'⚠️',label:'Signalements',desc:'Incidents & alertes',action:'generateIncidentPDF()',color:'var(--af-err-bg)'}
   ];
-  h += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px">';
+  h += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:18px">';
   reports.forEach(function(r) {
     h += '<button class="v2-clickable" onclick="' + r.action + '" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 8px;border-radius:var(--radius);background:var(--bg);border:1px solid rgba(0,0,0,.06);cursor:pointer;box-shadow:var(--shadow-card);transition:all .3s var(--ease-apple)">';
     h += '<div style="width:40px;height:40px;background:' + r.color + ';border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px">' + r.icon + '</div>';

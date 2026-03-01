@@ -10,7 +10,7 @@ async function loadSites() {
       S.sites = r.data || [];
     } else {
       var r = await sb.from('user_sites').select('site_id, site_role, sites(*)').eq('user_id', S.user.id);
-      S.sites = (r.data || []).map(function(us) { var site = us.sites; site._role = us.site_role; return site; });
+      S.sites = (r.data || []).filter(function(us) { return us.sites; }).map(function(us) { var site = us.sites; site._role = us.site_role; return site; });
     }
     if (S.sites.length > 0 && !S.currentSiteId) {
       S.currentSiteId = S.sites[0].id;
@@ -21,16 +21,17 @@ async function loadSites() {
 async function loadSiteConfig() {
   if (!S.currentSiteId) return;
   try {
-    var results = await Promise.all([
+    var results = await Promise.allSettled([
       sb.from('site_equipment').select('*').eq('site_id', S.currentSiteId).eq('active', true).order('sort_order'),
       sb.from('site_products').select('*').eq('site_id', S.currentSiteId).eq('active', true).order('sort_order'),
       sb.from('site_suppliers').select('*').eq('site_id', S.currentSiteId).eq('active', true).order('name'),
       sb.from('site_modules').select('*').eq('site_id', S.currentSiteId)
     ]);
-    S.siteConfig.equipment = results[0].data || [];
-    S.siteConfig.products = results[1].data || [];
-    S.siteConfig.suppliers = results[2].data || [];
-    S.siteConfig.modules = results[3].data || [];
+    var val = function(i) { return results[i].status === 'fulfilled' && results[i].value ? (results[i].value.data || []) : []; };
+    S.siteConfig.equipment = val(0);
+    S.siteConfig.products = val(1);
+    S.siteConfig.suppliers = val(2);
+    S.siteConfig.modules = val(3);
   } catch(e) { console.error('Load config error:', e); }
 }
 
@@ -40,33 +41,33 @@ async function loadSiteData() {
   var todayStr = today();
   var localMidnightISO = new Date(todayStr + 'T00:00:00').toISOString();
   try {
-    var results = await Promise.all([
-      sb.from('temperatures').select('*').eq('site_id', sid).gte('recorded_at', localMidnightISO).order('recorded_at', {ascending:false}),
-      sb.from('dlcs').select('*').eq('site_id', sid).not('status', 'in', '("consumed","discarded")').order('dlc_date').limit(500),
-      sb.from('lots').select('*').eq('site_id', sid).not('status', 'in', '("consumed","discarded")').order('recorded_at', {ascending:false}).limit(100),
-      sb.from('orders').select('*').eq('site_id', sid).in('status', ['to_order','ordered']).order('ordered_at', {ascending:false}),
+    var results = await Promise.allSettled([
+      sb.from('temperatures').select('*').eq('site_id', sid).gte('recorded_at', localMidnightISO).order('recorded_at', {ascending:false}).limit(200),
+      sb.from('dlcs').select('*').eq('site_id', sid).neq('status', 'consumed').neq('status', 'discarded').order('dlc_date').limit(500),
+      sb.from('lots').select('*').eq('site_id', sid).neq('status', 'consumed').neq('status', 'discarded').order('recorded_at', {ascending:false}).limit(100),
+      sb.from('orders').select('*').eq('site_id', sid).in('status', ['to_order','ordered']).order('ordered_at', {ascending:false}).limit(200),
       sb.from('consignes').select('*').eq('site_id', sid).gte('created_at', new Date(Date.now() - 7 * 86400000).toISOString()).order('created_at', {ascending:false}).limit(50),
-      sb.from('incident_reports').select('*').eq('site_id', sid).in('status', ['open','in_progress']).order('created_at', {ascending:false}),
-      sb.from('cleaning_schedules').select('*').eq('site_id', sid).eq('active', true).order('name'),
-      sb.from('cleaning_logs').select('*').eq('site_id', sid).gte('performed_at', localMidnightISO).order('performed_at', {ascending:false}),
-      sb.from('consumption_logs').select('*').eq('site_id', sid).gte('consumed_at', localMidnightISO).order('consumed_at', {ascending:false})
+      sb.from('incident_reports').select('*').eq('site_id', sid).in('status', ['open','in_progress']).order('created_at', {ascending:false}).limit(100),
+      sb.from('cleaning_schedules').select('*').eq('site_id', sid).eq('active', true).order('name').limit(200),
+      sb.from('cleaning_logs').select('*').eq('site_id', sid).gte('performed_at', localMidnightISO).order('performed_at', {ascending:false}).limit(200),
+      sb.from('consumption_logs').select('*').eq('site_id', sid).gte('consumed_at', localMidnightISO).order('consumed_at', {ascending:false}).limit(200)
     ]);
-    S.data.temperatures = results[0].data || [];
-    S.data.dlcs = results[1].data || [];
-    S.data.lots = results[2].data || [];
-    S.data.orders = results[3].data || [];
+    var val = function(i) { return results[i].status === 'fulfilled' && results[i].value ? (results[i].value.data || []) : []; };
+    S.data.temperatures = val(0);
+    S.data.dlcs = val(1);
+    S.data.lots = val(2);
+    S.data.orders = val(3);
 
     var dismissed = [];
     var dismissKey = 'haccp_dismissed_consignes_' + sid;
     try { dismissed = JSON.parse(localStorage.getItem(dismissKey) || '[]'); } catch(e) {}
-    // Also read legacy global key for backward compat
     try { var legacy = JSON.parse(localStorage.getItem('haccp_dismissed_consignes') || '[]'); dismissed = dismissed.concat(legacy); } catch(e) {}
-    S.data.consignes = (results[4].data || []).filter(function(con) { return dismissed.indexOf(con.id) === -1 && con.is_read !== true; });
+    S.data.consignes = val(4).filter(function(con) { return dismissed.indexOf(con.id) === -1 && con.is_read !== true; });
 
-    S.data.incident_reports = results[5].data || [];
-    S.data.cleaning_schedules = results[6].data || [];
-    S.data.cleaning_logs = results[7].data || [];
-    S.data.consumption_logs = results[8].data || [];
+    S.data.incident_reports = val(5);
+    S.data.cleaning_schedules = val(6);
+    S.data.cleaning_logs = val(7);
+    S.data.consumption_logs = val(8);
   } catch(e) { console.error('Load data error:', e); }
 }
 
@@ -255,6 +256,14 @@ async function deleteLot(id) {
   showToast('Lot supprimé', 'success');
   await loadSiteData(); render();
 }
+
+async function updateDlc(id, updates) {
+  var r = await sbExec(sb.from('dlcs').update(updates).eq('id', id), 'Modification DLC');
+  if (!r) return;
+  showToast('DLC modifiée', 'success');
+  await loadSiteData(); render();
+}
+window.updateDlc = updateDlc;
 
 // -- Consommation : colis entamés --
 
@@ -457,7 +466,7 @@ window.recordConsumption = recordConsumption;
 // Calcule l'aperçu FIFO sans modifier les données (pour preview)
 function previewFifo(productName, qtyToConsume) {
   var matches = S.data.dlcs
-    .filter(function(d) { return d.product_name === productName; })
+    .filter(function(d) { return d.product_name === productName && !d.opened_at; })
     .sort(function(a, b) { return a.dlc_date < b.dlc_date ? -1 : 1; });
   var totalAvailable = matches.reduce(function(sum, d) { return sum + (d.quantity || 1); }, 0);
   var preview = [];
@@ -498,6 +507,14 @@ async function updateOrderStatus(id, status) {
   await loadSiteData(); render();
 }
 
+async function updateOrder(id, updates) {
+  var r = await sbExec(sb.from('orders').update(updates).eq('id', id), 'Modification commande');
+  if (!r) return;
+  showToast('Commande modifiée', 'success');
+  await loadSiteData(); render();
+}
+window.updateOrder = updateOrder;
+
 async function deleteOrder(id) {
   if (!(await appConfirm('Supprimer', 'Supprimer cette commande ?', {danger:true,icon:'🗑️',confirmLabel:'Supprimer'}))) return;
   var r = await sbExec(sb.from('orders').delete().eq('id', id), 'Suppression commande');
@@ -525,6 +542,17 @@ async function deleteConsigne(id) {
   showToast('Consigne supprimée', 'success');
   await loadSiteData(); render();
 }
+async function updateTempCorrNote(tempId, note) {
+  var r = await sbExec(
+    sb.from('temperatures').update({ corrective_action: note }).eq('id', tempId),
+    'Note corrective'
+  );
+  if (!r) return;
+  showToast('Note corrective enregistrée', 'success');
+  await loadSiteData(); render();
+}
+window.updateTempCorrNote = updateTempCorrNote;
+
 // -- Cleaning Schedules --
 async function addCleaningSchedule(name, zone, frequency, opts) {
   opts = opts || {};
@@ -562,10 +590,22 @@ async function addCleaningLog(scheduleId, status, notes) {
   await loadSiteData(); render();
 }
 
+async function cancelCleaningLog(logId, reason) {
+  var label = '[ANNULÉ par ' + userName() + ' le ' + new Date().toLocaleString('fr-FR') + '] ' + reason;
+  var r = await sbExec(
+    sb.from('cleaning_logs').update({ status: 'cancelled', notes: label }).eq('id', logId),
+    'Annulation nettoyage'
+  );
+  if (!r) return;
+  showToast('Tâche annulée — elle peut être re-cochée', 'success');
+  await loadSiteData(); render();
+}
+
 // Window bindings for cleaning functions (needed for onclick in dynamic HTML)
 window.addCleaningLog = addCleaningLog;
 window.deleteCleaningSchedule = deleteCleaningSchedule;
 window.addCleaningSchedule = addCleaningSchedule;
+window.cancelCleaningLog = cancelCleaningLog;
 
 // ── SUPABASE HELPERS (safe) ──
 function notifyError(title, err) {

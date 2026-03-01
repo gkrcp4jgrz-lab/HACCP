@@ -48,7 +48,7 @@ window.handleTempEquip = async function(e) {
   var eqId = $('tempEq').value, val = $('tempEqVal').value;
   if (!eqId || !val) return;
   var numVal = sanitizeNumeric(val);
-  if (numVal === null || numVal < -50 || numVal > 200) { showToast('Temperature invalide (-50 a 200°C)', 'error'); return; }
+  if (numVal === null || numVal < -50 || numVal > 200) { showToast('Température invalide (-50 à 200°C)', 'error'); return; }
   var eq = S.siteConfig.equipment.find(function(e){return e.id===eqId;});
   var eqMin = (eq && eq.temp_min != null && eq.temp_min !== '') ? Number(eq.temp_min) : -999;
   var eqMax = (eq && eq.temp_max != null && eq.temp_max !== '') ? Number(eq.temp_max) : 999;
@@ -73,7 +73,7 @@ window.handleTempProd = async function(e) {
   var prId = $('tempPr').value, val = $('tempPrVal').value;
   if (!prId || !val) return;
   var numVal = sanitizeNumeric(val);
-  if (numVal === null || numVal < -50 || numVal > 200) { showToast('Temperature invalide (-50 a 200°C)', 'error'); return; }
+  if (numVal === null || numVal < -50 || numVal > 200) { showToast('Température invalide (-50 à 200°C)', 'error'); return; }
   var pr = S.siteConfig.products.find(function(p){return p.id===prId;});
   var prMin = (pr && pr.temp_min != null && pr.temp_min !== '') ? Number(pr.temp_min) : -999;
   var prMax = (pr && pr.temp_max != null && pr.temp_max !== '') ? Number(pr.temp_max) : 999;
@@ -186,7 +186,7 @@ window.handleCreateUser = async function(e) {
   e.preventDefault();
   var btn = e.target.querySelector('button[type="submit"]');
   var origText = btn.innerHTML;
-  btn.disabled = true; btn.innerHTML = '<span class="loading"></span> Creation en cours...';
+  btn.disabled = true; btn.innerHTML = '<span class="loading"></span> Création en cours...';
   try {
     var fullName = $('nuName').value;
     var role = $('nuRole').value;
@@ -253,7 +253,7 @@ window.openSignatureModal = function() {
 
 // ── CSV EXPORT HANDLERS ──
 window.exportTemperaturesCSV = function() {
-  var headers = ['Date', 'Heure', 'Point de controle', 'Type', 'Temperature', 'Conforme', 'Action corrective', 'Operateur'];
+  var headers = ['Date', 'Heure', 'Point de contrôle', 'Type', 'Température', 'Conforme', 'Action corrective', 'Opérateur'];
   var rows = S.data.temperatures.map(function(t) {
     var refName = '';
     if (t.record_type === 'equipment') {
@@ -263,13 +263,13 @@ window.exportTemperaturesCSV = function() {
       var pr = S.siteConfig.products.find(function(p) { return p.id === t.product_id; });
       refName = pr ? pr.name : '';
     }
-    return [fmtD(t.recorded_at), fmtDT(t.recorded_at), refName, t.record_type === 'equipment' ? 'Equipement' : 'Produit', t.value + ' C', t.is_conform ? 'Oui' : 'Non', t.corrective_action || '', t.recorded_by_name || ''];
+    return [fmtD(t.recorded_at), fmtDT(t.recorded_at), refName, t.record_type === 'equipment' ? 'Équipement' : 'Produit', t.value + ' C', t.is_conform ? 'Oui' : 'Non', t.corrective_action || '', t.recorded_by_name || ''];
   });
   exportCSV('temperatures-' + today() + '.csv', headers, rows);
 };
 
 window.exportDlcCSV = function() {
-  var headers = ['Produit', 'Date DLC', 'Jours restants', 'Lot', 'Statut', 'Enregistre par', 'Date'];
+  var headers = ['Produit', 'Date DLC', 'Jours restants', 'Lot', 'Statut', 'Enregistré par', 'Date'];
   var rows = S.data.dlcs.map(function(d) {
     return [d.product_name, fmtD(d.dlc_date), daysUntil(d.dlc_date), d.lot_number || '', d.status || 'actif', d.recorded_by_name || '', fmtDT(d.recorded_at)];
   });
@@ -277,7 +277,7 @@ window.exportDlcCSV = function() {
 };
 
 window.exportLotsCSV = function() {
-  var headers = ['Produit', 'N Lot', 'Fournisseur', 'Date DLC', 'Date enregistrement', 'Enregistre par'];
+  var headers = ['Produit', 'N° Lot', 'Fournisseur', 'Date DLC', 'Date enregistrement', 'Enregistré par'];
   var rows = S.data.lots.map(function(l) {
     return [l.product_name, l.lot_number, l.supplier_name || '', l.dlc_date ? fmtD(l.dlc_date) : '', fmtDT(l.recorded_at), l.recorded_by_name || ''];
   });
@@ -285,7 +285,7 @@ window.exportLotsCSV = function() {
 };
 
 window.exportOrdersCSV = function() {
-  var headers = ['Produit', 'Quantite', 'Unite', 'Fournisseur', 'Statut', 'Commande par', 'Date'];
+  var headers = ['Produit', 'Quantité', 'Unité', 'Fournisseur', 'Statut', 'Commandé par', 'Date'];
   var rows = S.data.orders.map(function(o) {
     return [o.product_name, o.quantity, o.unit || '', o.supplier_name || '', o.status, o.ordered_by_name || '', fmtDT(o.ordered_at)];
   });
@@ -294,7 +294,7 @@ window.exportOrdersCSV = function() {
 
 // ── FULL BACKUP EXPORT ──
 window.exportFullBackup = function() {
-  var headers = ['Type', 'Produit', 'Valeur', 'Conforme', 'Date DLC', 'N Lot', 'Fournisseur', 'Statut', 'Quantite', 'Unite', 'Notes', 'Operateur', 'Date'];
+  var headers = ['Type', 'Produit', 'Valeur', 'Conforme', 'Date DLC', 'N° Lot', 'Fournisseur', 'Statut', 'Quantité', 'Unité', 'Notes', 'Opérateur', 'Date'];
   var rows = [];
   S.data.temperatures.forEach(function(t) {
     var refName = '';
@@ -326,7 +326,7 @@ window.handleEditLoginId = async function(userId, currentId) {
   if (!newId || newId.toUpperCase() === (currentId || '').toUpperCase()) return;
   try {
     await updateLoginId(userId, newId);
-    showToast('Identifiant modifie : ' + newId.toUpperCase(), 'success');
+    showToast('Identifiant modifié : ' + newId.toUpperCase(), 'success');
     if (typeof loadAndDisplayUsersDetailed === 'function') loadAndDisplayUsersDetailed();
     if (typeof loadAndRenderTeam === 'function') loadAndRenderTeam();
   } catch(ex) {

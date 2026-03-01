@@ -154,6 +154,7 @@ function renderTemperatures() {
       }
       h += '<div class="list-item ' + (t.is_conform ? 'v2-list-item--border-left-ok' : 'v2-list-item--border-left-nok') + '"><div class="list-icon ' + (t.is_conform ? 'v2-list-icon--ok' : 'v2-list-icon--nok') + '">' + emoji + '</div><div class="list-content"><div class="list-title">' + esc(refName) + '</div><div class="list-sub"><strong class="v2-text-sm">' + t.value + '°C</strong> — ' + (t.is_conform ? '✅ Conforme' : '❌ Non conforme') + ' — ' + fmtDT(t.recorded_at) + '</div>';
       if (t.corrective_action) h += '<div class="list-sub v2-text-warning v2-font-600">⚠️ ' + esc(t.corrective_action) + '</div>';
+      if (!t.is_conform) h += '<div style="margin-top:4px"><button class="btn btn-outline btn-sm" onclick="openTempCorrNoteModal(\'' + t.id + '\')">✏️ ' + (t.corrective_action ? 'Modifier' : 'Ajouter') + ' note corrective</button></div>';
       h += '</div></div>';
     });
   }
@@ -204,4 +205,17 @@ window.validateService = async function(serviceNum, nonConformCount) {
 
   showToast('Service ' + serviceNum + ' validé avec succès' + (nonConformCount > 0 ? ' — ' + nonConformCount + ' non-conformité(s)' : ''), nonConformCount > 0 ? 'warning' : 'success');
   render();
+};
+
+window.openTempCorrNoteModal = async function(tempId) {
+  var t = S.data.temperatures.find(function(x) { return x.id === tempId; });
+  var current = t ? (t.corrective_action || '') : '';
+  var note = await appPrompt(
+    'Note corrective',
+    'Ajoutez ou modifiez l\'action corrective pour ce relevé non conforme :',
+    current,
+    { placeholder: 'Ex: Dégivrage effectué, transfert produits, appel SAV...', multiline: true, confirmLabel: 'Enregistrer' }
+  );
+  if (note === null) return;
+  await updateTempCorrNote(tempId, note);
 };

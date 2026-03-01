@@ -58,6 +58,7 @@ function renderOrdersActive() {
         h += '</div>';
         h += '<div class="v2-order-row__actions">';
         h += '<button class="btn btn-primary btn-sm" onclick="updateOrderStatus(\'' + o.id + '\',\'ordered\')" title="Commandé">✓</button>';
+        h += '<button class="btn btn-outline btn-sm" onclick="openEditOrderModal(\'' + o.id + '\')" title="Modifier">✏️</button>';
         h += '<button class="btn btn-ghost btn-sm" onclick="deleteOrder(\'' + o.id + '\')" title="Supprimer">🗑️</button>';
         h += '</div></div>';
       });
@@ -178,42 +179,6 @@ window.openReceiveModal = function(orderId, productName) {
   openModal(html);
 };
 
-window.previewBLPhoto = function() {
-  var input = document.getElementById('blPhotoInput');
-  if (!input || !input.files || !input.files[0]) return;
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    // Compress BL photo via canvas (same as handlePhotoFor)
-    var img = new Image();
-    img.onload = function() {
-      var canvas = document.createElement('canvas');
-      var maxW = 800;
-      var scale = img.width > maxW ? maxW / img.width : 1;
-      canvas.width = img.width * scale;
-      canvas.height = img.height * scale;
-      var ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      var dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-      S._blPhotoData = dataUrl;
-      document.getElementById('blPhotoPreviewBox').style.display = 'none';
-      var preview = document.getElementById('blPhotoPreview');
-      preview.style.display = 'block';
-      document.getElementById('blPhotoImg').src = dataUrl;
-      // Launch OCR on BL photo
-      if (typeof runPhotoOCR === 'function') {
-        runPhotoOCR(dataUrl, 'bl');
-      }
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(input.files[0]);
-};
-
-window.clearBLPhoto = function() {
-  S._blPhotoData = null;
-  document.getElementById('blPhotoPreviewBox').style.display = '';
-  document.getElementById('blPhotoPreview').style.display = 'none';
-};
 
 window.confirmReceive = async function(orderId) {
   try {
@@ -243,26 +208,53 @@ window.confirmReceive = async function(orderId) {
 window.markSupplierOrdered = async function(supplierName) {
   if (!(await appConfirm('Commandes passées', 'Marquer toutes les commandes de <strong>' + esc(supplierName) + '</strong> comme commandées ?', {icon:'📞',confirmLabel:'Tout commandé'}))) return;
   var toMark = S.data.orders.filter(function(o) { return o.status === 'to_order' && (o.supplier_name || '— Sans fournisseur —') === supplierName; });
-  var errors = 0;
-  for (var i = 0; i < toMark.length; i++) {
-    var r = await sb.from('orders').update({ status: 'ordered', ordered_at: new Date().toISOString() }).eq('id', toMark[i].id);
-    if (r.error) errors++;
-  }
+  var ids = toMark.map(function(o) { return o.id; });
+  var r = await sb.from('orders').update({ status: 'ordered', ordered_at: new Date().toISOString() }).in('id', ids);
   await loadSiteData();
   render();
-  if (errors > 0) showToast(errors + ' erreur(s) lors de la mise à jour', 'error');
+  if (r.error) showToast('Erreur lors de la mise à jour', 'error');
   else showToast(toMark.length + ' commande(s) marquée(s) comme commandée(s)', 'success');
 };
 
-window.viewBLPhoto = function(orderId) {
-  sb.from('orders').select('bl_photo,product_name').eq('id', orderId).single().then(function(r) {
-    if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
-    if (r.data && r.data.bl_photo && /^data:image\/(jpeg|png|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(r.data.bl_photo)) {
-      var html = '<div class="modal-header"><div class="modal-title">📸 BL : ' + esc(r.data.product_name) + '</div><button class="modal-close" onclick="closeModal()">✕</button></div>';
-      html += '<div class="modal-body v2-text-center"><img src="' + r.data.bl_photo + '" alt="Bon de livraison ' + esc(r.data.product_name) + '" style="max-width:100%;max-height:70vh;border-radius:12px"></div>';
-      openModal(html);
-    } else {
-      showToast('Aucune photo disponible', 'warning');
-    }
-  }).then(null, function(e) { showToast('Erreur: ' + (e.message||e), 'error'); });
+// ── ÉDITION COMMANDE ──
+
+window.openEditOrderModal = function(orderId) {
+  var o = S.data.orders.find(function(x) { return x.id === orderId; });
+  if (!o) return;
+  var suppliers = S.siteConfig.suppliers || [];
+  var h = '<div class="modal-header"><div class="modal-title">✏️ Modifier commande</div><button class="modal-close" onclick="closeModal()">✕</button></div>';
+  h += '<div class="modal-body">';
+  h += '<div class="form-group"><label class="form-label">Produit</label><input type="text" class="form-input" id="editOrdProduct" value="' + esc(o.product_name) + '"></div>';
+  h += '<div class="form-row">';
+  h += '<div class="form-group"><label class="form-label">Quantité</label><input type="number" class="form-input" id="editOrdQty" value="' + (o.quantity || 1) + '" min="0.1" step="0.1"></div>';
+  h += '<div class="form-group"><label class="form-label">Unité</label><select class="form-select" id="editOrdUnit">';
+  ['unité','kg','L','carton','paquet','pièce'].forEach(function(u) {
+    h += '<option' + (u === (o.unit || 'unité') ? ' selected' : '') + '>' + u + '</option>';
+  });
+  h += '</select></div></div>';
+  h += '<div class="form-group"><label class="form-label">Fournisseur</label><select class="form-select" id="editOrdSupp"><option value="">— Aucun —</option>';
+  suppliers.forEach(function(s) {
+    h += '<option value="' + esc(s.name) + '"' + (s.name === o.supplier_name ? ' selected' : '') + '>' + esc(s.name) + '</option>';
+  });
+  h += '</select></div>';
+  h += '<div class="form-group"><label class="form-label">Notes</label><input type="text" class="form-input" id="editOrdNotes" value="' + esc(o.notes || '') + '" placeholder="Observations..."></div>';
+  h += '</div>';
+  h += '<div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Annuler</button>';
+  h += '<button class="btn btn-primary btn-lg" onclick="confirmEditOrder(\'' + orderId + '\')">Enregistrer</button></div>';
+  openModal(h);
 };
+
+window.confirmEditOrder = async function(orderId) {
+  var product = $('editOrdProduct') ? $('editOrdProduct').value.trim() : '';
+  if (!product) { showToast('Produit requis', 'error'); return; }
+  var updates = {
+    product_name: product,
+    quantity: parseFloat($('editOrdQty') ? $('editOrdQty').value : '1') || 1,
+    unit: $('editOrdUnit') ? $('editOrdUnit').value : 'unité',
+    supplier_name: $('editOrdSupp') ? $('editOrdSupp').value : '',
+    notes: ($('editOrdNotes') ? $('editOrdNotes').value.trim() : '')
+  };
+  closeModal();
+  await updateOrder(orderId, updates);
+};
+

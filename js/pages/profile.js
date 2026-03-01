@@ -84,7 +84,8 @@ window.handleUpdateProfile = async function(e) {
     }
     var phone = $('profPhone') ? $('profPhone').value : '';
     updates.phone = phone || '';
-    await sb.from('profiles').update(updates).eq('id', S.user.id);
+    var r = await sb.from('profiles').update(updates).eq('id', S.user.id);
+    if (r.error) { showToast('Erreur : ' + r.error.message, 'error'); return; }
     if (updates.full_name) S.profile.full_name = updates.full_name;
     S.profile.phone = updates.phone;
     showToast('Profil mis à jour', 'success');

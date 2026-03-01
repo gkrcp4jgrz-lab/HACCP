@@ -90,10 +90,6 @@ async function doLoginById(loginId, pass) {
     throw new Error('Identifiant ou mot de passe incorrect');
   }
 
-  if (!email) {
-    recordLoginAttempt(false);
-    throw new Error('Identifiant inconnu');
-  }
   var r = await sb.auth.signInWithPassword({ email: email, password: pass });
   if (r.error) {
     recordLoginAttempt(false);
@@ -193,6 +189,11 @@ if (sb) {
     if (event === 'SIGNED_OUT') {
       S.user = null;
       S.profile = null;
+      S.sites = [];
+      S.currentSiteId = null;
+      S.siteConfig = { equipment:[], products:[], suppliers:[], modules:[] };
+      S.data = { temperatures:[], dlcs:[], lots:[], orders:[], consignes:[], incident_reports:[], cleaning_schedules:[], cleaning_logs:[], consumption_logs:[] };
+      S.claudeApiKey = '';
       render();
     } else if (event === 'TOKEN_REFRESHED' && session) {
       S.user = session.user;

@@ -29,15 +29,7 @@ function handlePhotoFor(inputId, context) {
   reader.readAsDataURL(file);
 }
 
-// Remove Claude API key from this browser (session + legacy localStorage)
-function clearClaudeKey() {
-  try { sessionStorage.removeItem('haccp_claude_key'); } catch (e) {}
-  try { localStorage.removeItem('haccp_claude_key'); } catch (e) {}
-  S.claudeApiKey = '';
-  var el = document.getElementById('claudeApiKey');
-  if (el) el.value = '';
-  showToast('Clé Claude supprimée de ce navigateur', 'success');
-}
+// clearClaudeKey is defined in settings.js (with render() + showToast)
 
 async function runPhotoOCR(dataUrl, context) {
   showOcrStatus(context, 'loading', '🔍 Analyse en cours...');
@@ -329,11 +321,21 @@ function closeModal() {
   }
 }
 
-// Fermer modals avec Escape
+// Fermer modals avec Escape + focus trap
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') {
-    var overlay = $('modalOverlay');
-    if (overlay && overlay.classList.contains('show')) closeModal();
+  var overlay = $('modalOverlay');
+  if (!overlay || !overlay.classList.contains('show')) return;
+  if (e.key === 'Escape') { closeModal(); return; }
+  if (e.key === 'Tab') {
+    var modal = $('modalContent');
+    var focusable = modal.querySelectorAll('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (focusable.length === 0) return;
+    var first = focusable[0], last = focusable[focusable.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+    } else {
+      if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
   }
 });
 
@@ -351,7 +353,7 @@ function appConfirm(title, message, opts) {
     var h = '<div class="modal-header"><div class="modal-title">' + esc(title) + '</div><button class="modal-close" onclick="window._modalResolve(false);window._modalResolve=null;closeModal()" aria-label="Fermer">✕</button></div>';
     h += '<div class="modal-body" style="text-align:center;padding:28px 24px">';
     h += '<div style="width:56px;height:56px;border-radius:50%;background:' + (danger ? 'var(--af-err-bg)' : 'var(--af-teal-bg)') + ';display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 16px">' + icon + '</div>';
-    h += '<p style="font-size:15px;line-height:1.6;color:var(--ink);font-weight:500;margin:0">' + esc(message) + '</p>';
+    h += '<p style="font-size:15px;line-height:1.6;color:var(--ink);font-weight:500;margin:0">' + message + '</p>';
     h += '</div>';
     h += '<div class="modal-footer" style="justify-content:center;gap:12px;padding:18px 24px">';
     h += '<button class="btn btn-ghost btn-lg" style="min-width:120px" onclick="window._modalResolve(false);window._modalResolve=null;closeModal()">' + esc(cancelLabel) + '</button>';
@@ -373,7 +375,7 @@ function appPrompt(title, message, defaultVal, opts) {
     window._modalResolve = resolve;
     var h = '<div class="modal-header"><div class="modal-title">' + esc(title) + '</div><button class="modal-close" onclick="window._modalResolve(null);window._modalResolve=null;closeModal()">✕</button></div>';
     h += '<div class="modal-body">';
-    if (message) h += '<p style="font-size:14px;line-height:1.6;color:var(--ink-muted);margin:0 0 16px;font-weight:500">' + esc(message) + '</p>';
+    if (message) h += '<p style="font-size:14px;line-height:1.6;color:var(--ink-muted);margin:0 0 16px;font-weight:500">' + message + '</p>';
     if (multiline) {
       h += '<textarea class="form-textarea" id="_appPromptInput" rows="3" placeholder="' + esc(placeholder) + '" style="font-size:15px">' + esc(defaultVal || '') + '</textarea>';
     } else {

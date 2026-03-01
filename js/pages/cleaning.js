@@ -6,7 +6,7 @@ function getTodayCleaningSchedules() {
   var now = new Date();
   var dow = now.getDay(); // 0=dim, 1=lun, ..., 6=sam
   var dom = now.getDate();
-  var todayStr = now.toISOString().slice(0, 10);
+  var todayStr = today();
   return (S.data.cleaning_schedules || []).filter(function(s) {
     if (s.frequency === 'daily') return true;
     if (s.frequency === 'weekly') {
@@ -30,7 +30,7 @@ function renderCleaning() {
   var records = S.data.cleaning_logs || [];
   var todayScheds = getTodayCleaningSchedules();
   var completedIds = {};
-  records.forEach(function(r) { completedIds[r.schedule_id] = r; });
+  records.forEach(function(r) { if (r.status !== 'cancelled') completedIds[r.schedule_id] = r; });
   var doneCount = todayScheds.filter(function(s) { return completedIds[s.id]; }).length;
   var totalCount = todayScheds.length;
   var pct = totalCount > 0 ? Math.round(doneCount / totalCount * 100) : 0;
@@ -107,6 +107,7 @@ function renderCleaningToday(schedules, completedIds) {
     h += '<div style="width:28px;height:28px;border-radius:50%;background:var(--af-ok);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>';
     h += '<div class="list-content"><div class="list-title" style="text-decoration:line-through">' + esc(s.name) + '</div>';
     h += '<div class="list-sub">' + esc(s.zone || '') + (rec ? ' · par ' + esc(rec.performed_by_name) + ' à ' + fmtTime(rec.performed_at) : '') + '</div></div>';
+    if (rec) h += '<button class="btn btn-ghost btn-sm" onclick="openCancelCleaningModal(\'' + rec.id + '\')" title="Annuler">↩️</button>';
     h += '</div>';
   });
 
@@ -158,11 +159,12 @@ function renderCleaningCompleted(records) {
   records.forEach(function(r) {
     var sched = (S.data.cleaning_schedules || []).find(function(s) { return s.id === r.schedule_id; });
     var name = sched ? sched.name : 'Tâche supprimée';
-    var statusIcon = r.status === 'skipped' ? '⏭️' : '✅';
-    var statusLabel = r.status === 'skipped' ? 'Passée' : 'Terminée';
+    var statusIcon = r.status === 'cancelled' ? '↩️' : (r.status === 'skipped' ? '⏭️' : '✅');
+    var statusLabel = r.status === 'cancelled' ? 'Annulée' : (r.status === 'skipped' ? 'Passée' : 'Terminée');
+    var badgeClass = r.status === 'cancelled' ? 'badge-red' : (r.status === 'skipped' ? 'badge-yellow' : 'badge-green');
 
     h += '<div class="list-item"><div class="list-icon" style="font-size:24px">' + statusIcon + '</div>';
-    h += '<div class="list-content"><div class="list-title">' + esc(name) + ' <span class="badge ' + (r.status === 'skipped' ? 'badge-yellow' : 'badge-green') + '">' + statusLabel + '</span></div>';
+    h += '<div class="list-content"><div class="list-title">' + esc(name) + ' <span class="badge ' + badgeClass + '">' + statusLabel + '</span></div>';
     h += '<div class="list-sub">Par ' + esc(r.performed_by_name) + ' à ' + fmtTime(r.performed_at);
     if (r.notes) h += ' — ' + esc(r.notes);
     h += '</div></div>';
@@ -287,4 +289,15 @@ window.toggleCleanFreqFields = function() {
     h += '<div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="cleanOneTimeDate" required></div>';
   }
   container.innerHTML = h;
+};
+
+window.openCancelCleaningModal = async function(logId) {
+  var reason = await appPrompt(
+    'Annuler cette tâche',
+    'Indiquez la raison de l\'annulation (traçabilité HACCP) :',
+    '',
+    { placeholder: 'Ex: Coché par erreur, mauvaise tâche...', multiline: true, confirmLabel: 'Annuler la tâche' }
+  );
+  if (!reason) return;
+  await cancelCleaningLog(logId, reason);
 };
