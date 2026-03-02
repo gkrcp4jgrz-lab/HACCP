@@ -22,23 +22,50 @@ function renderSiteManagement() {
   if (S.sites.length === 0) {
     h += '<div class="card-body"><div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Aucun site</div></div></div>';
   } else {
-    S.sites.forEach(function(s) {
-      var typeEmoji = {hotel:'🏨',restaurant:'🍽️',cuisine_centrale:'🏭',autre:'🏢'}[s.type] || '🏢';
-      h += '<div class="list-item v2-flex-wrap">';
-      h += '<div class="list-icon v2-list-icon--primary">' + typeEmoji + '</div>';
-      h += '<div class="list-content"><div class="list-title">' + esc(s.name) + '</div><div class="list-sub">' + (s.address ? esc(s.address) : '') + (s.city ? ', ' + esc(s.city) : '') + (s.responsable ? ' — ' + esc(s.responsable) : '') + '</div></div>';
-      h += '<div class="list-actions">';
-      h += '<button class="btn btn-primary btn-sm" onclick="openEditSiteModal(\'' + s.id + '\')">✏️ Modifier</button>';
-      h += '<button class="btn btn-warning btn-sm" onclick="openSiteAccessModal(\'' + s.id + '\')">👥 Accès</button>';
-      h += '<button class="btn btn-ghost btn-sm" onclick="switchSite(\'' + s.id + '\');navigate(\'settings\')">⚙️ Config</button>';
-      h += '<button class="btn btn-danger btn-sm" onclick="deleteSite(\'' + s.id + '\')">🗑️</button>';
-      h += '</div></div>';
-    });
+    h += '<div id="siteListContainer"><div class="card-body"><div class="v2-loading-inline"><div class="loading"></div></div></div></div>';
   }
   h += '</div>';
 
+  // Load employee counts async
+  if (S.sites.length > 0) {
+    setTimeout(function() { loadSiteListWithCounts(); }, 50);
+  }
+
   return h;
 }
+
+// Load site list with employee counts
+window.loadSiteListWithCounts = async function() {
+  var container = $('siteListContainer');
+  if (!container) return;
+
+  // Load all user_sites assignments in one query
+  var r = await sb.from('user_sites').select('site_id, user_id');
+  var assignments = r.data || [];
+
+  // Count per site
+  var countMap = {};
+  assignments.forEach(function(a) {
+    countMap[a.site_id] = (countMap[a.site_id] || 0) + 1;
+  });
+
+  var h = '';
+  S.sites.forEach(function(s) {
+    var typeEmoji = {hotel:'🏨',restaurant:'🍽️',cuisine_centrale:'🏭',autre:'🏢'}[s.type] || '🏢';
+    var empCount = countMap[s.id] || 0;
+    h += '<div class="list-item v2-flex-wrap">';
+    h += '<div class="list-icon v2-list-icon--primary">' + typeEmoji + '</div>';
+    h += '<div class="list-content"><div class="list-title">' + esc(s.name) + '</div><div class="list-sub">' + (s.address ? esc(s.address) : '') + (s.city ? ', ' + esc(s.city) : '') + (s.responsable ? ' — ' + esc(s.responsable) : '') + '</div>';
+    h += '<div class="list-sub" style="margin-top:2px"><span class="badge badge-blue" style="font-size:11px">👥 ' + empCount + ' membre' + (empCount > 1 ? 's' : '') + '</span></div></div>';
+    h += '<div class="list-actions">';
+    h += '<button class="btn btn-ghost btn-sm" onclick="openEditSiteModal(\'' + s.id + '\')" style="font-size:12px;padding:4px 10px">✏️</button>';
+    h += '<button class="btn btn-warning btn-sm" onclick="openSiteAccessModal(\'' + s.id + '\')">👥 Accès</button>';
+    h += '<button class="btn btn-ghost btn-sm" onclick="switchSite(\'' + s.id + '\');navigate(\'settings\')">⚙️</button>';
+    h += '<button class="btn btn-danger btn-sm" onclick="deleteSite(\'' + s.id + '\')" style="font-size:12px;padding:4px 8px">🗑️</button>';
+    h += '</div></div>';
+  });
+  container.innerHTML = h;
+};
 
 // Modal : Modifier un site
 window.openEditSiteModal = function(siteId) {
@@ -79,36 +106,50 @@ window.openSiteAccessModal = async function(siteId) {
   html += '<div class="modal-body" id="siteAccessBody"><div class="v2-loading-inline"><div class="loading"></div></div></div>';
   openModal(html);
 
-  // Charger les utilisateurs du site
-  var siteUsers = await loadSiteUsers(siteId);
+  // Charger les utilisateurs du site + tous les profils séparément (robuste)
+  var siteUsersRaw = await loadSiteUsers(siteId);
   var allUsers = await loadAllUsers();
+
+  // Build a profile lookup map for reliability
+  var profileMap = {};
+  allUsers.forEach(function(u) { profileMap[u.id] = u; });
 
   var body = '';
 
   // Utilisateurs actuels du site
-  body += '<h3 class="v2-text-lg v2-font-700 v2-mb-12">Membres actuels</h3>';
-  if (siteUsers.length === 0) {
-    body += '<p class="v2-text-base v2-text-muted v2-mb-16">Aucun utilisateur assigné.</p>';
+  body += '<h3 class="v2-text-lg v2-font-700 v2-mb-12">Membres du site <span class="badge badge-blue">' + siteUsersRaw.length + '</span></h3>';
+  if (siteUsersRaw.length === 0) {
+    body += '<p class="v2-text-base v2-text-muted v2-mb-16">Aucun utilisateur assigné à ce site.</p>';
   } else {
-    body += '<table class="data-table v2-mb-16"><thead><tr><th>Nom</th><th>Email</th><th>Rôle global</th><th>Rôle site</th><th>Actions</th></tr></thead><tbody>';
-    siteUsers.forEach(function(us) {
-      var p = us.profiles;
-      if (!p) return;
-      var globalRole = {super_admin:'👑 Super Admin',manager:'👔 Gérant',employee:'👷 Employé'}[p.role] || p.role;
+    body += '<div class="v2-site-members-list v2-mb-16">';
+    siteUsersRaw.forEach(function(us) {
+      // Use embedded profile OR fallback to profileMap
+      var p = us.profiles || profileMap[us.user_id];
+      var userName = p ? (p.full_name || p.email || '—') : 'Utilisateur #' + us.user_id.substring(0,8);
+      var userEmail = p ? (p.email || '') : '';
       var siteRoleLabel = {admin:'🔑 Admin',manager:'👔 Gérant',employee:'👷 Employé'}[us.site_role] || us.site_role;
-      body += '<tr><td>' + esc(p.full_name||'—') + '</td><td style="font-size:12px">' + esc(p.email) + '</td><td>' + globalRole + '</td><td>';
-      body += '<select onchange="changeSiteRole(\'' + p.id + '\',\'' + siteId + '\',this.value)" style="padding:4px 8px;border-radius:4px;border:1px solid #ddd">';
+      var uid = p ? p.id : us.user_id;
+
+      body += '<div class="list-item" style="padding:10px 12px">';
+      body += '<div class="list-content" style="min-width:0">';
+      body += '<div class="list-title" style="font-size:14px">' + esc(userName) + '</div>';
+      if (userEmail) body += '<div class="list-sub">' + esc(userEmail) + '</div>';
+      body += '</div>';
+      body += '<div class="v2-flex v2-gap-6 v2-items-center">';
+      body += '<select onchange="changeSiteRole(\'' + uid + '\',\'' + siteId + '\',this.value)" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border,#ddd);font-size:12px">';
       body += '<option value="employee"' + (us.site_role==='employee'?' selected':'') + '>Employé</option>';
       body += '<option value="manager"' + (us.site_role==='manager'?' selected':'') + '>Gérant</option>';
       body += '<option value="admin"' + (us.site_role==='admin'?' selected':'') + '>Admin</option>';
-      body += '</select></td>';
-      body += '<td><button class="btn btn-danger btn-sm" onclick="removeSiteAccess(\'' + p.id + '\',\'' + siteId + '\')">Retirer</button></td></tr>';
+      body += '</select>';
+      body += '<span class="badge" style="font-size:11px;background:var(--bg-off);padding:3px 8px">' + siteRoleLabel + '</span>';
+      body += '<button class="btn btn-danger btn-sm" onclick="removeSiteAccess(\'' + uid + '\',\'' + siteId + '\')" style="font-size:11px;padding:3px 8px">Retirer</button>';
+      body += '</div></div>';
     });
-    body += '</tbody></table>';
+    body += '</div>';
   }
 
   // Ajouter un utilisateur existant
-  var existingIds = siteUsers.map(function(us){return us.user_id;});
+  var existingIds = siteUsersRaw.map(function(us){return us.user_id;});
   var available = allUsers.filter(function(u){return existingIds.indexOf(u.id) === -1;});
 
   body += '<h3 class="v2-text-lg v2-font-700 v2-mt-16 v2-mb-12">Ajouter un membre</h3>';
@@ -118,11 +159,10 @@ window.openSiteAccessModal = async function(siteId) {
     body += '<div class="v2-flex v2-gap-8 v2-items-end v2-flex-wrap">';
     body += '<select id="addUserSelect" class="form-select" style="flex:1;min-width:200px">';
     available.forEach(function(u) {
-      var rl = {super_admin:'👑',manager:'👔',employee:'👷'}[u.role] || '';
-      body += '<option value="' + u.id + '">' + rl + ' ' + esc(u.full_name||u.email) + ' (' + esc(u.email) + ')</option>';
+      body += '<option value="' + u.id + '">' + esc(u.full_name||u.email) + '</option>';
     });
     body += '</select>';
-    body += '<select id="addUserRole" class="form-select" style="max-width:140px;width:100%"><option value="employee">Employé</option><option value="manager">Gérant</option><option value="admin">Admin</option></select>';
+    body += '<select id="addUserRole" class="form-select" style="max-width:140px;width:100%"><option value="employee">Employé</option><option value="manager">Gérant</option></select>';
     body += '<button class="btn btn-success btn-sm" onclick="addSiteAccess(\'' + siteId + '\')">+ Ajouter</button>';
     body += '</div>';
   }

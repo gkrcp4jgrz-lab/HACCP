@@ -1292,6 +1292,18 @@ body.theme-transitioning,body.theme-transitioning *{transition-duration:.3s !imp
 }
 
 /* ══════════════════════════════════════════
+   SETTINGS TABS — Grid layout (no scroll)
+   ══════════════════════════════════════════ */
+.settings-tabs-wrap{display:flex;flex-wrap:wrap;gap:4px;padding:4px;background:var(--bg-off);border-radius:var(--radius);margin-bottom:20px}
+.settings-tab{padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:none;color:var(--ink-muted);border-radius:var(--radius-sm);transition:all var(--transition);white-space:nowrap;flex:1 0 auto;text-align:center}
+.settings-tab:hover{color:var(--ink-secondary);background:var(--bg)}
+.settings-tab.active{background:var(--bg);color:var(--af-teal);box-shadow:var(--shadow-sm);font-weight:700}
+@media(max-width:768px){
+  .settings-tabs-wrap{gap:3px;padding:3px;position:sticky;top:52px;z-index:10}
+  .settings-tab{padding:8px 6px;font-size:11px;flex:1 1 auto;min-width:0}
+}
+
+/* ══════════════════════════════════════════
    REDUCED MOTION
    ══════════════════════════════════════════ */
 @media(prefers-reduced-motion:reduce){

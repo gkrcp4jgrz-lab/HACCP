@@ -4,11 +4,11 @@ function renderSettings() {
   }
 
   var h = '';
-  h += '<div class="tabs" style="overflow-x:auto;overflow-y:visible;flex-wrap:nowrap;-webkit-overflow-scrolling:touch">';
+  h += '<div class="settings-tabs-wrap">';
   var settingsTabs = ['equipment','products','suppliers','cleaning','modules','notifications','audit'];
-  var settingsLabels = {equipment:'❄️ Equip.',products:'🍽️ Produits',suppliers:'🏭 Fourn.',cleaning:'🧹 Nettoyage',modules:'📦 Modules',notifications:'🔔 Notifs',audit:'📋 Historique'};
+  var settingsLabels = {equipment:'❄️ Équip.',products:'🍽️ Produits',suppliers:'🏭 Fourn.',cleaning:'🧹 Nettoyage',modules:'📦 Modules',notifications:'🔔 Notifs',audit:'📋 Historique'};
   settingsTabs.forEach(function(t) {
-    h += '<button class="tab' + (S.settingsTab===t?' active':'') + '" onclick="S.settingsTab=\'' + t + '\';render()" style="flex:1 0 auto;white-space:nowrap;text-align:center">' + settingsLabels[t] + '</button>';
+    h += '<button class="settings-tab' + (S.settingsTab===t?' active':'') + '" onclick="S.settingsTab=\'' + t + '\';render()">' + settingsLabels[t] + '</button>';
   });
   h += '</div>';
 
@@ -142,9 +142,20 @@ function renderSettingsNotifications() {
 
   // Report email (manager only)
   var reportEmail = localStorage.getItem('haccp_report_email') || emailTo;
-  h += '<div class="card"><div class="card-header">📄 Envoi automatique des rapports</div><div class="card-body">';
-  h += '<p class="v2-text-sm v2-text-muted v2-mb-12">Les rapports générés seront automatiquement envoyés par email.</p>';
-  h += '<div class="form-group"><label class="form-label">Email destinataire des rapports</label><input type="text" class="form-input" id="reportEmail" value="' + esc(reportEmail) + '" placeholder="gerant@hotel.com" onchange="saveReportEmail()"></div>';
+  var reportHour = localStorage.getItem('haccp_report_hour') || '08';
+  var reportEnabled = localStorage.getItem('haccp_report_enabled') === 'true';
+  h += '<div class="card"><div class="card-header">📄 Rapport quotidien automatique</div><div class="card-body">';
+  h += '<div class="form-group"><label class="form-label" style="display:flex;align-items:center;gap:10px;cursor:pointer"><label class="toggle"><input type="checkbox" id="reportEnabled" ' + (reportEnabled ? 'checked' : '') + ' onchange="saveReportEmail()"><span class="toggle-slider"></span></label> Envoyer un rapport de la veille chaque matin</label></div>';
+  h += '<div id="reportConfig" style="' + (reportEnabled ? '' : 'opacity:.5;pointer-events:none') + '">';
+  h += '<div class="form-row"><div class="form-group"><label class="form-label">Email destinataire</label><input type="text" class="form-input" id="reportEmail" value="' + esc(reportEmail) + '" placeholder="gerant@hotel.com" onchange="saveReportEmail()"></div>';
+  h += '<div class="form-group"><label class="form-label">Heure d\'envoi</label><select class="form-select" id="reportHour" onchange="saveReportEmail()">';
+  for (var rh = 6; rh <= 10; rh++) {
+    var rhStr = rh < 10 ? '0' + rh : '' + rh;
+    h += '<option value="' + rhStr + '"' + (reportHour === rhStr ? ' selected' : '') + '>' + rhStr + ':00</option>';
+  }
+  h += '</select></div></div>';
+  h += '<p class="v2-text-xs v2-text-muted">Le rapport inclut : températures, DLC, nettoyage et incidents de la veille.</p>';
+  h += '</div>';
   h += '<div id="reportEmailStatus"></div>';
   h += '</div></div>';
 
@@ -190,11 +201,27 @@ window.saveNotifSettings = function() {
 };
 
 window.saveReportEmail = function() {
-  var email = document.getElementById('reportEmail').value.trim();
+  var enabled = document.getElementById('reportEnabled') ? document.getElementById('reportEnabled').checked : false;
+  var email = document.getElementById('reportEmail') ? document.getElementById('reportEmail').value.trim() : '';
+  var hour = document.getElementById('reportHour') ? document.getElementById('reportHour').value : '08';
+
+  localStorage.setItem('haccp_report_enabled', enabled);
   localStorage.setItem('haccp_report_email', email);
+  localStorage.setItem('haccp_report_hour', hour);
+
+  // Toggle opacity
+  var cfg = document.getElementById('reportConfig');
+  if (cfg) cfg.style = enabled ? '' : 'opacity:.5;pointer-events:none';
+
   var status = document.getElementById('reportEmailStatus');
   if (status) {
-    status.innerHTML = '<div class="v2-ocr-status v2-ocr-status--success v2-mt-8">' + (email ? '✅ Rapports envoyés à ' + email : '⚠️ Email supprimé — les rapports ne seront plus envoyés') + '</div>';
+    if (enabled && email) {
+      status.innerHTML = '<div class="v2-ocr-status v2-ocr-status--success v2-mt-8">✅ Rapport quotidien à ' + hour + ':00 → ' + esc(email) + '</div>';
+    } else if (enabled && !email) {
+      status.innerHTML = '<div class="v2-ocr-status v2-ocr-status--warning v2-mt-8">⚠️ Ajoutez un email destinataire</div>';
+    } else {
+      status.innerHTML = '<div class="v2-ocr-status v2-ocr-status--success v2-mt-8">Rapport quotidien désactivé</div>';
+    }
     setTimeout(function() { if (status) status.innerHTML = ''; }, 3000);
   }
 };

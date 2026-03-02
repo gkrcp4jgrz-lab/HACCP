@@ -6,20 +6,20 @@ function renderUserManagement() {
   var h = '';
 
   // Create user form
-  h += '<div class="card"><div class="card-header">Creer un utilisateur</div><div class="card-body"><form onsubmit="handleCreateUser(event)">';
+  h += '<div class="card"><div class="card-header" style="cursor:pointer" onclick="var el=document.getElementById(\'newUserForm\');el.style.display=el.style.display===\'none\'?\'block\':\'none\'">➕ Créer un utilisateur <span style="float:right;font-size:12px;color:var(--gray)">▼</span></div><div class="card-body" id="newUserForm" style="display:none"><form onsubmit="handleCreateUser(event)">';
   h += '<div class="form-row"><div class="form-group"><label class="form-label">Nom complet <span class="req">*</span></label><input type="text" class="form-input" id="nuName" required placeholder="Jean Renard" oninput="previewLoginId(this.value)"></div>';
   h += '<div class="form-group"><label class="form-label">Identifiant (auto)</label><div class="v2-login-preview" id="nuLoginPreview">—</div></div></div>';
   h += '<div class="form-row"><div class="form-group"><label class="form-label">Mot de passe provisoire <span class="req">*</span></label><input type="password" class="form-input" id="nuPass" required value="' + generateTempPassword() + '"><button type="button" class="btn btn-ghost btn-sm v2-mt-4" onclick="$(\'nuPass\').value=generateTempPassword()">Regénérer</button></div>';
-  h += '<div class="form-group"><label class="form-label">Role global</label><select class="form-select" id="nuRole"><option value="employee">Employe</option><option value="manager">Gerant</option><option value="super_admin">Super Admin</option></select></div></div>';
-  h += '<div class="form-row"><div class="form-group"><label class="form-label">Assigner a un site</label><select class="form-select" id="nuSite"><option value="">— Aucun site —</option>';
+  h += '<div class="form-group"><label class="form-label">Assigner a un site</label><select class="form-select" id="nuSite"><option value="">— Aucun site —</option>';
   S.sites.forEach(function(s) { h += '<option value="' + s.id + '">' + esc(s.name) + '</option>'; });
-  h += '</select></div>';
-  h += '<div class="form-group"><label class="form-label">Role sur le site</label><select class="form-select" id="nuSiteRole"><option value="employee">Employe</option><option value="manager">Gerant</option><option value="admin">Administrateur</option></select></div></div>';
-  h += '<div class="v2-callout v2-callout--info v2-mb-16"><strong>Info :</strong> L\'identifiant sera genere automatiquement (initiales + code). Communiquez l\'identifiant et le mot de passe a l\'employe.</div>';
-  h += '<button type="submit" class="btn btn-primary btn-lg">Creer l\'utilisateur</button></form></div></div>';
+  h += '</select></div></div>';
+  h += '<div class="form-row"><div class="form-group"><label class="form-label">Rôle sur le site</label><select class="form-select" id="nuSiteRole"><option value="employee">Employé</option><option value="manager">Gérant</option></select></div></div>';
+  h += '<input type="hidden" id="nuRole" value="employee">';
+  h += '<div class="v2-callout v2-callout--info v2-mb-16"><strong>Info :</strong> L\'identifiant sera généré automatiquement (initiales + code). Communiquez l\'identifiant et le mot de passe provisoire a l\'employé.</div>';
+  h += '<button type="submit" class="btn btn-primary btn-lg">Créer l\'utilisateur</button></form></div></div>';
 
   // User list
-  h += '<div class="card"><div class="card-header">Tous les utilisateurs</div><div class="card-body" id="userListContainer"><div class="v2-loading-inline"><div class="loading"></div></div></div></div>';
+  h += '<div class="card"><div class="card-header">👥 Tous les utilisateurs</div><div class="card-body" id="userListContainer"><div class="v2-loading-inline"><div class="loading"></div></div></div></div>';
 
   setTimeout(function() { loadAndDisplayUsersDetailed(); }, 50);
 
@@ -52,9 +52,9 @@ async function loadAndDisplayUsersDetailed() {
   } else {
     users.forEach(function(u) {
       var roleIcon = {super_admin:'👑',manager:'👔',employee:'👷'}[u.role] || '👤';
-      var roleLabel = {super_admin:'Super Admin',manager:'Gerant',employee:'Employe'}[u.role] || u.role;
       var userSites = allAssignments.filter(function(a){return a.user_id===u.id;});
       var loginId = u.login_id || '—';
+      var isSelf = S.user && S.user.id === u.id;
 
       html += '<div class="v2-user-card">';
       html += '<div class="v2-flex v2-justify-between v2-items-center v2-flex-wrap v2-gap-8">';
@@ -63,29 +63,56 @@ async function loadAndDisplayUsersDetailed() {
       html += '<span class="v2-login-badge">' + esc(loginId) + '</span>';
       html += '</div>';
       html += '<div class="v2-flex v2-gap-6 v2-items-center">';
-      html += '<button class="btn btn-ghost btn-sm" onclick="handleEditLoginId(\'' + u.id + '\',\'' + esc(loginId) + '\')" title="Modifier identifiant">Modifier ID</button>';
-      html += '<select onchange="changeGlobalRole(\'' + u.id + '\',this.value)" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border,#ddd);font-size:13px">';
-      html += '<option value="employee"' + (u.role==='employee'?' selected':'') + '>Employe</option>';
-      html += '<option value="manager"' + (u.role==='manager'?' selected':'') + '>Gerant</option>';
-      html += '<option value="super_admin"' + (u.role==='super_admin'?' selected':'') + '>Super Admin</option>';
-      html += '</select></div></div>';
 
-      // Sites
+      // Edit login ID
+      html += '<button class="btn btn-ghost btn-sm" onclick="handleEditLoginId(\'' + u.id + '\',\'' + esc(loginId) + '\')" title="Modifier identifiant" style="font-size:12px">ID</button>';
+
+      // Reset password
+      html += '<button class="btn btn-ghost btn-sm" onclick="handleResetUserPassword(\'' + u.id + '\')" title="Réinitialiser mot de passe" style="font-size:12px">🔑</button>';
+
+      // Delete (only for non-self, non-super_admin users)
+      if (!isSelf && u.role !== 'super_admin') {
+        html += '<button class="btn btn-danger btn-sm" onclick="handleDeleteUser(\'' + u.id + '\',\'' + esc(u.full_name||u.email) + '\')" title="Supprimer" style="font-size:12px;padding:3px 8px">🗑️</button>';
+      }
+      html += '</div></div>';
+
+      // Sites + role on each site
       if (userSites.length > 0) {
         html += '<div class="v2-flex v2-flex-wrap v2-gap-6 v2-mt-10">';
         userSites.forEach(function(us) {
+          var siteRoleLabel = {admin:'Admin',manager:'Gérant',employee:'Employé'}[us.site_role]||us.site_role;
           var siteRoleIcon = {admin:'🔑',manager:'👔',employee:'👷'}[us.site_role]||'';
-          html += '<span class="badge badge-blue" style="font-size:12px">' + siteRoleIcon + ' ' + esc(us.sites?us.sites.name:'?') + ' <button onclick="removeSiteAccessFromUserList(\'' + u.id + '\',\'' + us.site_id + '\')" style="background:none;border:none;cursor:pointer;color:var(--err,#ef4444);font-weight:bold;margin-left:4px">✕</button></span>';
+          html += '<span class="badge badge-blue" style="font-size:12px">' + siteRoleIcon + ' ' + esc(us.sites?us.sites.name:'?') + ' (' + siteRoleLabel + ') <button onclick="removeSiteAccessFromUserList(\'' + u.id + '\',\'' + us.site_id + '\')" style="background:none;border:none;cursor:pointer;color:var(--err,#ef4444);font-weight:bold;margin-left:4px">✕</button></span>';
         });
         html += '</div>';
       } else {
-        html += '<div class="v2-mt-8 v2-text-sm v2-text-muted">Aucun site assigne</div>';
+        html += '<div class="v2-mt-8 v2-text-sm v2-text-muted">Aucun site assigné</div>';
       }
       html += '</div>';
     });
   }
   container.innerHTML = html;
 }
+
+// Delete user (remove from all sites + delete profile)
+window.handleDeleteUser = async function(userId, userName) {
+  if (!(await appConfirm('Supprimer l\'utilisateur', 'Supprimer <strong>' + userName + '</strong> ? L\'utilisateur sera retiré de tous les sites et son profil sera supprimé.', {danger:true,icon:'🗑️',confirmLabel:'Supprimer'}))) return;
+
+  try {
+    // 1. Remove from all sites
+    var r1 = await sb.from('user_sites').delete().eq('user_id', userId);
+    if (r1.error) throw r1.error;
+
+    // 2. Delete profile
+    var r2 = await sb.from('profiles').delete().eq('id', userId);
+    if (r2.error) throw r2.error;
+
+    showToast('Utilisateur supprimé', 'success');
+    loadAndDisplayUsersDetailed();
+  } catch(e) {
+    showToast('Erreur: ' + (e.message||e), 'error');
+  }
+};
 
 window.changeGlobalRole = async function(userId, newRole) {
   try {
