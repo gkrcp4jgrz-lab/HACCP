@@ -82,7 +82,10 @@ function navGroup(groupKey, title, pages, hasActivePage) {
 }
 
 window.toggleNavGroup = function(key) {
-  S.navGroups[key] = !S.navGroups[key];
+  var wasOpen = S.navGroups[key];
+  // Accordion: fermer tous les autres
+  Object.keys(S.navGroups).forEach(function(k) { S.navGroups[k] = false; });
+  S.navGroups[key] = !wasOpen;
   render();
 };
 

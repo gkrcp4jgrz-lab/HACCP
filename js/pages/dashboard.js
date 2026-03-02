@@ -697,10 +697,11 @@ function renderConiScoreHero() {
   h += '<div class="card" style="overflow:hidden;margin-bottom:18px">';
   h += '<div style="display:flex;align-items:center;gap:20px;padding:20px">';
 
-  if (!summary || summary.coni_score === undefined) {
-    // Pas encore de score — proposer de calculer
+  if (!summary || summary.coni_score === undefined || summary.coni_score === null) {
+    // Pas encore de score ou pas de donnees
     h += '<div style="flex:1;text-align:center;padding:16px 0">';
-    h += '<div style="font-size:14px;color:var(--muted);margin-bottom:12px">Score CONI non encore calcule pour aujourd\'hui</div>';
+    var hasData = summary && summary.temp_expected > 0;
+    h += '<div style="font-size:14px;color:var(--muted);margin-bottom:12px">' + (hasData ? 'Score CONI non encore calcule pour aujourd\'hui' : 'Aucune donnee — configurez vos equipements et effectuez des releves') + '</div>';
     h += '<button class="btn btn-primary" onclick="refreshDailySummary().then(function(){loadSiteData().then(render)})">Calculer le CONI Score</button>';
     h += '</div></div></div>';
     return h;
