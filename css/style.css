@@ -1304,6 +1304,30 @@ body.theme-transitioning,body.theme-transitioning *{transition-duration:.3s !imp
 }
 
 /* ══════════════════════════════════════════
+   ICON BUTTONS — Clean SVG action buttons
+   ══════════════════════════════════════════ */
+.v2-icon-btn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;min-height:36px;min-width:36px;padding:0;border-radius:var(--radius-sm);color:var(--ink-muted);transition:all var(--transition)}
+.v2-icon-btn:hover{background:var(--bg-off);color:var(--ink)}
+.v2-icon-btn--danger{color:var(--ink-muted)}
+.v2-icon-btn--danger:hover{background:var(--af-err-bg,rgba(239,68,68,.08));color:var(--af-err,#EF4444)}
+@media(max-width:768px){
+  .v2-icon-btn{width:34px;height:34px;min-height:34px;min-width:34px}
+}
+
+/* Icon wrap (for card headers) */
+.v2-icon-wrap{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:var(--radius-sm);flex-shrink:0;vertical-align:middle;margin-right:4px}
+.v2-icon-wrap--primary{background:rgba(109,197,224,.1);color:var(--af-teal)}
+.v2-icon-wrap--teal{background:rgba(8,145,178,.1);color:var(--af-teal)}
+.v2-icon-wrap--danger{background:rgba(239,68,68,.08);color:var(--af-err)}
+
+/* Section titles in modals */
+.v2-section-title{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;color:var(--ink);margin-bottom:12px;letter-spacing:-0.01em}
+
+/* Badge X button (remove from badge) */
+.v2-badge-x{display:inline-flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:var(--ink-muted);padding:0;margin-left:2px;border-radius:50%;transition:color var(--transition)}
+.v2-badge-x:hover{color:var(--af-err,#EF4444)}
+
+/* ══════════════════════════════════════════
    REDUCED MOTION
    ══════════════════════════════════════════ */
 @media(prefers-reduced-motion:reduce){

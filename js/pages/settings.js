@@ -34,7 +34,7 @@ function renderSettingsEquipment() {
 
   h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">📋</span> Équipements actifs <span class="badge badge-blue v2-badge-lg v2-ml-auto">' + S.siteConfig.equipment.length + '</span></div>';
   S.siteConfig.equipment.forEach(function(e) {
-    h += '<div class="list-item"><div class="list-icon v2-list-icon--primary">' + e.emoji + '</div><div class="list-content"><div class="list-title">' + esc(e.name) + '</div><div class="list-sub">' + e.temp_min + '°C → ' + e.temp_max + '°C · ' + ({fridge:'Frigo',freezer:'Congélateur',hot:'Chaud',other:'Autre'}[e.type] || e.type) + '</div></div><div class="list-actions"><button class="btn btn-danger btn-sm" onclick="deleteEquipment(\'' + e.id + '\')">🗑️</button></div></div>';
+    h += '<div class="list-item"><div class="list-icon v2-list-icon--primary">' + e.emoji + '</div><div class="list-content"><div class="list-title">' + esc(e.name) + '</div><div class="list-sub">' + e.temp_min + '°C → ' + e.temp_max + '°C · ' + ({fridge:'Frigo',freezer:'Congélateur',hot:'Chaud',other:'Autre'}[e.type] || e.type) + '</div></div><div class="list-actions"><button class="btn btn-ghost btn-sm v2-icon-btn v2-icon-btn--danger" onclick="deleteEquipment(\'' + e.id + '\')" title="Désactiver">' + IC.trash + '</button></div></div>';
   });
   if (S.siteConfig.equipment.length === 0) h += '<div class="card-body"><div class="empty"><div class="empty-title">Aucun équipement</div></div></div>';
   h += '</div>';
@@ -53,8 +53,8 @@ function renderSettingsProducts() {
 
   h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">📋</span> Produits actifs <span class="badge badge-blue v2-badge-lg v2-ml-auto">' + S.siteConfig.products.length + '</span></div>';
   S.siteConfig.products.forEach(function(p) {
-    var modeLabel = p.consumption_mode === 'openable' ? ' · 📂 Entamable' : ' · 📦 Entier';
-    h += '<div class="list-item"><div class="list-icon v2-list-icon--ok">' + p.emoji + '</div><div class="list-content"><div class="list-title">' + esc(p.name) + '</div><div class="list-sub">' + p.temp_min + '°C → ' + p.temp_max + '°C · ' + ({frigo:'Frigo',congel:'Congélateur',chaud:'Chaud',autre:'Autre'}[p.category] || p.category) + modeLabel + '</div></div><div class="list-actions"><button class="btn btn-danger btn-sm" onclick="deleteProduct(\'' + p.id + '\')">🗑️</button></div></div>';
+    var modeLabel = p.consumption_mode === 'openable' ? ' · Entamable' : ' · Entier';
+    h += '<div class="list-item"><div class="list-icon v2-list-icon--ok">' + p.emoji + '</div><div class="list-content"><div class="list-title">' + esc(p.name) + '</div><div class="list-sub">' + p.temp_min + '°C → ' + p.temp_max + '°C · ' + ({frigo:'Frigo',congel:'Congélateur',chaud:'Chaud',autre:'Autre'}[p.category] || p.category) + modeLabel + '</div></div><div class="list-actions"><button class="btn btn-ghost btn-sm v2-icon-btn v2-icon-btn--danger" onclick="deleteProduct(\'' + p.id + '\')" title="Désactiver">' + IC.trash + '</button></div></div>';
   });
   if (S.siteConfig.products.length === 0) h += '<div class="card-body"><div class="empty"><div class="empty-title">Aucun produit</div></div></div>';
   h += '</div>';
@@ -70,7 +70,7 @@ function renderSettingsSuppliers() {
 
   h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">📋</span> Fournisseurs actifs <span class="badge badge-blue v2-badge-lg v2-ml-auto">' + S.siteConfig.suppliers.length + '</span></div>';
   S.siteConfig.suppliers.forEach(function(s) {
-    h += '<div class="list-item"><div class="list-icon v2-list-icon--warning">🏭</div><div class="list-content"><div class="list-title">' + esc(s.name) + '</div><div class="list-sub">' + (s.phone ? '📞 ' + esc(s.phone) + ' ' : '') + (s.email ? '✉️ ' + esc(s.email) : '') + '</div></div><div class="list-actions"><button class="btn btn-danger btn-sm" onclick="deleteSupplier(\'' + s.id + '\')">🗑️</button></div></div>';
+    h += '<div class="list-item"><div class="list-icon v2-list-icon--warning">🏭</div><div class="list-content"><div class="list-title">' + esc(s.name) + '</div><div class="list-sub">' + (s.phone ? esc(s.phone) + ' ' : '') + (s.email ? '· ' + esc(s.email) : '') + '</div></div><div class="list-actions"><button class="btn btn-ghost btn-sm v2-icon-btn v2-icon-btn--danger" onclick="deleteSupplier(\'' + s.id + '\')" title="Désactiver">' + IC.trash + '</button></div></div>';
   });
   if (S.siteConfig.suppliers.length === 0) h += '<div class="card-body"><div class="empty"><div class="empty-title">Aucun fournisseur</div></div></div>';
   h += '</div>';
@@ -271,7 +271,7 @@ function renderSettingsCleaning() {
       h += '<div class="list-item"><div class="list-icon" style="font-size:24px">🧹</div><div class="list-content">';
       h += '<div class="list-title">' + esc(s.name) + '</div>';
       h += '<div class="list-sub">' + esc(s.zone || 'Sans zone') + ' · ' + freqLabel + '</div>';
-      h += '</div><div class="list-actions"><button class="btn btn-danger btn-sm" onclick="deleteCleaningSchedule(\'' + s.id + '\')">🗑️</button></div></div>';
+      h += '</div><div class="list-actions"><button class="btn btn-ghost btn-sm v2-icon-btn v2-icon-btn--danger" onclick="deleteCleaningSchedule(\'' + s.id + '\')" title="Supprimer">' + IC.trash + '</button></div></div>';
     });
   } else {
     h += '<div class="card-body"><div class="empty"><div class="empty-icon">🧹</div><div class="empty-title">Aucune tâche configurée</div><div class="empty-text">Ajoutez des tâches de nettoyage pour votre site.</div></div></div>';
