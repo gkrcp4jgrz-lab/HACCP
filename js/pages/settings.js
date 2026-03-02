@@ -4,10 +4,11 @@ function renderSettings() {
   }
 
   var h = '';
-  h += '<div class="tabs" style="overflow:visible;flex-wrap:wrap">';
-  ['equipment','products','suppliers','cleaning','modules','notifications'].forEach(function(t) {
-    var labels = {equipment:'❄️ Équipements',products:'🍽️ Produits',suppliers:'🏭 Fournisseurs',cleaning:'🧹 Nettoyage',modules:'📦 Modules',notifications:'🔔 Notifications'};
-    h += '<button class="tab' + (S.settingsTab===t?' active':'') + '" onclick="S.settingsTab=\'' + t + '\';render()" style="flex:1;text-align:center">' + labels[t] + '</button>';
+  h += '<div class="tabs" style="overflow-x:auto;overflow-y:visible;flex-wrap:nowrap;-webkit-overflow-scrolling:touch">';
+  var settingsTabs = ['equipment','products','suppliers','cleaning','modules','notifications','audit'];
+  var settingsLabels = {equipment:'❄️ Equip.',products:'🍽️ Produits',suppliers:'🏭 Fourn.',cleaning:'🧹 Nettoyage',modules:'📦 Modules',notifications:'🔔 Notifs',audit:'📋 Historique'};
+  settingsTabs.forEach(function(t) {
+    h += '<button class="tab' + (S.settingsTab===t?' active':'') + '" onclick="S.settingsTab=\'' + t + '\';render()" style="flex:1 0 auto;white-space:nowrap;text-align:center">' + settingsLabels[t] + '</button>';
   });
   h += '</div>';
 
@@ -17,6 +18,7 @@ function renderSettings() {
   else if (S.settingsTab === 'cleaning') h += renderSettingsCleaning();
   else if (S.settingsTab === 'modules') h += renderSettingsModules();
   else if (S.settingsTab === 'notifications') h += renderSettingsNotifications();
+  else if (S.settingsTab === 'audit') h += renderSettingsAudit();
 
   return h;
 }
@@ -251,3 +253,86 @@ function renderSettingsCleaning() {
 
   return h;
 }
+
+// ── AUDIT TRAIL VIEWER ──
+
+function renderSettingsAudit() {
+  var h = '';
+  h += '<div class="card"><div class="card-header"><span class="v2-text-2xl">📋</span> Journal d\'audit (HACCP)';
+  h += '<span class="badge badge-blue v2-badge-lg v2-ml-auto">Tracabilite</span></div>';
+  h += '<div class="card-body" style="padding:12px 16px">';
+  h += '<p style="font-size:13px;color:var(--muted);margin-bottom:12px">Toutes les modifications de donnees sont enregistrees automatiquement. Ce journal est inalterable et constitue une preuve en cas de controle DDPP.</p>';
+  h += '</div>';
+  h += '<div id="auditLogContainer"><div style="text-align:center;padding:24px"><div class="loading" style="width:24px;height:24px;border-width:3px;display:inline-block"></div></div></div>';
+  h += '</div>';
+  setTimeout(function() { loadAndRenderAuditLogs(0); }, 50);
+  return h;
+}
+
+window.loadAndRenderAuditLogs = async function(offset) {
+  var container = document.getElementById('auditLogContainer');
+  if (!container) return;
+  var limit = 30;
+  var result = await loadAuditLogs(S.currentSiteId, offset, limit);
+  if (result.error) {
+    container.innerHTML = '<div class="card-body"><div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Table audit_logs non disponible</div><div class="empty-text">Executez le SQL Phase 1A dans Supabase pour activer l\'audit trail.</div></div></div>';
+    return;
+  }
+  var logs = result.data;
+  var total = result.count;
+  var h = '';
+
+  if (logs.length === 0 && offset === 0) {
+    h += '<div class="card-body"><div class="empty"><div class="empty-icon">📋</div><div class="empty-title">Aucun evenement</div><div class="empty-text">Les actions futures seront enregistrees ici automatiquement.</div></div></div>';
+  } else {
+    var tableLabels = { temperatures: '🌡️ Temperature', dlcs: '📅 DLC', lots: '📦 Lot', orders: '🛒 Commande', cleaning_logs: '🧹 Nettoyage', incident_reports: '🚨 Incident', site_equipment: '❄️ Equipement', profiles: '👤 Profil' };
+    var actionLabels = { INSERT: 'Ajout', UPDATE: 'Modification', DELETE: 'Suppression' };
+    var actionColors = { INSERT: 'badge-green', UPDATE: 'badge-blue', DELETE: 'badge-red' };
+
+    logs.forEach(function(log) {
+      var icon = tableLabels[log.table_name] || ('📄 ' + log.table_name);
+      var actionLabel = actionLabels[log.action] || log.action;
+      var actionClass = actionColors[log.action] || 'badge-gray';
+      var changed = (log.changed_fields || []).join(', ');
+
+      h += '<div class="list-item" style="cursor:pointer" onclick="this.querySelector(\'.audit-detail\').style.display=this.querySelector(\'.audit-detail\').style.display===\'none\'?\'\':\'none\'">';
+      h += '<div class="list-content" style="min-width:0">';
+      h += '<div class="list-title" style="font-size:13px">' + icon.split(' ')[0] + ' ';
+      h += '<span class="badge ' + actionClass + '" style="font-size:10px;padding:2px 6px">' + actionLabel + '</span> ';
+      h += icon.split(' ').slice(1).join(' ');
+      if (changed) h += ' <span style="color:var(--muted);font-size:11px">(' + esc(changed) + ')</span>';
+      h += '</div>';
+      h += '<div class="list-sub">' + esc(log.user_name || 'Systeme') + ' · ' + fmtDT(log.created_at) + '</div>';
+      // Detail expandable
+      h += '<div class="audit-detail" style="display:none;margin-top:8px;padding:8px;background:var(--bg-off);border-radius:6px;font-size:11px;font-family:monospace;max-height:200px;overflow:auto;word-break:break-all">';
+      if (log.action === 'UPDATE' && log.old_data && log.new_data && log.changed_fields) {
+        log.changed_fields.forEach(function(field) {
+          var oldVal = log.old_data[field];
+          var newVal = log.new_data[field];
+          h += '<div style="margin-bottom:4px"><strong>' + esc(field) + '</strong> : ';
+          h += '<span style="color:var(--err);text-decoration:line-through">' + esc(String(oldVal === null ? 'null' : oldVal)) + '</span>';
+          h += ' → <span style="color:var(--ok)">' + esc(String(newVal === null ? 'null' : newVal)) + '</span></div>';
+        });
+      } else if (log.action === 'INSERT' && log.new_data) {
+        h += '<div style="color:var(--ok)">+ ' + esc(JSON.stringify(log.new_data).substring(0, 500)) + '</div>';
+      } else if (log.action === 'DELETE' && log.old_data) {
+        h += '<div style="color:var(--err)">- ' + esc(JSON.stringify(log.old_data).substring(0, 500)) + '</div>';
+      }
+      h += '</div>';
+      h += '</div></div>';
+    });
+
+    // Pagination
+    h += '<div style="display:flex;justify-content:center;gap:8px;padding:12px">';
+    if (offset > 0) {
+      h += '<button class="btn btn-outline btn-sm" onclick="loadAndRenderAuditLogs(' + Math.max(0, offset - limit) + ')">← Precedent</button>';
+    }
+    h += '<span style="font-size:12px;color:var(--muted);align-self:center">' + (offset + 1) + '-' + Math.min(offset + logs.length, total) + ' / ' + total + '</span>';
+    if (offset + limit < total) {
+      h += '<button class="btn btn-outline btn-sm" onclick="loadAndRenderAuditLogs(' + (offset + limit) + ')">Suivant →</button>';
+    }
+    h += '</div>';
+  }
+
+  container.innerHTML = h;
+};

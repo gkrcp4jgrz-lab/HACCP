@@ -60,6 +60,29 @@ function renderChangePassword() {
   );
 }
 
+// ── SIDEBAR HELPERS ──
+
+if (!S.navGroups) S.navGroups = { operations: true, gestion: false, suivi: false, admin: false };
+
+function navItem(pageId, icon, label) {
+  return '<div class="nav-item' + (S.page===pageId?' active':'') + '" role="button" tabindex="0" onclick="navigate(\'' + pageId + '\')" onkeydown="if(event.key===\'Enter\')navigate(\'' + pageId + '\')"><span class="nav-icon">' + icon + '</span>' + label + '</div>';
+}
+
+function navGroup(groupKey, title, pages, hasActivePage) {
+  var isOpen = S.navGroups[groupKey] || hasActivePage;
+  var h = '<div class="nav-group">';
+  h += '<div class="nav-group-header' + (hasActivePage ? ' active' : '') + '" onclick="toggleNavGroup(\'' + groupKey + '\')" role="button" tabindex="0"><span>' + title + '</span><span class="nav-chevron' + (isOpen ? ' open' : '') + '">›</span></div>';
+  h += '<div class="nav-group-items" style="' + (isOpen ? '' : 'display:none') + '">';
+  pages.forEach(function(p) { h += navItem(p.id, p.icon, p.label); });
+  h += '</div></div>';
+  return h;
+}
+
+window.toggleNavGroup = function(key) {
+  S.navGroups[key] = !S.navGroups[key];
+  render();
+};
+
 // ── SIDEBAR ──
 
 function renderSidebar() {
@@ -81,32 +104,50 @@ function renderSidebar() {
     navHtml += '<div class="nav-section">Mon compte</div>';
     navHtml += '<div class="nav-item' + (S.page==='profile'?' active':'') + '" role="button" tabindex="0" onclick="navigate(\'profile\')" onkeydown="if(event.key===\'Enter\')navigate(\'profile\')"><span class="nav-icon">👤</span>Mon profil</div>';
   } else {
-    pages.push({ id:'dashboard', icon:'📊', label:'Tableau de bord' });
-    if (moduleEnabled('temperatures')) pages.push({ id:'temperatures', icon:'🌡️', label:'Températures' });
-    if (moduleEnabled('dlc') || moduleEnabled('lots')) pages.push({ id:'dlc', icon:'📋', label:'DLC & Traçabilité' });
-    if (moduleEnabled('cleaning')) pages.push({ id:'cleaning', icon:'🧹', label:'Nettoyage' });
-    if (moduleEnabled('orders')) pages.push({ id:'orders', icon:'🛒', label:'Liste de courses' });
-    if (moduleEnabled('consignes')) pages.push({ id:'consignes', icon:'💬', label:'Consignes' });
-    pages.push({ id:'reports', icon:'📄', label:'Rapports PDF' });
+    // Dashboard (toujours visible)
+    navHtml += navItem('dashboard', '📊', 'Tableau de bord');
 
-    pages.forEach(function(p) {
-      navHtml += '<div class="nav-item' + (S.page===p.id?' active':'') + '" role="button" tabindex="0" onclick="navigate(\'' + p.id + '\')" onkeydown="if(event.key===\'Enter\')navigate(\'' + p.id + '\')"><span class="nav-icon">' + p.icon + '</span>' + p.label + '</div>';
-    });
-
-    // Notifications avec badge
-    var alertCount = (typeof getAlertCount === 'function') ? getAlertCount() : 0;
-    navHtml += '<div class="nav-item' + (S.page==='notifications'?' active':'') + '" role="button" tabindex="0" onclick="navigate(\'notifications\')" onkeydown="if(event.key===\'Enter\')navigate(\'notifications\')"><span class="nav-icon">🔔</span>Notifications';
-    if (alertCount > 0) navHtml += '<span class="nav-badge">' + alertCount + '</span>';
-    navHtml += '</div>';
-
-    if (isManager()) {
-      navHtml += '<div class="nav-section">Administration</div>';
-      navHtml += '<div class="nav-item' + (S.page==='team'?' active':'') + '" role="button" tabindex="0" onclick="navigate(\'team\')" onkeydown="if(event.key===\'Enter\')navigate(\'team\')"><span class="nav-icon">👥</span>Personnel</div>';
-      navHtml += '<div class="nav-item' + (S.page==='settings'?' active':'') + '" role="button" tabindex="0" onclick="navigate(\'settings\')" onkeydown="if(event.key===\'Enter\')navigate(\'settings\')"><span class="nav-icon">⚙️</span>Paramètres site</div>';
+    // Groupe : Operations
+    var opsPages = [];
+    if (moduleEnabled('temperatures')) opsPages.push({ id:'temperatures', icon:'🌡️', label:'Temperatures' });
+    if (moduleEnabled('dlc') || moduleEnabled('lots')) opsPages.push({ id:'dlc', icon:'📋', label:'DLC & Tracabilite' });
+    if (moduleEnabled('cleaning')) opsPages.push({ id:'cleaning', icon:'🧹', label:'Nettoyage' });
+    if (opsPages.length > 0) {
+      var opsActive = opsPages.some(function(p) { return S.page === p.id; });
+      navHtml += navGroup('operations', 'Operations', opsPages, opsActive);
     }
 
+    // Groupe : Gestion
+    var gestPages = [];
+    if (moduleEnabled('orders')) gestPages.push({ id:'orders', icon:'🛒', label:'Commandes' });
+    if (moduleEnabled('consignes')) gestPages.push({ id:'consignes', icon:'💬', label:'Consignes' });
+    if (gestPages.length > 0) {
+      var gestActive = gestPages.some(function(p) { return S.page === p.id; });
+      navHtml += navGroup('gestion', 'Gestion', gestPages, gestActive);
+    }
+
+    // Groupe : Suivi
+    var alertCount = (typeof getAlertCount === 'function') ? getAlertCount() : 0;
+    var suiviHtml = navItem('notifications', '🔔', 'Notifications' + (alertCount > 0 ? '<span class="nav-badge">' + alertCount + '</span>' : ''));
+    suiviHtml += navItem('reports', '📄', 'Rapports');
+    var suiviActive = S.page === 'notifications' || S.page === 'reports';
+    navHtml += '<div class="nav-group">';
+    navHtml += '<div class="nav-group-header' + (suiviActive ? ' active' : '') + '" onclick="toggleNavGroup(\'suivi\')" role="button" tabindex="0"><span>Suivi</span><span class="nav-chevron' + (S.navGroups && S.navGroups.suivi ? ' open' : '') + '">›</span></div>';
+    navHtml += '<div class="nav-group-items" style="' + ((!S.navGroups || S.navGroups.suivi || suiviActive) ? '' : 'display:none') + '">' + suiviHtml + '</div></div>';
+
+    // Groupe : Administration (manager+)
+    if (isManager()) {
+      var adminPages = [
+        { id:'team', icon:'👥', label:'Personnel' },
+        { id:'settings', icon:'⚙️', label:'Parametres' }
+      ];
+      var adminActive = adminPages.some(function(p) { return S.page === p.id; });
+      navHtml += navGroup('admin', 'Administration', adminPages, adminActive);
+    }
+
+    // Mon compte
     navHtml += '<div class="nav-section">Mon compte</div>';
-    navHtml += '<div class="nav-item' + (S.page==='profile'?' active':'') + '" role="button" tabindex="0" onclick="navigate(\'profile\')" onkeydown="if(event.key===\'Enter\')navigate(\'profile\')"><span class="nav-icon">👤</span>Mon profil</div>';
+    navHtml += navItem('profile', '👤', 'Mon profil');
   }
 
   var siteOpts = '';

@@ -50,7 +50,8 @@ async function loadSiteData() {
       sb.from('incident_reports').select('*').eq('site_id', sid).in('status', ['open','in_progress']).order('created_at', {ascending:false}).limit(100),
       sb.from('cleaning_schedules').select('*').eq('site_id', sid).eq('active', true).order('name').limit(200),
       sb.from('cleaning_logs').select('*').eq('site_id', sid).gte('performed_at', localMidnightISO).order('performed_at', {ascending:false}).limit(200),
-      sb.from('consumption_logs').select('*').eq('site_id', sid).gte('consumed_at', localMidnightISO).order('consumed_at', {ascending:false}).limit(200)
+      sb.from('consumption_logs').select('*').eq('site_id', sid).gte('consumed_at', localMidnightISO).order('consumed_at', {ascending:false}).limit(200),
+      sb.from('daily_site_summary').select('*').eq('site_id', sid).eq('summary_date', todayStr).maybeSingle()
     ]);
     var val = function(i) { return results[i].status === 'fulfilled' && results[i].value ? (results[i].value.data || []) : []; };
     S.data.temperatures = val(0);
@@ -68,6 +69,8 @@ async function loadSiteData() {
     S.data.cleaning_schedules = val(6);
     S.data.cleaning_logs = val(7);
     S.data.consumption_logs = val(8);
+    // Daily summary (single object or null)
+    S.data.dailySummary = (results[9].status === 'fulfilled' && results[9].value) ? results[9].value.data : null;
   } catch(e) { console.error('Load data error:', e); }
 }
 
@@ -613,6 +616,48 @@ function notifyError(title, err) {
   var msg = (err && err.message) ? err.message : String(err || '');
   showToast((title || 'Erreur') + (msg ? (' : ' + msg) : ''), 'error');
 }
+
+// ── CONI Score ──
+
+async function refreshDailySummary() {
+  if (!S.currentSiteId) return;
+  // Ne recalculer que si le dernier calcul date de plus de 5 min
+  var summary = S.data.dailySummary;
+  if (summary && summary.computed_at) {
+    var elapsed = Date.now() - new Date(summary.computed_at).getTime();
+    if (elapsed < 5 * 60 * 1000) return;
+  }
+  try {
+    var r = await sb.rpc('compute_daily_summary', { p_site_id: S.currentSiteId, p_date: today() });
+    if (r.error) { console.warn('CONI Score refresh error:', r.error.message); return; }
+    // Recharger le summary
+    var s = await sb.from('daily_site_summary').select('*').eq('site_id', S.currentSiteId).eq('summary_date', today()).maybeSingle();
+    if (s.data) S.data.dailySummary = s.data;
+  } catch(e) { console.warn('CONI Score refresh error:', e); }
+}
+window.refreshDailySummary = refreshDailySummary;
+
+async function loadScoreTrend(siteId, days) {
+  var d = new Date(); d.setDate(d.getDate() - (days || 7));
+  var since = d.toISOString().slice(0, 10);
+  var r = await sb.from('daily_site_summary').select('summary_date,coni_score,score_breakdown')
+    .eq('site_id', siteId).gte('summary_date', since).order('summary_date');
+  return (r.data || []);
+}
+window.loadScoreTrend = loadScoreTrend;
+
+// ── Audit Logs ──
+
+async function loadAuditLogs(siteId, offset, limit) {
+  offset = offset || 0;
+  limit = limit || 50;
+  var q = sb.from('audit_logs').select('*', { count: 'exact' });
+  if (siteId) q = q.eq('site_id', siteId);
+  q = q.order('created_at', { ascending: false }).range(offset, offset + limit - 1);
+  var r = await q;
+  return { data: r.data || [], count: r.count || 0, error: r.error };
+}
+window.loadAuditLogs = loadAuditLogs;
 
 // sbExec: exécute une requête supabase et gère l'erreur proprement
 async function sbExec(promise, title) {

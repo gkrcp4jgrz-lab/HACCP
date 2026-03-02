@@ -41,6 +41,9 @@ function renderDashboard() {
   }
   h += '</div></div>';
 
+  // ── CONI SCORE HERO ──
+  h += renderConiScoreHero();
+
   // ── 2. STATS GRID ──
   h += '<div class="stats-grid">';
 
@@ -328,46 +331,62 @@ async function loadMultiSiteStats() {
   if (_multiSiteCache && (now - _multiSiteCacheTime) < 30000) return _multiSiteCache;
 
   var todayStr = today();
-  var stats = [];
+  var siteIds = S.sites.map(function(s) { return s.id; });
 
-  var localMidnightISO = new Date(todayStr + 'T00:00:00').toISOString();
+  try {
+    // 1 query au lieu de 6*N : charger tous les summaries du jour
+    var results = await Promise.all([
+      sb.from('daily_site_summary').select('*').in('site_id', siteIds).eq('summary_date', todayStr),
+      sb.from('consignes').select('*').in('site_id', siteIds).eq('priority', 'urgent').eq('is_read', false)
+    ]);
 
-  stats = await Promise.all(S.sites.map(async function(site) {
-    var sid = site.id;
-    try {
-      var results = await Promise.all([
-        sb.from('temperatures').select('id', { count: 'exact', head: true }).eq('site_id', sid).gte('recorded_at', localMidnightISO),
-        sb.from('site_equipment').select('id', { count: 'exact', head: true }).eq('site_id', sid).eq('active', true),
-        sb.from('site_products').select('id', { count: 'exact', head: true }).eq('site_id', sid).eq('active', true),
-        sb.from('dlcs').select('id, dlc_date, status').eq('site_id', sid).not('status', 'in', '("consumed","discarded")'),
-        sb.from('orders').select('id', { count: 'exact', head: true }).eq('site_id', sid).eq('status', 'to_order'),
-        sb.from('consignes').select('*').eq('site_id', sid).eq('priority', 'urgent').eq('is_read', false)
-      ]);
+    var summaries = results[0].data || [];
+    var urgentConsignes = results[1].data || [];
+    var summaryBySite = {};
+    summaries.forEach(function(s) { summaryBySite[s.site_id] = s; });
+    var urgentBySite = {};
+    urgentConsignes.forEach(function(c) {
+      if (!urgentBySite[c.site_id]) urgentBySite[c.site_id] = [];
+      urgentBySite[c.site_id].push(c);
+    });
 
-      var dlcData = results[3].data || [];
-      var dlcWarnings = dlcData.filter(function(x) { var days = daysUntil(x.dlc_date); return days <= 2 && days >= 0; }).length;
-      var dlcExpired = dlcData.filter(function(x) { return daysUntil(x.dlc_date) < 0; }).length;
-      var urgentList = results[5].data || [];
+    var stats = S.sites.map(function(site) {
+      var sum = summaryBySite[site.id];
+      var urgList = urgentBySite[site.id] || [];
+      urgList.forEach(function(c) { c._siteName = site.name; });
 
+      if (sum) {
+        return {
+          site: site,
+          coniScore: Math.round(sum.coni_score || 0),
+          scoreBreakdown: sum.score_breakdown || {},
+          tempCount: sum.temp_recorded || 0,
+          totalExpected: sum.temp_expected || 0,
+          dlcWarnings: sum.dlc_warning || 0,
+          dlcExpired: sum.dlc_expired || 0,
+          ordersOpen: sum.orders_pending || 0,
+          urgentConsignes: urgList.length,
+          urgentConsignesList: urgList,
+          incidentsOpen: sum.incidents_open || 0
+        };
+      }
       return {
-        site: site,
-        tempCount: results[0].count || 0,
-        totalExpected: (results[1].count || 0) + (results[2].count || 0),
-        dlcWarnings: dlcWarnings,
-        dlcExpired: dlcExpired,
-        ordersOpen: results[4].count || 0,
-        urgentConsignes: urgentList.length,
-        urgentConsignesList: urgentList
+        site: site, coniScore: null, scoreBreakdown: {},
+        tempCount: 0, totalExpected: 0, dlcWarnings: 0, dlcExpired: 0,
+        ordersOpen: 0, urgentConsignes: urgList.length, urgentConsignesList: urgList,
+        incidentsOpen: 0
       };
-    } catch (e) {
-      console.error('Stats error for site', site.name, e);
-      return { site: site, tempCount: 0, totalExpected: 0, dlcWarnings: 0, dlcExpired: 0, ordersOpen: 0, urgentConsignes: 0 };
-    }
-  }));
+    });
 
-  _multiSiteCache = stats;
-  _multiSiteCacheTime = now;
-  return stats;
+    _multiSiteCache = stats;
+    _multiSiteCacheTime = now;
+    return stats;
+  } catch (e) {
+    console.error('Multi-site stats error:', e);
+    return S.sites.map(function(site) {
+      return { site: site, coniScore: null, scoreBreakdown: {}, tempCount: 0, totalExpected: 0, dlcWarnings: 0, dlcExpired: 0, ordersOpen: 0, urgentConsignes: 0, urgentConsignesList: [], incidentsOpen: 0 };
+    });
+  }
 }
 
 function renderMultiSiteDashboard() {
@@ -408,77 +427,249 @@ async function loadAndRenderMultiDashboard() {
   var stats = await loadMultiSiteStats();
   var h = '';
 
-  var totalTemp = 0, totalExpected = 0, totalDlcWarn = 0, totalDlcExp = 0, totalOrders = 0, totalUrgent = 0;
-  var sitesOk = 0;
+  var totalTemp = 0, totalExpected = 0, totalDlcExp = 0, totalUrgent = 0;
   var allUrgentConsignes = [];
+  var scoredSites = 0, scoreSum = 0;
 
   stats.forEach(function(s) {
     totalTemp += s.tempCount;
     totalExpected += s.totalExpected;
-    totalDlcWarn += s.dlcWarnings;
     totalDlcExp += s.dlcExpired;
-    totalOrders += s.ordersOpen;
     totalUrgent += s.urgentConsignes;
-    if (s.totalExpected > 0 && s.tempCount >= s.totalExpected && s.dlcExpired === 0) sitesOk++;
+    if (s.coniScore !== null) { scoredSites++; scoreSum += s.coniScore; }
     if (s.urgentConsignesList) {
-      s.urgentConsignesList.forEach(function(c) { c._siteName = s.site.name; allUrgentConsignes.push(c); });
+      s.urgentConsignesList.forEach(function(c) { allUrgentConsignes.push(c); });
     }
   });
 
-  var globalPct = totalExpected > 0 ? Math.round(totalTemp / totalExpected * 100) : 0;
+  var globalScore = scoredSites > 0 ? Math.round(scoreSum / scoredSites) : null;
+  var globalGrade = globalScore !== null ? (globalScore >= 90 ? 'A' : globalScore >= 75 ? 'B' : globalScore >= 60 ? 'C' : globalScore >= 40 ? 'D' : 'F') : '-';
+  var globalColor = globalScore !== null ? (globalScore >= 80 ? 'var(--ok,#16a34a)' : globalScore >= 60 ? '#f59e0b' : 'var(--err,#dc2626)') : 'var(--muted)';
 
-  // Stats
-  h += '<div class="global-stats-banner v2-grid-2">';
-  h += '<div class="global-stat"><div class="gs-value">' + S.sites.length + '</div><div class="gs-label">Sites actifs</div></div>';
-  h += '<div class="global-stat' + (globalPct >= 100 ? ' gs-success' : '') + '"><div class="gs-value">' + globalPct + '%</div><div class="gs-label">Relevés complétés</div></div>';
-  h += '</div>';
-
-  // Progress bar
-  h += '<div class="card v2-mb-18"><div class="card-body v2-card-body--compact"><div class="v2-flex v2-justify-between v2-items-center v2-mb-8"><span class="v2-font-700 v2-text-md">Progression globale</span><span class="v2-font-800 v2-text-xl ' + (globalPct >= 100 ? 'v2-text-ok' : 'v2-text-primary') + '">' + totalTemp + '/' + totalExpected + '</span></div><div class="progress v2-progress-lg"><div class="progress-bar" style="width:' + Math.min(100, globalPct) + '%;background:' + (globalPct >= 100 ? 'var(--success)' : globalPct >= 50 ? 'var(--primary)' : 'var(--warning)') + '"></div></div></div></div>';
+  // CONI Score Global Hero
+  if (globalScore !== null) {
+    var radius = 44, circ = 2 * Math.PI * radius, off = circ - (globalScore / 100) * circ;
+    h += '<div class="card" style="overflow:hidden;margin-bottom:18px"><div style="display:flex;align-items:center;gap:20px;padding:20px">';
+    h += '<div style="flex-shrink:0;position:relative;width:108px;height:108px">';
+    h += '<svg viewBox="0 0 108 108" width="108" height="108"><circle cx="54" cy="54" r="' + radius + '" fill="none" stroke="var(--border)" stroke-width="8"/>';
+    h += '<circle cx="54" cy="54" r="' + radius + '" fill="none" stroke="' + globalColor + '" stroke-width="8" stroke-linecap="round" stroke-dasharray="' + circ + '" stroke-dashoffset="' + off + '" transform="rotate(-90 54 54)" style="transition:stroke-dashoffset 1s ease"/></svg>';
+    h += '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">';
+    h += '<div style="font-size:28px;font-weight:800;color:' + globalColor + ';line-height:1">' + globalScore + '</div>';
+    h += '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Global</div>';
+    h += '</div></div>';
+    h += '<div style="flex:1"><div style="font-size:20px;font-weight:800;color:' + globalColor + ';margin-bottom:6px">Grade ' + globalGrade + '</div>';
+    h += '<div style="font-size:13px;color:var(--muted)">Score moyen sur ' + scoredSites + ' site' + (scoredSites > 1 ? 's' : '') + '</div>';
+    h += '<div style="font-size:12px;color:var(--muted);margin-top:4px">' + S.sites.length + ' sites · ' + fmtD(today()) + '</div>';
+    h += '</div></div></div>';
+  } else {
+    h += '<div class="card" style="margin-bottom:18px"><div class="card-body" style="text-align:center;padding:24px">';
+    h += '<div style="font-size:14px;color:var(--muted);margin-bottom:12px">CONI Score non encore calcule</div>';
+    h += '<button class="btn btn-primary" onclick="S.sites.forEach(function(s){sb.rpc(\'compute_daily_summary\',{p_site_id:s.id,p_date:today()}).catch(function(){})});_multiSiteCache=null;setTimeout(function(){loadAndRenderMultiDashboard()},2000)">Calculer les scores</button>';
+    h += '</div></div>';
+  }
 
   // Alerts
   if (totalUrgent > 0 || totalDlcExp > 0) {
     h += '<div class="card v2-card--danger-left v2-mb-18">';
-    h += '<div class="card-header v2-card-header--danger">🚨 Alertes à traiter <span class="badge badge-red v2-badge-lg v2-ml-auto">' + (totalUrgent + totalDlcExp) + '</span></div>';
+    h += '<div class="card-header v2-card-header--danger">🚨 Alertes <span class="badge badge-red v2-badge-lg v2-ml-auto">' + (totalUrgent + totalDlcExp) + '</span></div>';
     h += '<div class="card-body v2-p-0">';
     allUrgentConsignes.forEach(function(c) {
-      h += '<div class="list-item"><div class="list-icon v2-list-icon--danger">💬</div><div class="list-content"><div class="list-title v2-text-danger">' + esc(c.message.substring(0, 80)) + (c.message.length > 80 ? '...' : '') + '</div><div class="list-sub">📍 ' + esc(c._siteName || '') + ' — ' + esc(c.created_by_name || '') + '</div></div>';
-      h += '<div class="list-actions"><button class="btn btn-success btn-sm" onclick="event.stopPropagation();markConsigneRead(\'' + c.id + '\');_multiSiteCache=null;">✓ Traité</button></div>';
-      h += '</div>';
+      h += '<div class="list-item"><div class="list-icon v2-list-icon--danger">💬</div><div class="list-content"><div class="list-title v2-text-danger">' + esc(c.message.substring(0, 80)) + '</div><div class="list-sub">📍 ' + esc(c._siteName || '') + '</div></div>';
+      h += '<div class="list-actions"><button class="btn btn-success btn-sm" onclick="event.stopPropagation();markConsigneRead(\'' + c.id + '\');_multiSiteCache=null;">✓</button></div></div>';
     });
     if (totalDlcExp > 0) {
-      h += '<div class="list-item"><div class="list-icon v2-list-icon--danger">📅</div><div class="list-content"><div class="list-title v2-text-danger">' + totalDlcExp + ' DLC expirée(s)</div><div class="list-sub">Vérifiez chaque site</div></div>';
-      h += '<div class="list-actions"><button class="btn btn-ghost btn-sm" onclick="navigate(\'dlc\')">Voir →</button></div>';
-      h += '</div>';
+      h += '<div class="list-item"><div class="list-icon v2-list-icon--danger">📅</div><div class="list-content"><div class="list-title v2-text-danger">' + totalDlcExp + ' DLC expiree(s)</div></div>';
+      h += '<div class="list-actions"><button class="btn btn-ghost btn-sm" onclick="navigate(\'dlc\')">Voir</button></div></div>';
     }
     h += '</div></div>';
   }
 
-  // Site detail
-  h += '<div class="v2-flex v2-justify-between v2-items-center v2-mb-14"><h3 class="v2-section-heading">Détail par site</h3><span class="v2-text-sm v2-text-muted v2-font-600">' + sitesOk + '/' + S.sites.length + ' conformes</span></div>';
+  // Classement sites par CONI Score (pire en premier)
+  var sorted = stats.slice().sort(function(a, b) { return (a.coniScore || 0) - (b.coniScore || 0); });
 
-  stats.forEach(function(s, idx) {
+  h += '<div class="v2-flex v2-justify-between v2-items-center v2-mb-14"><h3 class="v2-section-heading">Classement par site</h3></div>';
+
+  sorted.forEach(function(s) {
     var site = s.site;
-    var pct = s.totalExpected > 0 ? Math.round(s.tempCount / s.totalExpected * 100) : 0;
+    var score = s.coniScore;
     var typeEmoji = { hotel: '🏨', restaurant: '🍽️', cuisine_centrale: '🏭', autre: '🏢' }[site.type] || '🏢';
-    var isOk = pct >= 100 && s.dlcExpired === 0 && s.urgentConsignes === 0;
+    var scoreColor = score === null ? 'var(--muted)' : score >= 80 ? 'var(--ok,#16a34a)' : score >= 60 ? '#f59e0b' : 'var(--err,#dc2626)';
+    var grade = score === null ? '-' : score >= 90 ? 'A' : score >= 75 ? 'B' : score >= 60 ? 'C' : score >= 40 ? 'D' : 'F';
 
-    h += '<div class="site-overview-card hover-lift animate-in" onclick="switchSite(\'' + site.id + '\');navigate(\'dashboard\');">';
+    h += '<div class="site-overview-card hover-lift animate-in" onclick="switchSite(\'' + site.id + '\');navigate(\'dashboard\');" style="border-left:4px solid ' + scoreColor + '">';
     h += '<div class="site-card-header"><div class="site-card-title">' + typeEmoji + ' ' + esc(site.name) + '</div><div class="site-card-badges">';
-    if (isOk) h += '<span class="badge badge-green">✓ OK</span>';
-    if (s.dlcExpired > 0) h += '<span class="badge badge-red">' + s.dlcExpired + ' DLC</span>';
-    if (s.urgentConsignes > 0) h += '<span class="badge badge-red">' + s.urgentConsignes + ' urg.</span>';
-    if (pct < 100) h += '<span class="badge badge-yellow">' + pct + '%</span>';
+    if (score !== null) {
+      h += '<span style="font-size:20px;font-weight:800;color:' + scoreColor + '">' + score + '</span>';
+      h += '<span style="font-size:12px;font-weight:700;color:' + scoreColor + ';margin-left:4px">' + grade + '</span>';
+    } else {
+      h += '<span class="badge badge-gray">--</span>';
+    }
     h += '</div></div>';
     h += '<div class="mini-stats">';
-    h += '<div class="mini-stat' + (pct >= 100 ? ' ok' : pct > 0 ? ' warn' : '') + '"><div class="mini-stat-value">' + s.tempCount + '/' + s.totalExpected + '</div><div class="mini-stat-label">🌡️ Relevés</div></div>';
+    h += '<div class="mini-stat' + (s.tempCount >= s.totalExpected && s.totalExpected > 0 ? ' ok' : s.tempCount > 0 ? ' warn' : '') + '"><div class="mini-stat-value">' + s.tempCount + '/' + s.totalExpected + '</div><div class="mini-stat-label">🌡️ Releves</div></div>';
     h += '<div class="mini-stat' + (s.dlcExpired > 0 ? ' bad' : ' ok') + '"><div class="mini-stat-value">' + (s.dlcExpired + s.dlcWarnings) + '</div><div class="mini-stat-label">📅 DLC</div></div>';
     h += '<div class="mini-stat"><div class="mini-stat-value">' + s.ordersOpen + '</div><div class="mini-stat-label">🛒 Cmd</div></div>';
     h += '<div class="mini-stat' + (s.urgentConsignes > 0 ? ' bad' : ' ok') + '"><div class="mini-stat-value">' + s.urgentConsignes + '</div><div class="mini-stat-label">💬 Urg.</div></div>';
     h += '</div>';
-    h += '<div class="v2-mt-10"><div class="progress v2-progress-xs"><div class="progress-bar" style="width:' + Math.min(100, pct) + '%;background:' + (pct >= 100 ? 'var(--success)' : 'var(--primary)') + '"></div></div></div>';
+    // Score bar
+    if (score !== null) {
+      h += '<div style="margin-top:10px"><div class="progress v2-progress-xs"><div class="progress-bar" style="width:' + score + '%;background:' + scoreColor + '"></div></div></div>';
+    }
     h += '</div>';
   });
 
   container.innerHTML = h;
+
+  // Trigger CONI Score refresh for all sites in background
+  S.sites.forEach(function(site) {
+    sb.rpc('compute_daily_summary', { p_site_id: site.id, p_date: today() }).catch(function(){});
+  });
+}
+
+// =====================================================================
+// CONI SCORE
+// =====================================================================
+
+function renderConiScoreHero() {
+  var summary = S.data.dailySummary;
+  var h = '';
+
+  h += '<div class="card" style="overflow:hidden;margin-bottom:18px">';
+  h += '<div style="display:flex;align-items:center;gap:20px;padding:20px">';
+
+  if (!summary || summary.coni_score === undefined) {
+    // Pas encore de score — proposer de calculer
+    h += '<div style="flex:1;text-align:center;padding:16px 0">';
+    h += '<div style="font-size:14px;color:var(--muted);margin-bottom:12px">Score CONI non encore calcule pour aujourd\'hui</div>';
+    h += '<button class="btn btn-primary" onclick="refreshDailySummary().then(function(){loadSiteData().then(render)})">Calculer le CONI Score</button>';
+    h += '</div></div></div>';
+    return h;
+  }
+
+  var score = Math.round(summary.coni_score);
+  var grade = score >= 90 ? 'A' : score >= 75 ? 'B' : score >= 60 ? 'C' : score >= 40 ? 'D' : 'F';
+  var color = score >= 80 ? 'var(--ok,#16a34a)' : score >= 60 ? '#f59e0b' : 'var(--err,#dc2626)';
+  var bgColor = score >= 80 ? '#f0fdf4' : score >= 60 ? '#fffbeb' : '#fef2f2';
+  var breakdown = summary.score_breakdown || {};
+
+  // Cercle SVG
+  var radius = 44;
+  var circumference = 2 * Math.PI * radius;
+  var offset = circumference - (score / 100) * circumference;
+
+  h += '<div style="flex-shrink:0;position:relative;width:108px;height:108px">';
+  h += '<svg viewBox="0 0 108 108" width="108" height="108">';
+  h += '<circle cx="54" cy="54" r="' + radius + '" fill="none" stroke="var(--border)" stroke-width="8"/>';
+  h += '<circle cx="54" cy="54" r="' + radius + '" fill="none" stroke="' + color + '" stroke-width="8" stroke-linecap="round" stroke-dasharray="' + circumference + '" stroke-dashoffset="' + offset + '" transform="rotate(-90 54 54)" style="transition:stroke-dashoffset 1s ease"/>';
+  h += '</svg>';
+  h += '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">';
+  h += '<div style="font-size:28px;font-weight:800;color:' + color + ';line-height:1">' + score + '</div>';
+  h += '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Score</div>';
+  h += '</div></div>';
+
+  // Breakdown
+  h += '<div style="flex:1;min-width:0">';
+  h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">';
+  h += '<span style="font-size:20px;font-weight:800;color:' + color + '">Grade ' + grade + '</span>';
+  h += '<span style="font-size:12px;color:var(--muted);font-weight:500">CONI Score</span>';
+  h += '</div>';
+
+  var dimensions = [
+    { label: 'Temperatures', key: 'temp_pct', icon: '🌡️', weight: '20%' },
+    { label: 'Completude', key: 'temp_completion', icon: '📊', weight: '20%' },
+    { label: 'DLC', key: 'dlc_pct', icon: '📅', weight: '25%' },
+    { label: 'Nettoyage', key: 'cleaning_pct', icon: '🧹', weight: '20%' }
+  ];
+
+  dimensions.forEach(function(dim) {
+    var val = Math.round(breakdown[dim.key] || 0);
+    var barColor = val >= 80 ? 'var(--ok,#16a34a)' : val >= 60 ? '#f59e0b' : 'var(--err,#dc2626)';
+    h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:12px">';
+    h += '<span style="width:16px;text-align:center">' + dim.icon + '</span>';
+    h += '<span style="width:70px;color:var(--muted);font-weight:500">' + dim.label + '</span>';
+    h += '<div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:' + val + '%;height:100%;background:' + barColor + ';border-radius:3px;transition:width 0.6s ease"></div></div>';
+    h += '<span style="width:30px;text-align:right;font-weight:700;color:' + barColor + '">' + val + '%</span>';
+    h += '</div>';
+  });
+
+  // Incident penalty
+  var penalty = breakdown.incident_penalty || 0;
+  if (penalty > 0) {
+    h += '<div style="font-size:11px;color:var(--err);margin-top:4px;font-weight:600">🚨 Malus incidents : -' + penalty + ' pts</div>';
+  }
+
+  h += '</div></div>';
+
+  // Sparkline container (loaded async)
+  h += '<div id="coniSparklineContainer" style="padding:0 20px 16px"></div>';
+
+  h += '</div>';
+
+  // Load sparkline data async
+  setTimeout(function() { loadAndRenderSparkline(); }, 100);
+
+  return h;
+}
+
+// ── SPARKLINE 7 JOURS ──
+
+async function loadAndRenderSparkline() {
+  var container = document.getElementById('coniSparklineContainer');
+  if (!container || !S.currentSiteId) return;
+
+  var data = await loadScoreTrend(S.currentSiteId, 7);
+  if (!data || data.length < 2) {
+    container.innerHTML = '<div style="font-size:11px;color:var(--muted);text-align:center">Tendance disponible apres 2 jours de donnees</div>';
+    return;
+  }
+
+  container.innerHTML = renderSparkline(data, 280, 50);
+}
+
+function renderSparkline(dataPoints, width, height) {
+  var padding = 4;
+  var w = width - padding * 2;
+  var h = height - padding * 2;
+
+  var scores = dataPoints.map(function(d) { return d.coni_score || 0; });
+  var minS = Math.max(0, Math.min.apply(null, scores) - 10);
+  var maxS = Math.min(100, Math.max.apply(null, scores) + 10);
+  var range = maxS - minS || 1;
+
+  var points = dataPoints.map(function(d, i) {
+    var x = padding + (i / (dataPoints.length - 1)) * w;
+    var y = padding + h - ((d.coni_score - minS) / range) * h;
+    return { x: x, y: y, score: Math.round(d.coni_score), date: d.summary_date };
+  });
+
+  var polyline = points.map(function(p) { return p.x + ',' + p.y; }).join(' ');
+  var areaPoints = polyline + ' ' + points[points.length - 1].x + ',' + (height - padding) + ' ' + points[0].x + ',' + (height - padding);
+
+  var lastScore = points[points.length - 1].score;
+  var firstScore = points[0].score;
+  var diff = lastScore - firstScore;
+  var trendColor = diff >= 0 ? 'var(--ok,#16a34a)' : 'var(--err,#dc2626)';
+  var lineColor = lastScore >= 80 ? 'var(--ok,#16a34a)' : lastScore >= 60 ? '#f59e0b' : 'var(--err,#dc2626)';
+
+  var svg = '<div style="display:flex;align-items:center;gap:12px">';
+  svg += '<svg viewBox="0 0 ' + width + ' ' + height + '" width="100%" height="' + height + '" style="flex:1;max-width:' + width + 'px">';
+  // Zone 80+ (vert)
+  var y80 = padding + h - ((80 - minS) / range) * h;
+  svg += '<rect x="' + padding + '" y="' + padding + '" width="' + w + '" height="' + Math.max(0, y80 - padding) + '" fill="var(--ok,#16a34a)" opacity="0.04"/>';
+  // Area fill
+  svg += '<polygon points="' + areaPoints + '" fill="' + lineColor + '" opacity="0.08"/>';
+  // Line
+  svg += '<polyline points="' + polyline + '" fill="none" stroke="' + lineColor + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+  // Dots
+  points.forEach(function(p) {
+    svg += '<circle cx="' + p.x + '" cy="' + p.y + '" r="3" fill="' + lineColor + '" stroke="white" stroke-width="1.5"/>';
+  });
+  svg += '</svg>';
+  // Trend indicator
+  svg += '<div style="text-align:center;flex-shrink:0">';
+  svg += '<div style="font-size:16px;font-weight:800;color:' + trendColor + '">' + (diff >= 0 ? '+' : '') + diff + '</div>';
+  svg += '<div style="font-size:10px;color:var(--muted);font-weight:600">7 jours</div>';
+  svg += '</div></div>';
+
+  return svg;
 }

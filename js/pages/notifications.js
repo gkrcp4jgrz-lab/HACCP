@@ -348,36 +348,54 @@ function buildAlerts() {
   var alerts = [];
   var todayStr = today();
 
-  // 1. DLC expirées (CRITIQUE)
+  // 1. DLC expirées — groupees par produit (CRITIQUE)
   var dlcExpired = S.data.dlcs.filter(function(d) {
     return daysUntil(d.dlc_date) < 0 && d.status !== 'consumed' && d.status !== 'discarded';
   });
+  var dlcExpGroups = {};
   dlcExpired.forEach(function(d) {
+    if (!dlcExpGroups[d.product_name]) dlcExpGroups[d.product_name] = [];
+    dlcExpGroups[d.product_name].push(d);
+  });
+  Object.keys(dlcExpGroups).forEach(function(prodName) {
+    var items = dlcExpGroups[prodName];
+    var oldest = items[0];
+    var countLabel = items.length > 1 ? ' (' + items.length + 'x)' : '';
     alerts.push({
       level: 'critical', icon: '📅', category: 'dlc',
-      title: 'DLC expirée : ' + d.product_name,
-      message: 'Expirée depuis ' + Math.abs(daysUntil(d.dlc_date)) + ' jour(s) — Lot: ' + (d.lot_number || 'N/R'),
-      time: fmtD(d.dlc_date),
-      action: '<button class="btn btn-danger" onclick="updateDlcStatus(\'' + d.id + '\',\'discarded\');render()">🗑️ Jeter</button>'
+      title: 'DLC expiree : ' + prodName + countLabel,
+      message: 'Expiree depuis ' + Math.abs(daysUntil(oldest.dlc_date)) + ' jour(s) — Lot: ' + (oldest.lot_number || 'N/R'),
+      time: fmtD(oldest.dlc_date),
+      action: '<button class="btn btn-danger" onclick="updateDlcStatus(\'' + oldest.id + '\',\'discarded\');render()">🗑️ Jeter</button>'
     });
   });
 
-  // 2. Températures non conformes du jour (CRITIQUE)
+  // 2. Temperatures non conformes — groupees par equipement/produit (CRITIQUE)
   var nonConform = S.data.temperatures.filter(function(t) { return !t.is_conform; });
+  var ncGroups = {};
   nonConform.forEach(function(t) {
-    var refName = '';
-    if (t.record_type === 'equipment') {
-      var eq = S.siteConfig.equipment.find(function(e) { return e.id === t.equipment_id; });
-      refName = eq ? eq.name : 'Équipement';
-    } else {
-      var pr = S.siteConfig.products.find(function(p) { return p.id === t.product_id; });
-      refName = pr ? pr.name : 'Produit';
+    var key = t.equipment_id || t.product_id || 'unknown';
+    if (!ncGroups[key]) ncGroups[key] = { items: [], refName: '' };
+    ncGroups[key].items.push(t);
+    if (!ncGroups[key].refName) {
+      if (t.record_type === 'equipment') {
+        var eq = S.siteConfig.equipment.find(function(e) { return e.id === t.equipment_id; });
+        ncGroups[key].refName = eq ? eq.name : 'Equipement';
+      } else {
+        var pr = S.siteConfig.products.find(function(p) { return p.id === t.product_id; });
+        ncGroups[key].refName = pr ? pr.name : 'Produit';
+      }
     }
+  });
+  Object.keys(ncGroups).forEach(function(key) {
+    var g = ncGroups[key];
+    var latest = g.items[0];
+    var countLabel = g.items.length > 1 ? ' (' + g.items.length + 'x)' : '';
     alerts.push({
       level: 'critical', icon: '🌡️', category: 'temperature',
-      title: 'Température non conforme : ' + refName,
-      message: t.value + '°C — Action : ' + (t.corrective_action || 'Non renseignée'),
-      time: fmtDT(t.recorded_at)
+      title: 'Temperature non conforme : ' + g.refName + countLabel,
+      message: latest.value + '°C — Action : ' + (latest.corrective_action || 'Non renseignee'),
+      time: fmtDT(latest.recorded_at)
     });
   });
 
@@ -393,19 +411,27 @@ function buildAlerts() {
     });
   });
 
-  // 4. DLC qui expirent dans 2 jours (WARNING)
+  // 4. DLC qui expirent dans 2 jours — groupees par produit (WARNING)
   var dlcSoon = S.data.dlcs.filter(function(d) {
     var days = daysUntil(d.dlc_date);
     return days >= 0 && days <= 2 && d.status !== 'consumed' && d.status !== 'discarded';
   });
+  var dlcSoonGroups = {};
   dlcSoon.forEach(function(d) {
-    var days = daysUntil(d.dlc_date);
+    if (!dlcSoonGroups[d.product_name]) dlcSoonGroups[d.product_name] = [];
+    dlcSoonGroups[d.product_name].push(d);
+  });
+  Object.keys(dlcSoonGroups).forEach(function(prodName) {
+    var items = dlcSoonGroups[prodName];
+    var nearest = items[0];
+    var days = daysUntil(nearest.dlc_date);
+    var countLabel = items.length > 1 ? ' (' + items.length + ' lots)' : '';
     alerts.push({
       level: 'warning', icon: '📅', category: 'dlc',
-      title: 'DLC proche : ' + d.product_name,
-      message: (days === 0 ? 'Expire aujourd\'hui' : 'Expire dans ' + days + ' jour(s)') + ' — Lot: ' + (d.lot_number || 'N/R'),
-      time: fmtD(d.dlc_date),
-      action: '<button class="btn btn-success" onclick="updateDlcStatus(\'' + d.id + '\',\'consumed\')">✓ Consommé</button>'
+      title: 'DLC proche : ' + prodName + countLabel,
+      message: (days === 0 ? 'Expire aujourd\'hui' : 'Expire dans ' + days + ' jour(s)') + ' — Lot: ' + (nearest.lot_number || 'N/R'),
+      time: fmtD(nearest.dlc_date),
+      action: '<button class="btn btn-success" onclick="updateDlcStatus(\'' + nearest.id + '\',\'consumed\')">Consomme</button>'
     });
   });
 
@@ -485,13 +511,15 @@ function buildAlerts() {
     });
   }
 
-  // 8. Signalements non résolus (CRITICAL ou WARNING)
+  // 8. Signalements non résolus (CRITICAL ou WARNING) + indicateur escalade
   var unresolvedReports = (S.data.incident_reports || []).filter(function(r) { return r.status !== 'resolved'; });
   unresolvedReports.forEach(function(r) {
+    var escLevel = r.escalation_level || 0;
+    var escBadge = escLevel >= 3 ? ' <span class="badge badge-red" style="animation:pulse 1.5s infinite">ESC ' + escLevel + '</span>' : escLevel > 0 ? ' <span class="badge badge-yellow">ESC ' + escLevel + '</span>' : '';
     alerts.push({
       level: r.priority === 'urgent' ? 'critical' : 'warning',
       icon: '🚨', category: 'report',
-      title: 'Signalement : ' + r.title,
+      title: 'Signalement : ' + r.title + escBadge,
       message: (r.description || '').substring(0, 100) + ((r.description || '').length > 100 ? '...' : ''),
       time: fmtDT(r.created_at) + ' — par ' + (r.reported_by_name || 'Inconnu'),
       action: isManager() ? '<button class="btn btn-success" onclick="resolveReport(\'' + r.id + '\')">✓ Résolu</button>' : ''
