@@ -490,7 +490,11 @@ window.handleUseWhole = async function(prodIdx, inputId) {
   if (qty <= 0) { showToast('Quantité invalide', 'warning'); return; }
   var group = S._consoProds[prod];
   var unit = group && group[0] ? (group[0].unit || 'unité') : 'unité';
-  await recordConsumption(prod, qty, unit, 'Utilisé entier');
+  try {
+    await recordConsumption(prod, qty, unit, 'Utilisé entier');
+  } catch(e) {
+    showToast('Erreur: ' + (e.message || e), 'error');
+  }
 };
 
 // -- Colis entamés --
