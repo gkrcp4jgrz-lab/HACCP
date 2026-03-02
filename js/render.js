@@ -14,7 +14,7 @@ function render() {
   }
 
   if (S.sites.length === 0 && !isSuperAdmin()) {
-    app.innerHTML = '<div class="v2-no-sites"><div class="card v2-max-w-500 v2-mb-20"><div class="card-body"><div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Aucun site assigné</div><div class="empty-text">Contactez votre administrateur pour être ajouté à un site.</div></div></div></div></div>';
+    app.innerHTML = '<div class="v2-no-sites"><div class="card v2-max-w-500 v2-mb-20"><div class="card-body"><div class="empty"><div class="empty-icon">' + IC.building + '</div><div class="empty-title">Aucun site assigné</div><div class="empty-text">Contactez votre administrateur pour être ajouté à un site.</div></div></div></div></div>';
     return;
   }
 
@@ -97,27 +97,24 @@ function renderSidebar() {
   var navHtml = '';
 
   if (isSuperAdmin()) {
-    pages.push({ id:'dashboard', icon:'📊', label:'Tableau de bord' });
-    pages.forEach(function(p) {
-      navHtml += '<div class="nav-item' + (S.page===p.id?' active':'') + '" role="button" tabindex="0" onclick="navigate(\'' + p.id + '\')" onkeydown="if(event.key===\'Enter\')navigate(\'' + p.id + '\')"><span class="nav-icon">' + p.icon + '</span>' + p.label + '</div>';
-    });
+    navHtml += navItem('dashboard', IC.home, 'Tableau de bord');
     navHtml += '<div class="nav-section">Administration</div>';
-    navHtml += '<div class="nav-item' + (S.page==='sites'?' active':'') + '" role="button" tabindex="0" onclick="navigate(\'sites\')" onkeydown="if(event.key===\'Enter\')navigate(\'sites\')"><span class="nav-icon">🏢</span>Gestion sites</div>';
-    navHtml += '<div class="nav-item' + (S.page==='admin'?' active':'') + '" role="button" tabindex="0" onclick="navigate(\'admin\')" onkeydown="if(event.key===\'Enter\')navigate(\'admin\')"><span class="nav-icon">👥</span>Utilisateurs</div>';
+    navHtml += navItem('sites', IC.building, 'Gestion sites');
+    navHtml += navItem('admin', IC.users, 'Utilisateurs');
     if (S.currentSiteId) {
-      navHtml += '<div class="nav-item' + (S.page==='settings'?' active':'') + '" role="button" tabindex="0" onclick="navigate(\'settings\')" onkeydown="if(event.key===\'Enter\')navigate(\'settings\')"><span class="nav-icon">⚙️</span>Paramètres site</div>';
+      navHtml += navItem('settings', IC.gear, 'Paramètres site');
     }
     navHtml += '<div class="nav-section">Mon compte</div>';
-    navHtml += '<div class="nav-item' + (S.page==='profile'?' active':'') + '" role="button" tabindex="0" onclick="navigate(\'profile\')" onkeydown="if(event.key===\'Enter\')navigate(\'profile\')"><span class="nav-icon">👤</span>Mon profil</div>';
+    navHtml += navItem('profile', IC.user, 'Mon profil');
   } else {
     // Dashboard (toujours visible)
-    navHtml += navItem('dashboard', '📊', 'Tableau de bord');
+    navHtml += navItem('dashboard', IC.home, 'Tableau de bord');
 
     // Groupe : Operations
     var opsPages = [];
-    if (moduleEnabled('temperatures')) opsPages.push({ id:'temperatures', icon:'🌡️', label:'Temperatures' });
-    if (moduleEnabled('dlc') || moduleEnabled('lots')) opsPages.push({ id:'dlc', icon:'📋', label:'DLC & Tracabilite' });
-    if (moduleEnabled('cleaning')) opsPages.push({ id:'cleaning', icon:'🧹', label:'Nettoyage' });
+    if (moduleEnabled('temperatures')) opsPages.push({ id:'temperatures', icon:IC.thermo, label:'Temperatures' });
+    if (moduleEnabled('dlc') || moduleEnabled('lots')) opsPages.push({ id:'dlc', icon:IC.calendarDlc, label:'DLC & Tracabilite' });
+    if (moduleEnabled('cleaning')) opsPages.push({ id:'cleaning', icon:IC.broomClean, label:'Nettoyage' });
     if (opsPages.length > 0) {
       var opsActive = opsPages.some(function(p) { return S.page === p.id; });
       navHtml += navGroup('operations', 'Operations', opsPages, opsActive);
@@ -125,8 +122,8 @@ function renderSidebar() {
 
     // Groupe : Gestion
     var gestPages = [];
-    if (moduleEnabled('orders')) gestPages.push({ id:'orders', icon:'🛒', label:'Commandes' });
-    if (moduleEnabled('consignes')) gestPages.push({ id:'consignes', icon:'💬', label:'Consignes' });
+    if (moduleEnabled('orders')) gestPages.push({ id:'orders', icon:IC.cart, label:'Commandes' });
+    if (moduleEnabled('consignes')) gestPages.push({ id:'consignes', icon:IC.msgBubble, label:'Consignes' });
     if (gestPages.length > 0) {
       var gestActive = gestPages.some(function(p) { return S.page === p.id; });
       navHtml += navGroup('gestion', 'Gestion', gestPages, gestActive);
@@ -134,8 +131,8 @@ function renderSidebar() {
 
     // Groupe : Suivi
     var alertCount = (typeof getAlertCount === 'function') ? getAlertCount() : 0;
-    var suiviHtml = navItem('notifications', '🔔', 'Notifications' + (alertCount > 0 ? '<span class="nav-badge">' + alertCount + '</span>' : ''));
-    suiviHtml += navItem('reports', '📄', 'Rapports');
+    var suiviHtml = navItem('notifications', IC.bell, 'Notifications' + (alertCount > 0 ? '<span class="nav-badge">' + alertCount + '</span>' : ''));
+    suiviHtml += navItem('reports', IC.fileText, 'Rapports');
     var suiviActive = S.page === 'notifications' || S.page === 'reports';
     navHtml += '<div class="nav-group">';
     navHtml += '<div class="nav-group-header' + (suiviActive ? ' active' : '') + '" onclick="toggleNavGroup(\'suivi\')" role="button" tabindex="0"><span>Suivi</span><span class="nav-chevron' + (S.navGroups && S.navGroups.suivi ? ' open' : '') + '">›</span></div>';
@@ -144,8 +141,8 @@ function renderSidebar() {
     // Groupe : Administration (manager+)
     if (isManager()) {
       var adminPages = [
-        { id:'team', icon:'👥', label:'Personnel' },
-        { id:'settings', icon:'⚙️', label:'Parametres' }
+        { id:'team', icon:IC.users, label:'Personnel' },
+        { id:'settings', icon:IC.gear, label:'Parametres' }
       ];
       var adminActive = adminPages.some(function(p) { return S.page === p.id; });
       navHtml += navGroup('admin', 'Administration', adminPages, adminActive);
@@ -153,7 +150,7 @@ function renderSidebar() {
 
     // Mon compte
     navHtml += '<div class="nav-section">Mon compte</div>';
-    navHtml += navItem('profile', '👤', 'Mon profil');
+    navHtml += navItem('profile', IC.user, 'Mon profil');
   }
 
   var siteOpts = '';

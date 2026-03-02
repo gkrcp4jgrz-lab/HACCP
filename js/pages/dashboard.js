@@ -516,7 +516,7 @@ async function loadAndRenderMultiDashboard() {
     h += '</div>';
     // Score bar
     if (score !== null) {
-      h += '<div style="margin-top:10px"><div class="progress v2-progress-xs"><div class="progress-bar" style="width:' + score + '%;background:' + scoreColor + '"></div></div></div>';
+      h += '<div style="margin-top:10px"><div class="progress v2-progress-xs" style="overflow:hidden"><div class="progress-bar" style="width:' + score + '%;background:' + scoreColor + '"></div></div></div>';
     }
     h += '</div>';
   });
@@ -694,8 +694,8 @@ function renderConiScoreHero() {
   var summary = S.data.dailySummary;
   var h = '';
 
-  h += '<div class="card" style="overflow:hidden;margin-bottom:18px">';
-  h += '<div style="display:flex;align-items:center;gap:20px;padding:20px">';
+  h += '<div class="card coni-hero-card">';
+  h += '<div class="coni-hero-layout">';
 
   if (!summary || summary.coni_score === undefined || summary.coni_score === null) {
     // Pas encore de score ou pas de donnees
@@ -710,7 +710,6 @@ function renderConiScoreHero() {
   var score = Math.round(summary.coni_score);
   var grade = score >= 90 ? 'A' : score >= 75 ? 'B' : score >= 60 ? 'C' : score >= 40 ? 'D' : 'F';
   var color = score >= 80 ? 'var(--ok,#16a34a)' : score >= 60 ? '#f59e0b' : 'var(--err,#dc2626)';
-  var bgColor = score >= 80 ? '#f0fdf4' : score >= 60 ? '#fffbeb' : '#fef2f2';
   var breakdown = summary.score_breakdown || {};
 
   // Cercle SVG
@@ -718,45 +717,44 @@ function renderConiScoreHero() {
   var circumference = 2 * Math.PI * radius;
   var offset = circumference - (score / 100) * circumference;
 
-  h += '<div style="flex-shrink:0;position:relative;width:108px;height:108px">';
+  h += '<div class="coni-hero-circle">';
   h += '<svg viewBox="0 0 108 108" width="108" height="108">';
   h += '<circle cx="54" cy="54" r="' + radius + '" fill="none" stroke="var(--border)" stroke-width="8"/>';
   h += '<circle cx="54" cy="54" r="' + radius + '" fill="none" stroke="' + color + '" stroke-width="8" stroke-linecap="round" stroke-dasharray="' + circumference + '" stroke-dashoffset="' + offset + '" transform="rotate(-90 54 54)" style="transition:stroke-dashoffset 1s ease"/>';
   h += '</svg>';
-  h += '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">';
+  h += '<div class="coni-hero-score">';
   h += '<div style="font-size:28px;font-weight:800;color:' + color + ';line-height:1">' + score + '</div>';
   h += '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Score</div>';
   h += '</div></div>';
 
   // Breakdown
-  h += '<div style="flex:1;min-width:0">';
+  h += '<div class="coni-hero-breakdown">';
   h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">';
   h += '<span style="font-size:20px;font-weight:800;color:' + color + '">Grade ' + grade + '</span>';
   h += '<span style="font-size:12px;color:var(--muted);font-weight:500">CONI Score</span>';
   h += '</div>';
 
   var dimensions = [
-    { label: 'Temperatures', key: 'temp_pct', icon: '🌡️', weight: '20%' },
-    { label: 'Completude', key: 'temp_completion', icon: '📊', weight: '20%' },
-    { label: 'DLC', key: 'dlc_pct', icon: '📅', weight: '25%' },
-    { label: 'Nettoyage', key: 'cleaning_pct', icon: '🧹', weight: '20%' }
+    { label: 'Temp.', key: 'temp_pct', weight: '20%' },
+    { label: 'Complet.', key: 'temp_completion', weight: '20%' },
+    { label: 'DLC', key: 'dlc_pct', weight: '25%' },
+    { label: 'Nettoy.', key: 'cleaning_pct', weight: '20%' }
   ];
 
   dimensions.forEach(function(dim) {
     var val = Math.round(breakdown[dim.key] || 0);
     var barColor = val >= 80 ? 'var(--ok,#16a34a)' : val >= 60 ? '#f59e0b' : 'var(--err,#dc2626)';
-    h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:12px">';
-    h += '<span style="width:16px;text-align:center">' + dim.icon + '</span>';
-    h += '<span style="width:70px;color:var(--muted);font-weight:500">' + dim.label + '</span>';
-    h += '<div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:' + val + '%;height:100%;background:' + barColor + ';border-radius:3px;transition:width 0.6s ease"></div></div>';
-    h += '<span style="width:30px;text-align:right;font-weight:700;color:' + barColor + '">' + val + '%</span>';
+    h += '<div class="coni-bar-row">';
+    h += '<span class="coni-bar-label">' + dim.label + '</span>';
+    h += '<div class="coni-bar-track"><div class="coni-bar-fill" style="width:' + val + '%;background:' + barColor + '"></div></div>';
+    h += '<span class="coni-bar-value" style="color:' + barColor + '">' + val + '%</span>';
     h += '</div>';
   });
 
   // Incident penalty
   var penalty = breakdown.incident_penalty || 0;
   if (penalty > 0) {
-    h += '<div style="font-size:11px;color:var(--err);margin-top:4px;font-weight:600">🚨 Malus incidents : -' + penalty + ' pts</div>';
+    h += '<div style="font-size:11px;color:var(--err);margin-top:4px;font-weight:600">' + IC.alertTriangle + ' Malus incidents : -' + penalty + ' pts</div>';
   }
 
   h += '</div></div>';

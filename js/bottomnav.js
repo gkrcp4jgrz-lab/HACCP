@@ -89,29 +89,29 @@ function renderRightSidebar(alertCount) {
   h += '<div class="rsidebar-nav">';
 
   if (isSuperAdmin()) {
-    h += rsidebarItem('reports', '📄', 'Rapports PDF');
-    h += rsidebarItem('notifications', '🔔', 'Notifications', alertCount);
-    h += rsidebarItem('profile', '👤', 'Mon profil');
+    h += rsidebarItem('reports', IC.fileText, 'Rapports PDF');
+    h += rsidebarItem('notifications', IC.bell, 'Notifications', alertCount);
+    h += rsidebarItem('profile', IC.user, 'Mon profil');
   } else if (isManager()) {
-    h += rsidebarItem('stock', '📊', 'Stock');
-    h += rsidebarItem('orders', '🛍️', 'Liste de courses');
-    if (moduleEnabled('consignes')) h += rsidebarItem('consignes', '💬', 'Consignes');
-    h += rsidebarItem('reports', '📄', 'Rapports');
+    h += rsidebarItem('stock', IC.barChart, 'Stock');
+    h += rsidebarItem('orders', IC.cart, 'Liste de courses');
+    if (moduleEnabled('consignes')) h += rsidebarItem('consignes', IC.msgBubble, 'Consignes');
+    h += rsidebarItem('reports', IC.fileText, 'Rapports');
     h += '<div class="rsidebar-divider"></div>';
-    h += rsidebarItem('team', '👥', 'Personnel');
-    h += rsidebarItem('notifications', '🔔', 'Notifications', alertCount);
-    h += rsidebarItem('settings', '⚙️', 'Paramètres');
+    h += rsidebarItem('team', IC.users, 'Personnel');
+    h += rsidebarItem('notifications', IC.bell, 'Notifications', alertCount);
+    h += rsidebarItem('settings', IC.gear, 'Paramètres');
     h += '<div class="rsidebar-divider"></div>';
-    h += rsidebarItem('profile', '👤', 'Mon profil');
+    h += rsidebarItem('profile', IC.user, 'Mon profil');
   } else {
     // Employee
-    h += rsidebarItem('stock', '📊', 'Stock');
-    h += rsidebarItem('orders', '🛍️', 'Liste de courses');
-    if (moduleEnabled('consignes')) h += rsidebarItem('consignes', '💬', 'Consignes');
-    h += rsidebarItem('reports', '📄', 'Rapports');
-    h += rsidebarItem('notifications', '🔔', 'Notifications', alertCount);
+    h += rsidebarItem('stock', IC.barChart, 'Stock');
+    h += rsidebarItem('orders', IC.cart, 'Liste de courses');
+    if (moduleEnabled('consignes')) h += rsidebarItem('consignes', IC.msgBubble, 'Consignes');
+    h += rsidebarItem('reports', IC.fileText, 'Rapports');
+    h += rsidebarItem('notifications', IC.bell, 'Notifications', alertCount);
     h += '<div class="rsidebar-divider"></div>';
-    h += rsidebarItem('profile', '👤', 'Mon profil');
+    h += rsidebarItem('profile', IC.user, 'Mon profil');
   }
 
   h += '</div>';
@@ -130,9 +130,9 @@ function renderRightSidebar(alertCount) {
 
   // Footer actions
   h += '<div class="rsidebar-footer">';
-  h += '<button class="rsidebar-footer-btn" onclick="closeRightSidebar();toggleDarkMode()"><span>' + (isDark ? '☀️' : '🌙') + '</span>' + (isDark ? 'Mode clair' : 'Mode sombre') + '</button>';
-  h += '<button class="rsidebar-footer-btn" onclick="closeRightSidebar();navigate(\'legal\')"><span>📋</span>Mentions légales</button>';
-  h += '<button class="rsidebar-footer-btn rsidebar-logout" onclick="closeRightSidebar();doLogout()"><span>🚪</span>Déconnexion</button>';
+  h += '<button class="rsidebar-footer-btn" onclick="closeRightSidebar();toggleDarkMode()"><span class="rsidebar-icon">' + (isDark ? IC.sun : IC.moon) + '</span>' + (isDark ? 'Mode clair' : 'Mode sombre') + '</button>';
+  h += '<button class="rsidebar-footer-btn" onclick="closeRightSidebar();navigate(\'legal\')"><span class="rsidebar-icon">' + IC.clipboard + '</span>Mentions légales</button>';
+  h += '<button class="rsidebar-footer-btn rsidebar-logout" onclick="closeRightSidebar();doLogout()"><span class="rsidebar-icon">' + IC.logOut + '</span>Déconnexion</button>';
   h += '</div>';
 
   h += '</div>';
