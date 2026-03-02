@@ -1328,6 +1328,24 @@ body.theme-transitioning,body.theme-transitioning *{transition-duration:.3s !imp
 .v2-badge-x:hover{color:var(--af-err,#EF4444)}
 
 /* ══════════════════════════════════════════
+   ROLE TAGS — Discreet inline labels
+   ══════════════════════════════════════════ */
+.v2-role-tag{display:inline-flex;align-items:center;font-size:10px;font-weight:600;padding:1px 6px;border-radius:var(--radius-pill);vertical-align:middle;margin-left:4px;letter-spacing:.02em}
+.v2-role-tag--admin{background:rgba(245,158,11,.1);color:#B45309;border:1px solid rgba(245,158,11,.2)}
+.v2-role-tag--manager{background:rgba(59,130,246,.08);color:#2563EB;border:1px solid rgba(59,130,246,.15)}
+.v2-role-tag--employee{background:rgba(107,114,128,.08);color:#4B5563;border:1px solid rgba(107,114,128,.15)}
+[data-theme="dark"] .v2-role-tag--admin{background:rgba(245,158,11,.15);color:#FBBF24}
+[data-theme="dark"] .v2-role-tag--manager{background:rgba(59,130,246,.15);color:#93C5FD}
+[data-theme="dark"] .v2-role-tag--employee{background:rgba(107,114,128,.15);color:#9CA3AF}
+
+/* Member chips (site list preview) */
+.v2-member-chip{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:500;color:var(--ink-muted);background:var(--bg-off);padding:2px 7px;border-radius:var(--radius-pill)}
+.v2-role-dot{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;font-size:8px;font-weight:700;color:#fff;flex-shrink:0}
+.v2-role-dot.v2-role-tag--admin{background:#F59E0B;border:none}
+.v2-role-dot.v2-role-tag--manager{background:#3B82F6;border:none}
+.v2-role-dot.v2-role-tag--employee{background:#9CA3AF;border:none}
+
+/* ══════════════════════════════════════════
    REDUCED MOTION
    ══════════════════════════════════════════ */
 @media(prefers-reduced-motion:reduce){

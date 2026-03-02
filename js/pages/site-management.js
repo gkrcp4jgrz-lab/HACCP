@@ -35,33 +35,67 @@ function renderSiteManagement() {
   return h;
 }
 
-// Load site list with employee counts
+// Load site list with employee counts + names
 window.loadSiteListWithCounts = async function() {
   var container = $('siteListContainer');
   if (!container) return;
 
-  var r = await sb.from('user_sites').select('site_id, user_id');
-  var assignments = r.data || [];
-  var countMap = {};
-  assignments.forEach(function(a) {
-    countMap[a.site_id] = (countMap[a.site_id] || 0) + 1;
+  // Load all user_sites WITH profile names in one query
+  var r = await sb.from('user_sites').select('site_id, user_id, site_role, profiles(full_name, email)');
+  var allAssignments = r.data || [];
+
+  // If profiles join failed, load separately
+  var profileMap = {};
+  var needFallback = allAssignments.length > 0 && !allAssignments[0].profiles;
+  if (needFallback) {
+    var pRes = await sb.from('profiles').select('id, full_name, email');
+    (pRes.data || []).forEach(function(p) { profileMap[p.id] = p; });
+  }
+
+  // Group by site
+  var siteMembers = {};
+  allAssignments.forEach(function(a) {
+    if (!siteMembers[a.site_id]) siteMembers[a.site_id] = [];
+    var p = a.profiles || profileMap[a.user_id];
+    siteMembers[a.site_id].push({
+      name: p ? (p.full_name || p.email || '?') : '?',
+      role: a.site_role
+    });
   });
 
   var h = '';
   S.sites.forEach(function(s) {
-    var empCount = countMap[s.id] || 0;
+    var members = siteMembers[s.id] || [];
     var addr = (s.address ? esc(s.address) : '') + (s.city ? ', ' + esc(s.city) : '');
 
-    h += '<div class="list-item">';
+    h += '<div class="list-item" style="flex-wrap:wrap">';
     h += '<div class="list-icon v2-list-icon--primary">' + IC.building + '</div>';
     h += '<div class="list-content">';
-    h += '<div class="list-title">' + esc(s.name) + '</div>';
+    h += '<div class="list-title">' + esc(s.name);
+    // Discreet admin badge
+    h += ' <span class="v2-role-tag v2-role-tag--admin">Admin</span>';
+    h += '</div>';
     h += '<div class="list-sub">';
-    if (addr) h += '<span style="display:inline-flex;align-items:center;gap:3px">' + IC.mapPin + ' ' + addr + '</span>';
+    if (addr) h += addr;
     if (s.responsable) h += (addr ? ' · ' : '') + esc(s.responsable);
     h += '</div>';
-    h += '<div style="margin-top:4px"><span class="badge badge-blue">' + IC.users + ' ' + empCount + ' membre' + (empCount > 1 ? 's' : '') + '</span></div>';
+
+    // Show members preview (max 4 names)
+    if (members.length > 0) {
+      h += '<div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:4px;align-items:center">';
+      var shown = members.slice(0, 4);
+      shown.forEach(function(m) {
+        var roleTag = {admin:'v2-role-tag--admin',manager:'v2-role-tag--manager',employee:'v2-role-tag--employee'}[m.role] || 'v2-role-tag--employee';
+        var roleShort = {admin:'A',manager:'G',employee:'E'}[m.role] || '';
+        h += '<span class="v2-member-chip"><span class="v2-role-dot ' + roleTag + '">' + roleShort + '</span>' + esc(m.name.split(' ')[0]) + '</span>';
+      });
+      if (members.length > 4) h += '<span class="v2-member-chip">+' + (members.length - 4) + '</span>';
+      h += '</div>';
+    } else {
+      h += '<div style="margin-top:4px;font-size:11px;color:var(--ink-muted)">Aucun membre</div>';
+    }
     h += '</div>';
+
     h += '<div class="list-actions">';
     h += '<button class="btn btn-ghost btn-sm v2-icon-btn" onclick="openEditSiteModal(\'' + s.id + '\')" title="Modifier">' + IC.edit + '</button>';
     h += '<button class="btn btn-primary btn-sm" onclick="openSiteAccessModal(\'' + s.id + '\')" style="gap:4px">' + IC.users + ' Accès</button>';
@@ -111,9 +145,12 @@ window.openSiteAccessModal = async function(siteId) {
   html += '<div class="modal-body" id="siteAccessBody"><div class="v2-loading-inline"><div class="loading"></div></div></div>';
   openModal(html);
 
-  var siteUsersRaw = await loadSiteUsers(siteId);
-  var allUsers = await loadAllUsers();
+  // Load user_sites for this site
+  var usRes = await sb.from('user_sites').select('user_id, site_role').eq('site_id', siteId);
+  var siteUsersRaw = usRes.data || [];
 
+  // Load ALL profiles separately (more reliable than join)
+  var allUsers = await loadAllUsers();
   var profileMap = {};
   allUsers.forEach(function(u) { profileMap[u.id] = u; });
 
@@ -125,16 +162,17 @@ window.openSiteAccessModal = async function(siteId) {
     body += '<p class="v2-text-base v2-text-muted v2-mb-16">Aucun utilisateur assigné à ce site.</p>';
   } else {
     siteUsersRaw.forEach(function(us) {
-      var p = us.profiles || profileMap[us.user_id];
-      var uName = p ? (p.full_name || p.email || '—') : 'Utilisateur #' + us.user_id.substring(0,8);
+      var p = profileMap[us.user_id];
+      var uName = p ? (p.full_name || p.email || '—') : 'ID: ' + us.user_id.substring(0,8);
       var uEmail = p ? (p.email || '') : '';
-      var siteRoleLabel = {admin:'Admin',manager:'Gérant',employee:'Employé'}[us.site_role] || us.site_role;
-      var uid = p ? p.id : us.user_id;
+      var roleTag = {admin:'v2-role-tag--admin',manager:'v2-role-tag--manager',employee:'v2-role-tag--employee'}[us.site_role] || '';
+      var roleLabel = {admin:'Admin',manager:'Gérant',employee:'Employé'}[us.site_role] || us.site_role;
+      var uid = us.user_id;
 
       body += '<div class="list-item" style="padding:10px 12px">';
       body += '<div class="list-icon v2-list-icon--info" style="width:36px;height:36px">' + IC.user + '</div>';
       body += '<div class="list-content" style="min-width:0">';
-      body += '<div class="list-title" style="font-size:14px">' + esc(uName) + '</div>';
+      body += '<div class="list-title" style="font-size:14px">' + esc(uName) + ' <span class="v2-role-tag ' + roleTag + '">' + roleLabel + '</span></div>';
       if (uEmail) body += '<div class="list-sub">' + esc(uEmail) + '</div>';
       body += '</div>';
       body += '<div class="v2-flex v2-gap-6 v2-items-center">';
@@ -143,7 +181,7 @@ window.openSiteAccessModal = async function(siteId) {
       body += '<option value="manager"' + (us.site_role==='manager'?' selected':'') + '>Gérant</option>';
       body += '<option value="admin"' + (us.site_role==='admin'?' selected':'') + '>Admin</option>';
       body += '</select>';
-      body += '<button class="btn btn-ghost btn-sm v2-icon-btn v2-icon-btn--danger" onclick="removeSiteAccess(\'' + uid + '\',\'' + siteId + '\')" title="Retirer">' + IC.userX + '</button>';
+      body += '<button class="btn btn-ghost btn-sm v2-icon-btn v2-icon-btn--danger" onclick="removeSiteAccess(\'' + uid + '\',\'' + siteId + '\')" title="Retirer l\'accès">' + IC.userX + '</button>';
       body += '</div></div>';
     });
   }
@@ -174,6 +212,7 @@ window.changeSiteRole = async function(userId, siteId, newRole) {
   try {
     await assignUserToSite(userId, siteId, newRole);
     showToast('Rôle modifié', 'success');
+    openSiteAccessModal(siteId); // Refresh
   } catch(e) { showToast('Erreur: ' + (e.message||e), 'error'); }
 };
 
@@ -182,7 +221,7 @@ window.removeSiteAccess = async function(userId, siteId) {
   try {
     await removeUserFromSite(userId, siteId);
     showToast('Utilisateur retiré du site', 'success');
-    openSiteAccessModal(siteId);
+    openSiteAccessModal(siteId); // Refresh
   } catch(e) { showToast('Erreur: ' + (e.message||e), 'error'); }
 };
 
@@ -193,6 +232,6 @@ window.addSiteAccess = async function(siteId) {
   try {
     await assignUserToSite(userId, siteId, role);
     showToast('Utilisateur ajouté au site', 'success');
-    openSiteAccessModal(siteId);
+    openSiteAccessModal(siteId); // Refresh
   } catch(e) { showToast('Erreur: ' + (e.message||e), 'error'); }
 };
