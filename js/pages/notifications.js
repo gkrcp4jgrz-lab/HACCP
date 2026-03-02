@@ -191,34 +191,54 @@ async function loadMultiSiteAlerts() {
 function buildAlertsForSite(temperatures, dlcs, consignes, orders, incidents, equipment, products) {
   var alerts = [];
 
-  // 1. DLC expirées (CRITIQUE)
-  dlcs.filter(function(d) {
+  // 1. DLC expirées — groupees par produit (CRITIQUE)
+  var dlcExpired = dlcs.filter(function(d) {
     return daysUntil(d.dlc_date) < 0 && d.status !== 'consumed' && d.status !== 'discarded';
-  }).forEach(function(d) {
+  });
+  var dlcExpGroups = {};
+  dlcExpired.forEach(function(d) {
+    if (!dlcExpGroups[d.product_name]) dlcExpGroups[d.product_name] = [];
+    dlcExpGroups[d.product_name].push(d);
+  });
+  Object.keys(dlcExpGroups).forEach(function(prodName) {
+    var items = dlcExpGroups[prodName];
+    var oldest = items[0];
+    var countLabel = items.length > 1 ? ' (' + items.length + 'x)' : '';
     alerts.push({
       level: 'critical', icon: '📅', category: 'dlc',
-      title: 'DLC expirée : ' + d.product_name,
-      message: 'Expirée depuis ' + Math.abs(daysUntil(d.dlc_date)) + ' jour(s) — Lot: ' + (d.lot_number || 'N/R'),
-      time: fmtD(d.dlc_date),
-      action: '<button class="btn btn-danger" onclick="updateDlcStatus(\'' + d.id + '\',\'discarded\');render()">🗑️ Jeter</button>'
+      title: 'DLC expirée : ' + prodName + countLabel,
+      message: 'Expirée depuis ' + Math.abs(daysUntil(oldest.dlc_date)) + ' jour(s) — Lot: ' + (oldest.lot_number || 'N/R'),
+      time: fmtD(oldest.dlc_date),
+      action: '<button class="btn btn-danger" onclick="updateDlcStatus(\'' + oldest.id + '\',\'discarded\');render()">🗑️ Jeter</button>'
     });
   });
 
-  // 2. Températures non conformes (CRITIQUE)
-  temperatures.filter(function(t) { return !t.is_conform; }).forEach(function(t) {
-    var refName = '';
-    if (t.record_type === 'equipment') {
-      var eq = equipment.find(function(e) { return e.id === t.equipment_id; });
-      refName = eq ? eq.name : 'Équipement';
-    } else {
-      var pr = products.find(function(p) { return p.id === t.product_id; });
-      refName = pr ? pr.name : 'Produit';
+  // 2. Températures non conformes — groupees (CRITIQUE)
+  var ncTemps = temperatures.filter(function(t) { return !t.is_conform; });
+  var ncTempGroups = {};
+  ncTemps.forEach(function(t) {
+    var key = t.equipment_id || t.product_id || 'unknown';
+    if (!ncTempGroups[key]) ncTempGroups[key] = { items: [], refName: '' };
+    ncTempGroups[key].items.push(t);
+    if (!ncTempGroups[key].refName) {
+      if (t.record_type === 'equipment') {
+        var eq = equipment.find(function(e) { return e.id === t.equipment_id; });
+        ncTempGroups[key].refName = eq ? eq.name : 'Équipement';
+      } else {
+        var pr = products.find(function(p) { return p.id === t.product_id; });
+        ncTempGroups[key].refName = pr ? pr.name : 'Produit';
+      }
     }
+  });
+  Object.keys(ncTempGroups).forEach(function(key) {
+    var g = ncTempGroups[key];
+    var latest = g.items[0];
+    var countLabel = g.items.length > 1 ? ' (' + g.items.length + 'x)' : '';
     alerts.push({
       level: 'critical', icon: '🌡️', category: 'temperature',
-      title: 'Température non conforme : ' + refName,
-      message: t.value + '°C — Action : ' + (t.corrective_action || 'Non renseignée'),
-      time: fmtDT(t.recorded_at)
+      title: 'Température non conforme : ' + g.refName + countLabel,
+      message: latest.value + '°C — Action : ' + (latest.corrective_action || 'Non renseignée'),
+      time: fmtDT(latest.recorded_at)
     });
   });
 
@@ -233,18 +253,27 @@ function buildAlertsForSite(temperatures, dlcs, consignes, orders, incidents, eq
     });
   });
 
-  // 4. DLC proches (WARNING)
-  dlcs.filter(function(d) {
+  // 4. DLC proches — groupees par produit (WARNING)
+  var dlcSoon = dlcs.filter(function(d) {
     var days = daysUntil(d.dlc_date);
     return days >= 0 && days <= 2 && d.status !== 'consumed' && d.status !== 'discarded';
-  }).forEach(function(d) {
-    var days = daysUntil(d.dlc_date);
+  });
+  var dlcSoonGroups = {};
+  dlcSoon.forEach(function(d) {
+    if (!dlcSoonGroups[d.product_name]) dlcSoonGroups[d.product_name] = [];
+    dlcSoonGroups[d.product_name].push(d);
+  });
+  Object.keys(dlcSoonGroups).forEach(function(prodName) {
+    var items = dlcSoonGroups[prodName];
+    var nearest = items[0];
+    var days = daysUntil(nearest.dlc_date);
+    var countLabel = items.length > 1 ? ' (' + items.length + ' lots)' : '';
     alerts.push({
       level: 'warning', icon: '📅', category: 'dlc',
-      title: 'DLC proche : ' + d.product_name,
-      message: (days === 0 ? 'Expire aujourd\'hui' : 'Expire dans ' + days + ' jour(s)') + ' — Lot: ' + (d.lot_number || 'N/R'),
-      time: fmtD(d.dlc_date),
-      action: '<button class="btn btn-success" onclick="updateDlcStatus(\'' + d.id + '\',\'consumed\')">✓ Consommé</button>'
+      title: 'DLC proche : ' + prodName + countLabel,
+      message: (days === 0 ? 'Expire aujourd\'hui' : 'Expire dans ' + days + ' jour(s)') + ' — Lot: ' + (nearest.lot_number || 'N/R'),
+      time: fmtD(nearest.dlc_date),
+      action: '<button class="btn btn-success" onclick="updateDlcStatus(\'' + nearest.id + '\',\'consumed\')">✓ Consommé</button>'
     });
   });
 
@@ -702,7 +731,9 @@ async function loadAndRenderReportHistory() {
       h += '<span class="badge badge-green">✓ Résolu</span> ';
       h += fmtDT(rep.resolved_at || rep.created_at) + ' — Signalé par ' + esc(rep.reported_by_name || 'Inconnu');
       if (rep.resolved_by_name) h += ' — Résolu par ' + esc(rep.resolved_by_name);
-      h += '</div></div></div>';
+      h += '</div>';
+      if (rep.resolution_notes) h += '<div class="list-sub v2-text-xs v2-mt-4" style="color:var(--af-ok)">📝 ' + esc(rep.resolution_notes) + '</div>';
+      h += '</div></div>';
     });
 
     container.innerHTML = h;
@@ -860,13 +891,20 @@ window.handleNewReport = async function(e) {
 };
 
 window.resolveReport = async function(id) {
-  if (!(await appConfirm('Résoudre le signalement', 'Marquer ce signalement comme résolu ?', {icon:'✅',confirmLabel:'Marquer résolu'}))) return;
+  var notes = await appPrompt(
+    'Résoudre le signalement',
+    'Comment le problème a-t-il été résolu ?',
+    '',
+    { placeholder: 'Ex: Technicien intervenu, pièce remplacée...', multiline: true, confirmLabel: 'Marquer résolu' }
+  );
+  if (notes === null || notes === undefined) return;
   try {
     await sb.from('incident_reports').update({
       status: 'resolved',
       resolved_at: new Date().toISOString(),
       resolved_by: S.user.id,
-      resolved_by_name: userName()
+      resolved_by_name: userName(),
+      resolution_notes: notes || ''
     }).eq('id', id);
     await loadAndRenderReports();
     render();

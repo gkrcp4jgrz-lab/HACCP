@@ -93,7 +93,7 @@ async function doLoginById(loginId, pass) {
   var r = await sb.auth.signInWithPassword({ email: email, password: pass });
   if (r.error) {
     recordLoginAttempt(false);
-    throw new Error('Mot de passe incorrect');
+    throw new Error('Identifiant ou mot de passe incorrect');
   }
 
   recordLoginAttempt(true);
@@ -112,7 +112,6 @@ async function doLogout() {
   if (_sessionTimer) clearTimeout(_sessionTimer);
   await sb.auth.signOut();
   // Clean sensitive data from storage
-  sessionStorage.removeItem('haccp_claude_key');
   localStorage.removeItem('haccp_email_enabled');
   localStorage.removeItem('haccp_email_to');
   localStorage.removeItem('haccp_email_events');
@@ -120,7 +119,6 @@ async function doLogout() {
   S.profile = null;
   S.sites = [];
   S.currentSiteId = null;
-  S.claudeApiKey = '';
   render();
 }
 
@@ -141,7 +139,12 @@ async function postLoginFlow() {
       }
       // No MFA enrolled — proceed (enrollment available in profile)
     } catch (e) {
-      console.warn('MFA check failed, proceeding without:', e);
+      // MFA check failed — block login, do NOT proceed without MFA
+      console.error('MFA check failed:', e);
+      await sb.auth.signOut();
+      S.user = null;
+      S.profile = null;
+      throw new Error('Verification 2FA impossible (erreur reseau). Reessayez.');
     }
   }
   await initApp();
@@ -275,7 +278,6 @@ if (sb) {
       S.currentSiteId = null;
       S.siteConfig = { equipment:[], products:[], suppliers:[], modules:[] };
       S.data = { temperatures:[], dlcs:[], lots:[], orders:[], consignes:[], incident_reports:[], cleaning_schedules:[], cleaning_logs:[], consumption_logs:[] };
-      S.claudeApiKey = '';
       render();
     } else if (event === 'TOKEN_REFRESHED' && session) {
       S.user = session.user;

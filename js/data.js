@@ -83,8 +83,6 @@ async function switchSite(siteId) {
 async function initApp() {
   S.loading = true;
   render();
-  // Charger les clés sauvegardées
-  S.claudeApiKey = sessionStorage.getItem('haccp_claude_key') || '';
   await loadSites();
   if (S.currentSiteId) {
     await Promise.all([loadSiteConfig(), loadSiteData()]);
@@ -210,24 +208,18 @@ async function updateLotStatus(id, status) {
   await loadSiteData(); render();
 }
 
-// -- Partial consumption (DLC + Lots) --
+// -- Partial consumption (DLC + Lots) — via RPC atomique --
 async function partialConsumeDlc(id, qty, status) {
   var dlc = S.data.dlcs.find(function(d) { return d.id === id; });
   if (!dlc) return;
   var currentQty = dlc.quantity || 1;
   if (qty >= currentQty) { return updateDlcStatus(id, status); }
-  // Reduce original
-  var r1 = await sbExec(sb.from('dlcs').update({ quantity: currentQty - qty }).eq('id', id), 'Mise à jour quantité DLC');
-  if (!r1) return;
-  // Insert consumed/discarded copy
-  var rec = {
-    site_id: dlc.site_id, product_name: dlc.product_name, dlc_date: dlc.dlc_date,
-    lot_number: dlc.lot_number || '', notes: dlc.notes || '',
-    quantity: qty, status: status,
-    opened_at: dlc.opened_at || null, shelf_life_days: dlc.shelf_life_days || null,
-    recorded_by: S.user.id, recorded_by_name: userName()
-  };
-  await sbExec(sb.from('dlcs').insert(rec), 'Insert DLC partiel');
+  var r = await sb.rpc('rpc_partial_consume_dlc', {
+    p_dlc_id: id, p_qty: qty, p_new_status: status,
+    p_user_id: S.user.id, p_user_name: userName()
+  });
+  if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
+  if (r.data && r.data.error) { showToast(r.data.error, 'error'); return; }
   showToast(qty + ' unité(s) ' + (status === 'consumed' ? 'utilisée(s)' : 'jetée(s)'), 'success');
   await loadSiteData(); render();
 }
@@ -237,17 +229,12 @@ async function partialConsumeLot(id, qty, status) {
   if (!lot) return;
   var currentQty = lot.quantity || 1;
   if (qty >= currentQty) { return updateLotStatus(id, status); }
-  // Reduce original
-  var r1 = await sbExec(sb.from('lots').update({ quantity: currentQty - qty }).eq('id', id), 'Mise à jour quantité lot');
-  if (!r1) return;
-  // Insert consumed/discarded copy
-  var rec = {
-    site_id: lot.site_id, product_name: lot.product_name, lot_number: lot.lot_number,
-    supplier_name: lot.supplier_name || '', dlc_date: lot.dlc_date || null,
-    notes: lot.notes || '', quantity: qty, status: status,
-    recorded_by: S.user.id, recorded_by_name: userName()
-  };
-  await sbExec(sb.from('lots').insert(rec), 'Insert lot partiel');
+  var r = await sb.rpc('rpc_partial_consume_lot', {
+    p_lot_id: id, p_qty: qty, p_new_status: status,
+    p_user_id: S.user.id, p_user_name: userName()
+  });
+  if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
+  if (r.data && r.data.error) { showToast(r.data.error, 'error'); return; }
   showToast(qty + ' unité(s) ' + (status === 'consumed' ? 'utilisée(s)' : 'jetée(s)'), 'success');
   await loadSiteData(); render();
 }
@@ -291,45 +278,10 @@ async function openPackage(dlcId, shelfLifeDays) {
   var d = S.data.dlcs.find(function(x) { return x.id === dlcId; });
   if (!d) { showToast('Produit introuvable', 'error'); return; }
   var days = shelfLifeDays || 3;
-  var now = new Date().toISOString();
 
-  if ((d.quantity || 1) > 1) {
-    // Scinder : décrémenter l'original + créer une entrée pour le paquet ouvert
-    var r1 = await sbExec(
-      sb.from('dlcs').update({ quantity: (d.quantity || 1) - 1 }).eq('id', dlcId),
-      'Déduction stock'
-    );
-    if (!r1) return;
-    var openedEntry = {
-      site_id: d.site_id,
-      product_name: d.product_name,
-      lot_number: d.lot_number || '',
-      dlc_date: d.dlc_date,
-      supplier_name: d.supplier_name || '',
-      unit: d.unit || 'unité',
-      quantity: 1,
-      status: 'active',
-      opened_at: now,
-      shelf_life_days: days
-    };
-    var r2 = await sbExec(sb.from('dlcs').insert(openedEntry), 'Création paquet entamé');
-    if (!r2) {
-      // Rollback : restaurer la quantité d'origine si l'insert échoue
-      await sbExec(sb.from('dlcs').update({ quantity: d.quantity || 1 }).eq('id', dlcId), 'Rollback stock');
-      showToast('Erreur — stock restauré. Vérifiez que le SQL a été exécuté dans Supabase.', 'error');
-      return;
-    }
-  } else {
-    // Paquet unique : ouvrir directement
-    var r = await sbExec(
-      sb.from('dlcs').update({ opened_at: now, shelf_life_days: days }).eq('id', dlcId),
-      'Ouverture colis'
-    );
-    if (!r) {
-      showToast('Erreur — vérifiez que le SQL a été exécuté dans Supabase (colonnes opened_at / shelf_life_days).', 'error');
-      return;
-    }
-  }
+  var r = await sb.rpc('rpc_open_package', { p_dlc_id: dlcId, p_shelf_life_days: days });
+  if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
+  if (r.data && r.data.error) { showToast(r.data.error, 'error'); return; }
 
   showToast('Paquet ouvert ✓', 'success');
   await loadSiteData(); render();
@@ -413,53 +365,19 @@ async function consumeFromPackage(dlcId, qty, notes) {
 }
 window.consumeFromPackage = consumeFromPackage;
 
-// -- Consommation FIFO (produits consommés en 1 fois, sans notion de colis ouvert) --
+// -- Consommation FIFO via RPC atomique --
 async function recordConsumption(productName, qtyToConsume, unit, notes) {
-  // 1. Trouver les entrées DLC NON ENTAMÉES pour ce produit, triées FIFO
-  // (les colis entamés sont gérés via confirmBuffetRefill / markPackageEmpty)
-  var matches = S.data.dlcs
-    .filter(function(d) { return d.product_name === productName && !d.opened_at; })
-    .sort(function(a, b) { return a.dlc_date < b.dlc_date ? -1 : 1; });
-
-  var totalAvailable = matches.reduce(function(sum, d) { return sum + (d.quantity || 1); }, 0);
-  if (totalAvailable < qtyToConsume) {
-    throw new Error('Stock insuffisant — disponible : ' + totalAvailable + ' ' + unit);
-  }
-
-  // 2. Déduire en FIFO
-  var remaining = qtyToConsume;
-  var dlcEntries = [];
-  for (var i = 0; i < matches.length; i++) {
-    if (remaining <= 0) break;
-    var d = matches[i];
-    var available = d.quantity || 1;
-    var taken = Math.min(available, remaining);
-    var newQty = available - taken;
-    if (newQty <= 0) {
-      var r1 = await sbExec(sb.from('dlcs').update({ status: 'consumed' }).eq('id', d.id), 'Mise à jour DLC');
-      if (!r1) throw new Error('Erreur mise à jour DLC');
-    } else {
-      var r2 = await sbExec(sb.from('dlcs').update({ quantity: newQty }).eq('id', d.id), 'Mise à jour quantité DLC');
-      if (!r2) throw new Error('Erreur mise à jour quantité DLC');
-    }
-    dlcEntries.push({ dlc_id: d.id, lot_number: d.lot_number || '', dlc_date: d.dlc_date, qty_taken: taken });
-    remaining -= taken;
-  }
-
-  // 3. Enregistrer la consommation
-  var rec = {
-    site_id: S.currentSiteId,
-    product_name: productName,
-    quantity_consumed: qtyToConsume,
-    unit: unit || 'unité',
-    consumed_by: S.user.id,
-    consumed_by_name: userName(),
-    consumed_at: new Date().toISOString(),
-    notes: notes || '',
-    dlc_entries: dlcEntries
-  };
-  var r3 = await sbExec(sb.from('consumption_logs').insert(rec), 'Enregistrement consommation');
-  if (!r3) throw new Error('Erreur enregistrement consommation');
+  var r = await sb.rpc('rpc_record_consumption_fifo', {
+    p_site_id: S.currentSiteId,
+    p_product_name: productName,
+    p_qty_to_consume: qtyToConsume,
+    p_unit: unit || 'unité',
+    p_notes: notes || '',
+    p_user_id: S.user.id,
+    p_user_name: userName()
+  });
+  if (r.error) throw new Error(r.error.message);
+  if (r.data && r.data.error) throw new Error(r.data.error);
 
   showToast('Consommation enregistrée ✓', 'success');
   await loadSiteData(); render();

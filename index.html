@@ -12,7 +12,8 @@
 <link rel="apple-touch-icon" href="/icon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap"></noscript>
 <link rel="stylesheet" href="css/style.css">
 <script src="js/supabase.min.js"></script>
 </head>
@@ -32,46 +33,37 @@
 <div id="sidebarBackdrop" class="sidebar-backdrop" onclick="toggleSidebar()"></div>
 
 <!-- ═══════════════════════════════════════════════════════════════════
-     SCRIPTS — Ordre de chargement important !
-     1. Config (Supabase + State + Helpers)
-     2. Auth (login/register/logout)
-     3. Data (CRUD operations)
-     4. Sites (site/equipment/supplier management)
-     5. UI (photos, signature, modals, navigation, PDF)
-     6. Render (moteur de rendu + sidebar + routing)
-     7. Pages (chaque page indépendante)
-     8. Handlers (tous les window.handleXxx)
-     9. App (initialisation)
+     SCRIPTS — defer preserve l'ordre d'execution sans bloquer le rendu
      ═══════════════════════════════════════════════════════════════════ -->
 
 <!-- Core -->
-<script src="js/config.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/data.js"></script>
-<script src="js/sites.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/render.js"></script>
-<script src="js/bottomnav.js"></script>
+<script defer src="js/config.js"></script>
+<script defer src="js/auth.js"></script>
+<script defer src="js/data.js"></script>
+<script defer src="js/sites.js"></script>
+<script defer src="js/ui.js"></script>
+<script defer src="js/render.js"></script>
+<script defer src="js/bottomnav.js"></script>
 
 <!-- Pages -->
-<script src="js/pages/dashboard.js"></script>
-<script src="js/pages/temperatures.js"></script>
-<script src="js/pages/dlc.js"></script>
-<script src="js/pages/orders.js"></script>
-<script src="js/pages/consignes.js"></script>
-<script src="js/pages/reports.js"></script>
-<script src="js/pages/settings.js"></script>
-<script src="js/pages/site-management.js"></script>
-<script src="js/pages/user-management.js"></script>
-<script src="js/pages/team.js"></script>
-<script src="js/pages/profile.js"></script>
-<script src="js/pages/notifications.js"></script>
-<script src="js/pages/legal.js"></script>
-<script src="js/pages/cleaning.js"></script>
+<script defer src="js/pages/dashboard.js"></script>
+<script defer src="js/pages/temperatures.js"></script>
+<script defer src="js/pages/dlc.js"></script>
+<script defer src="js/pages/orders.js"></script>
+<script defer src="js/pages/consignes.js"></script>
+<script defer src="js/pages/reports.js"></script>
+<script defer src="js/pages/settings.js"></script>
+<script defer src="js/pages/site-management.js"></script>
+<script defer src="js/pages/user-management.js"></script>
+<script defer src="js/pages/team.js"></script>
+<script defer src="js/pages/profile.js"></script>
+<script defer src="js/pages/notifications.js"></script>
+<script defer src="js/pages/legal.js"></script>
+<script defer src="js/pages/cleaning.js"></script>
 
 <!-- Handlers & Init -->
-<script src="js/handlers.js"></script>
-<script src="js/app.js"></script>
+<script defer src="js/handlers.js"></script>
+<script defer src="js/app.js"></script>
 
 </body>
 </html>
