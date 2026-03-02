@@ -906,6 +906,240 @@ async function generateFullPDF() {
 
 
 // =====================================================================
+// EXPORT DOSSIER DDPP
+// =====================================================================
+
+async function generateDDPPPDF() {
+  var site = currentSite();
+  if (!site) { showToast('Aucun site selectionne', 'error'); return; }
+  var siteName = site.name;
+  var days = parseInt(($('rptDDPPDays') || {}).value || '30', 10);
+  var endDate = today();
+  var d = new Date(); d.setDate(d.getDate() - days);
+  var startDate = d.toISOString().slice(0, 10);
+
+  showToast('Chargement du dossier DDPP (' + days + ' jours)...', 'info');
+
+  var data;
+  try {
+    data = await loadDDPPData(S.currentSiteId, startDate, endDate);
+  } catch (e) {
+    showToast('Erreur de chargement : ' + e.message, 'error');
+    return;
+  }
+
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Dossier DDPP — ' + esc(siteName) + '</title><style>' + pdfStyles() + '.page-break{page-break-before:always}' + '</style></head><body>';
+  html += pdfHeader('Dossier de Conformite DDPP', esc(siteName) + ' — du ' + fmtD(startDate) + ' au ' + fmtD(endDate));
+
+  // ── 1. Identification du site ──
+  html += '<div class="section"><h3>1. Identification de l\'etablissement</h3>';
+  html += '<table><tbody>';
+  html += '<tr><td style="font-weight:700;width:200px">Nom</td><td>' + esc(site.name) + '</td></tr>';
+  if (site.address) html += '<tr><td style="font-weight:700">Adresse</td><td>' + esc(site.address) + '</td></tr>';
+  if (site.city) html += '<tr><td style="font-weight:700">Ville</td><td>' + esc(site.city) + '</td></tr>';
+  if (site.agrement) html += '<tr><td style="font-weight:700">N° agrement sanitaire</td><td>' + esc(site.agrement) + '</td></tr>';
+  if (site.responsable) html += '<tr><td style="font-weight:700">Responsable HACCP</td><td>' + esc(site.responsable) + '</td></tr>';
+  var typeLabel = { hotel: 'Hotel', restaurant: 'Restaurant', cuisine_centrale: 'Cuisine centrale', autre: 'Autre' }[site.type] || site.type || '--';
+  html += '<tr><td style="font-weight:700">Type d\'etablissement</td><td>' + esc(typeLabel) + '</td></tr>';
+  html += '<tr><td style="font-weight:700">Periode du rapport</td><td>' + fmtD(startDate) + ' au ' + fmtD(endDate) + ' (' + days + ' jours)</td></tr>';
+  html += '</tbody></table></div>';
+
+  // ── 2. Plan HACCP (equipements, produits) ──
+  html += '<div class="section"><h3>2. Plan HACCP — Points de controle</h3>';
+  var eqs = S.siteConfig.equipment || [];
+  var prs = S.siteConfig.products || [];
+  if (eqs.length > 0) {
+    html += '<p style="font-weight:600;margin-bottom:6px">Equipements surveilles (' + eqs.length + ')</p>';
+    html += '<table><thead><tr><th>Nom</th><th>Type</th><th>Min</th><th>Max</th></tr></thead><tbody>';
+    eqs.forEach(function(eq) {
+      html += '<tr><td>' + esc(eq.name) + '</td><td>' + esc(eq.type || '--') + '</td><td>' + (eq.temp_min != null ? eq.temp_min + ' °C' : '--') + '</td><td>' + (eq.temp_max != null ? eq.temp_max + ' °C' : '--') + '</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+  if (prs.length > 0) {
+    html += '<p style="font-weight:600;margin:12px 0 6px">Produits surveilles (' + prs.length + ')</p>';
+    html += '<table><thead><tr><th>Nom</th><th>Type</th><th>Min</th><th>Max</th></tr></thead><tbody>';
+    prs.forEach(function(pr) {
+      html += '<tr><td>' + esc(pr.name) + '</td><td>' + esc(pr.type || '--') + '</td><td>' + (pr.temp_min != null ? pr.temp_min + ' °C' : '--') + '</td><td>' + (pr.temp_max != null ? pr.temp_max + ' °C' : '--') + '</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+  html += '</div>';
+
+  // ── 3. Temperatures ──
+  var temps = data.temperatures;
+  var tempConform = temps.filter(function(t) { return t.is_conform; }).length;
+  var tempNonConform = temps.length - tempConform;
+  var tempRate = temps.length > 0 ? Math.round(tempConform / temps.length * 100) : 100;
+
+  html += '<div class="section"><h3>3. Releves de temperatures (' + days + ' jours)</h3>';
+  html += '<div style="margin-bottom:10px">';
+  html += '<div class="stat-box"><div class="val">' + temps.length + '</div><div class="lbl">Total releves</div></div>';
+  html += '<div class="stat-box success"><div class="val">' + tempConform + '</div><div class="lbl">Conformes</div></div>';
+  html += '<div class="stat-box danger"><div class="val">' + tempNonConform + '</div><div class="lbl">Non conformes</div></div>';
+  html += '<div class="stat-box"><div class="val">' + tempRate + '%</div><div class="lbl">Taux conformite</div></div>';
+  html += '</div>';
+
+  // Show only non-conform records in detail
+  var nonConformTemps = temps.filter(function(t) { return !t.is_conform; });
+  if (nonConformTemps.length > 0) {
+    html += '<p style="font-weight:600;margin-bottom:6px;color:#dc2626">Non-conformites detectees :</p>';
+    html += '<table><thead><tr><th>Date</th><th>Point de controle</th><th>Valeur</th><th>Action corrective</th><th>Operateur</th></tr></thead><tbody>';
+    nonConformTemps.slice(0, 50).forEach(function(t) {
+      html += '<tr><td>' + fmtDT(t.recorded_at) + '</td>';
+      html += '<td>' + esc(t.equipment_name || t.product_name || '--') + '</td>';
+      html += '<td style="font-weight:700;color:#dc2626">' + t.value + ' °C</td>';
+      html += '<td>' + esc(t.corrective_action || '--') + '</td>';
+      html += '<td>' + esc(t.recorded_by_name || '--') + '</td></tr>';
+    });
+    if (nonConformTemps.length > 50) html += '<tr><td colspan="5" style="text-align:center;color:#64748B">+ ' + (nonConformTemps.length - 50) + ' autres non-conformites</td></tr>';
+    html += '</tbody></table>';
+  } else {
+    html += '<p style="color:#059669;font-weight:600">Aucune non-conformite sur la periode.</p>';
+  }
+  html += '</div>';
+
+  // ── 4. DLC ──
+  var dlcs = data.dlcs;
+  var dlcActive = dlcs.filter(function(d) { return d.status !== 'consumed' && d.status !== 'discarded'; });
+  var dlcExpired = dlcActive.filter(function(d) { return daysUntil(d.dlc_date) < 0; });
+
+  html += '<div class="section"><h3>4. Suivi DLC & Tracabilite</h3>';
+  html += '<div style="margin-bottom:10px">';
+  html += '<div class="stat-box"><div class="val">' + dlcActive.length + '</div><div class="lbl">DLC actives</div></div>';
+  html += '<div class="stat-box danger"><div class="val">' + dlcExpired.length + '</div><div class="lbl">Expirees</div></div>';
+  html += '<div class="stat-box"><div class="val">' + data.lots.length + '</div><div class="lbl">Lots enregistres</div></div>';
+  html += '</div>';
+
+  if (dlcExpired.length > 0) {
+    html += '<p style="font-weight:600;margin-bottom:6px;color:#dc2626">DLC expirees non traitees :</p>';
+    html += '<table><thead><tr><th>Produit</th><th>DLC</th><th>Lot</th><th>Retard</th></tr></thead><tbody>';
+    dlcExpired.forEach(function(d) {
+      html += '<tr><td>' + esc(d.product_name) + '</td><td>' + fmtD(d.dlc_date) + '</td><td>' + esc(d.lot_number || '--') + '</td><td class="nok">J' + daysUntil(d.dlc_date) + '</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+
+  if (data.lots.length > 0) {
+    html += '<p style="font-weight:600;margin:12px 0 6px">Derniers lots enregistres :</p>';
+    html += '<table><thead><tr><th>Produit</th><th>N° Lot</th><th>Fournisseur</th><th>DLC</th><th>Date reception</th></tr></thead><tbody>';
+    data.lots.slice(0, 30).forEach(function(l) {
+      html += '<tr><td>' + esc(l.product_name) + '</td><td style="font-weight:600">' + esc(l.lot_number) + '</td><td>' + esc(l.supplier_name || '--') + '</td><td>' + (l.dlc_date ? fmtD(l.dlc_date) : '--') + '</td><td>' + fmtD(l.recorded_at) + '</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+  html += '</div>';
+
+  // ── 5. Nettoyage ──
+  var cleanLogs = data.cleaningLogs;
+  html += '<div class="section"><h3>5. Plan de nettoyage</h3>';
+  html += '<div style="margin-bottom:10px">';
+  html += '<div class="stat-box"><div class="val">' + cleanLogs.length + '</div><div class="lbl">Nettoyages effectues</div></div>';
+  html += '</div>';
+  if (cleanLogs.length > 0) {
+    html += '<table><thead><tr><th>Date</th><th>Tache</th><th>Zone</th><th>Effectue par</th><th>Notes</th></tr></thead><tbody>';
+    cleanLogs.slice(0, 50).forEach(function(l) {
+      html += '<tr><td>' + fmtD(l.performed_at) + '</td><td>' + esc(l.schedule_name || '--') + '</td><td>' + esc(l.zone || '--') + '</td><td>' + esc(l.performed_by_name || '--') + '</td><td>' + esc(l.notes || '--') + '</td></tr>';
+    });
+    if (cleanLogs.length > 50) html += '<tr><td colspan="5" style="text-align:center;color:#64748B">+ ' + (cleanLogs.length - 50) + ' autres</td></tr>';
+    html += '</tbody></table>';
+  } else {
+    html += '<p style="color:#64748B">Aucun enregistrement de nettoyage sur la periode.</p>';
+  }
+  html += '</div>';
+
+  // ── 6. Incidents ──
+  var incidents = data.incidents;
+  var urgentInc = incidents.filter(function(i) { return i.priority === 'urgent'; });
+  var resolvedInc = incidents.filter(function(i) { return i.status === 'resolved'; });
+
+  html += '<div class="section"><h3>6. Journal des incidents</h3>';
+  html += '<div style="margin-bottom:10px">';
+  html += '<div class="stat-box"><div class="val">' + incidents.length + '</div><div class="lbl">Total incidents</div></div>';
+  html += '<div class="stat-box danger"><div class="val">' + urgentInc.length + '</div><div class="lbl">Urgents</div></div>';
+  html += '<div class="stat-box success"><div class="val">' + resolvedInc.length + '</div><div class="lbl">Resolus</div></div>';
+  html += '</div>';
+
+  if (incidents.length > 0) {
+    html += '<table><thead><tr><th>Date</th><th>Titre</th><th>Categorie</th><th>Priorite</th><th>Statut</th><th>Resolution</th></tr></thead><tbody>';
+    incidents.forEach(function(i) {
+      html += '<tr><td>' + fmtD(i.created_at) + '</td><td>' + esc(i.title) + '</td><td>' + esc(i.category || '--') + '</td>';
+      html += '<td><span class="badge ' + (i.priority === 'urgent' ? 'badge-red' : 'badge-yellow') + '">' + esc(i.priority) + '</span></td>';
+      html += '<td>' + esc(i.status) + '</td>';
+      html += '<td>' + esc(i.resolution || '--') + '</td></tr>';
+    });
+    html += '</tbody></table>';
+  } else {
+    html += '<p style="color:#059669;font-weight:600">Aucun incident sur la periode.</p>';
+  }
+  html += '</div>';
+
+  // ── 7. CONI Score ──
+  var summaries = data.summaries;
+  html += '<div class="section"><h3>7. Evolution CONI Score</h3>';
+  if (summaries.length > 0) {
+    var avgScore = Math.round(summaries.reduce(function(s, d) { return s + (d.coni_score || 0); }, 0) / summaries.length);
+    var minScore = Math.round(Math.min.apply(null, summaries.map(function(d) { return d.coni_score || 0; })));
+    var maxScore = Math.round(Math.max.apply(null, summaries.map(function(d) { return d.coni_score || 0; })));
+    html += '<div style="margin-bottom:10px">';
+    html += '<div class="stat-box"><div class="val">' + avgScore + '</div><div class="lbl">Score moyen</div></div>';
+    html += '<div class="stat-box danger"><div class="val">' + minScore + '</div><div class="lbl">Score min</div></div>';
+    html += '<div class="stat-box success"><div class="val">' + maxScore + '</div><div class="lbl">Score max</div></div>';
+    html += '</div>';
+
+    html += '<table><thead><tr><th>Date</th><th>Score</th><th>Temp</th><th>Complet.</th><th>DLC</th><th>Nettoy.</th><th>Malus inc.</th></tr></thead><tbody>';
+    summaries.forEach(function(s) {
+      var bk = s.score_breakdown || {};
+      var sc = Math.round(s.coni_score || 0);
+      var scColor = sc >= 80 ? '#059669' : sc >= 60 ? '#D97706' : '#DC2626';
+      html += '<tr><td>' + fmtD(s.summary_date) + '</td>';
+      html += '<td style="font-weight:700;color:' + scColor + '">' + sc + '</td>';
+      html += '<td>' + Math.round(bk.temp_pct || 0) + '%</td>';
+      html += '<td>' + Math.round(bk.temp_completion || 0) + '%</td>';
+      html += '<td>' + Math.round(bk.dlc_pct || 0) + '%</td>';
+      html += '<td>' + Math.round(bk.cleaning_pct || 0) + '%</td>';
+      html += '<td>' + (bk.incident_penalty || 0) + '</td></tr>';
+    });
+    html += '</tbody></table>';
+  } else {
+    html += '<p style="color:#64748B">Aucun score calcule sur la periode. Utilisez le dashboard pour declencher le calcul.</p>';
+  }
+  html += '</div>';
+
+  // ── 8. Extrait journal d'audit ──
+  var auditLogs = data.auditLogs;
+  html += '<div class="section"><h3>8. Journal d\'audit (extrait)</h3>';
+  html += '<p style="font-size:11px;color:#64748B;margin-bottom:8px">Les 100 dernieres actions enregistrees automatiquement par le systeme.</p>';
+  if (auditLogs.length > 0) {
+    html += '<table><thead><tr><th>Date</th><th>Utilisateur</th><th>Action</th><th>Table</th><th>Champs modifies</th></tr></thead><tbody>';
+    auditLogs.forEach(function(a) {
+      var actionLabel = { INSERT: 'Creation', UPDATE: 'Modification', DELETE: 'Suppression' }[a.action] || a.action;
+      var fields = (a.changed_fields || []).join(', ') || '--';
+      html += '<tr><td>' + fmtDT(a.created_at) + '</td><td>' + esc(a.user_name || '--') + '</td>';
+      html += '<td>' + esc(actionLabel) + '</td><td>' + esc(a.table_name) + '</td>';
+      html += '<td style="font-size:10px">' + esc(fields) + '</td></tr>';
+    });
+    html += '</tbody></table>';
+  } else {
+    html += '<p style="color:#64748B">Aucun log d\'audit disponible. Executez le SQL Phase 1A dans Supabase.</p>';
+  }
+  html += '</div>';
+
+  // ── Conclusion ──
+  var allOk = tempNonConform === 0 && dlcExpired.length === 0 && urgentInc.length === 0;
+  html += '<div style="margin-top:24px;padding:16px;border-radius:8px;background:' + (allOk ? '#d1fae5' : '#fee2e2') + ';text-align:center">';
+  html += '<strong style="font-size:15px;color:' + (allOk ? '#059669' : '#dc2626') + '">';
+  html += allOk ? 'ETABLISSEMENT CONFORME — Aucune anomalie detectee sur la periode' : 'POINTS D\'ATTENTION — Actions correctives requises (voir details ci-dessus)';
+  html += '</strong></div>';
+
+  html += pdfSignatureBlock();
+  html += pdfFooter();
+  html += '</body></html>';
+  openPdfWindow(html, 'Dossier DDPP — ' + siteName);
+}
+window.generateDDPPPDF = generateDDPPPDF;
+
+// =====================================================================
 // SEND REPORT BY EMAIL (managers only)
 // =====================================================================
 

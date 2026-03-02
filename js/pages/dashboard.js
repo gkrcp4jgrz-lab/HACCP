@@ -402,7 +402,10 @@ function renderMultiSiteDashboard() {
   h += '<div class="v2-flex v2-items-center v2-justify-between v2-flex-wrap v2-gap-12">';
   h += '<div class="greeting-text"><h2>' + greeting + ', ' + esc(firstName) + '</h2>';
   h += '<p>Vue globale — ' + S.sites.length + ' site' + (S.sites.length > 1 ? 's' : '') + ' · ' + fmtD(today()) + '</p></div>';
+  h += '<div class="v2-flex v2-gap-8">';
+  h += '<button class="v2-greeting-select" onclick="toggleBenchmarkView();">📊 Benchmark</button>';
   h += '<button class="v2-greeting-select" onclick="_multiSiteCache=null;loadAndRenderMultiDashboard();">↻ Actualiser</button>';
+  h += '</div>';
   h += '</div></div>';
 
   // Container with skeleton loading
@@ -524,6 +527,163 @@ async function loadAndRenderMultiDashboard() {
   S.sites.forEach(function(site) {
     sb.rpc('compute_daily_summary', { p_site_id: site.id, p_date: today() }).catch(function(){});
   });
+}
+
+// =====================================================================
+// 5A — BENCHMARKING INTER-SITES
+// =====================================================================
+
+window.toggleBenchmarkView = function() {
+  S._benchmarkOpen = !S._benchmarkOpen;
+  var container = $('multiDashContainer');
+  if (!container) return;
+  if (S._benchmarkOpen) {
+    loadAndRenderBenchmark();
+  } else {
+    _multiSiteCache = null;
+    loadAndRenderMultiDashboard();
+  }
+};
+
+async function loadAndRenderBenchmark() {
+  var container = $('multiDashContainer');
+  if (!container) return;
+  container.innerHTML = '<div style="text-align:center;padding:40px"><div class="loading"></div><div style="margin-top:12px;color:var(--muted);font-size:13px">Chargement du benchmark...</div></div>';
+
+  var siteIds = S.sites.map(function(s) { return s.id; });
+  var data = await loadBenchmarkData(siteIds, 30);
+
+  // Aggregate by site
+  var bySite = {};
+  siteIds.forEach(function(sid) { bySite[sid] = []; });
+  data.forEach(function(d) {
+    if (bySite[d.site_id]) bySite[d.site_id].push(d);
+  });
+
+  var siteStats = S.sites.map(function(site) {
+    var entries = bySite[site.id] || [];
+    if (entries.length === 0) return { site: site, avg: null, trend: 0, weekAvg: null, breakdown: {}, weakest: null, count: 0 };
+
+    var total = 0;
+    entries.forEach(function(e) { total += (e.coni_score || 0); });
+    var avg = Math.round(total / entries.length);
+
+    // Last 7 days vs previous 7 days
+    var now = new Date();
+    var d7 = new Date(); d7.setDate(d7.getDate() - 7);
+    var d14 = new Date(); d14.setDate(d14.getDate() - 14);
+    var recent = entries.filter(function(e) { return new Date(e.summary_date) >= d7; });
+    var prev = entries.filter(function(e) { var d = new Date(e.summary_date); return d >= d14 && d < d7; });
+    var recentAvg = recent.length > 0 ? recent.reduce(function(s, e) { return s + (e.coni_score || 0); }, 0) / recent.length : null;
+    var prevAvg = prev.length > 0 ? prev.reduce(function(s, e) { return s + (e.coni_score || 0); }, 0) / prev.length : null;
+    var trend = (recentAvg !== null && prevAvg !== null) ? Math.round(recentAvg - prevAvg) : 0;
+
+    // Average breakdown over 30 days
+    var bk = { temp_pct: 0, temp_completion: 0, dlc_pct: 0, cleaning_pct: 0, incident_penalty: 0 };
+    var bkCount = 0;
+    entries.forEach(function(e) {
+      if (e.score_breakdown) {
+        bk.temp_pct += (e.score_breakdown.temp_pct || 0);
+        bk.temp_completion += (e.score_breakdown.temp_completion || 0);
+        bk.dlc_pct += (e.score_breakdown.dlc_pct || 0);
+        bk.cleaning_pct += (e.score_breakdown.cleaning_pct || 0);
+        bk.incident_penalty += (e.score_breakdown.incident_penalty || 0);
+        bkCount++;
+      }
+    });
+    if (bkCount > 0) {
+      Object.keys(bk).forEach(function(k) { bk[k] = Math.round(bk[k] / bkCount); });
+    }
+
+    // Find weakest dimension
+    var dims = [
+      { key: 'temp_pct', label: 'Temperatures' },
+      { key: 'temp_completion', label: 'Completude' },
+      { key: 'dlc_pct', label: 'DLC' },
+      { key: 'cleaning_pct', label: 'Nettoyage' }
+    ];
+    var weakest = null;
+    var weakVal = 101;
+    dims.forEach(function(d) {
+      if (bk[d.key] < weakVal) { weakVal = bk[d.key]; weakest = d.label; }
+    });
+
+    return { site: site, avg: avg, trend: trend, weekAvg: recentAvg !== null ? Math.round(recentAvg) : null, breakdown: bk, weakest: weakest, count: entries.length };
+  });
+
+  // Sort by avg score ascending (worst first)
+  siteStats.sort(function(a, b) { return (a.avg || 0) - (b.avg || 0); });
+
+  var h = '';
+
+  // Header
+  h += '<div class="v2-flex v2-justify-between v2-items-center v2-mb-14">';
+  h += '<h3 class="v2-section-heading">Benchmark 30 jours</h3>';
+  h += '<button class="btn btn-ghost btn-sm" onclick="toggleBenchmarkView()">Retour classement</button>';
+  h += '</div>';
+
+  // Comparative chart
+  h += '<div class="card" style="margin-bottom:18px"><div class="card-header">Comparaison des scores moyens</div><div class="card-body">';
+  siteStats.forEach(function(s) {
+    var score = s.avg;
+    var color = score === null ? 'var(--muted)' : score >= 80 ? 'var(--ok,#16a34a)' : score >= 60 ? '#f59e0b' : 'var(--err,#dc2626)';
+    var trendArrow = s.trend > 0 ? '<span style="color:var(--ok,#16a34a);font-weight:700;margin-left:6px">+' + s.trend + ' pts</span>' : s.trend < 0 ? '<span style="color:var(--err,#dc2626);font-weight:700;margin-left:6px">' + s.trend + ' pts</span>' : '';
+    h += '<div style="margin-bottom:12px">';
+    h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">';
+    h += '<span style="font-size:13px;font-weight:600">' + esc(s.site.name) + '</span>';
+    h += '<span style="font-size:14px;font-weight:800;color:' + color + '">' + (score !== null ? score : '--') + trendArrow + '</span>';
+    h += '</div>';
+    h += '<div style="height:10px;background:var(--border);border-radius:5px;overflow:hidden">';
+    h += '<div style="width:' + (score || 0) + '%;height:100%;background:' + color + ';border-radius:5px;transition:width 0.6s ease"></div>';
+    h += '</div></div>';
+  });
+  h += '</div></div>';
+
+  // Breakdown comparison table
+  h += '<div class="card" style="margin-bottom:18px"><div class="card-header">Detail par dimension (%)</div><div class="card-body" style="overflow-x:auto">';
+  h += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  h += '<thead><tr style="border-bottom:2px solid var(--border)">';
+  h += '<th style="text-align:left;padding:8px 10px;font-size:11px;color:var(--muted)">Site</th>';
+  h += '<th style="text-align:center;padding:8px 6px;font-size:11px">Temp</th>';
+  h += '<th style="text-align:center;padding:8px 6px;font-size:11px">Complet.</th>';
+  h += '<th style="text-align:center;padding:8px 6px;font-size:11px">DLC</th>';
+  h += '<th style="text-align:center;padding:8px 6px;font-size:11px">Nettoy.</th>';
+  h += '<th style="text-align:center;padding:8px 6px;font-size:11px">Incidents</th>';
+  h += '<th style="text-align:center;padding:8px 6px;font-size:11px">Faiblesse</th>';
+  h += '</tr></thead><tbody>';
+
+  siteStats.forEach(function(s) {
+    var bk = s.breakdown;
+    h += '<tr style="border-bottom:1px solid var(--border)">';
+    h += '<td style="padding:8px 10px;font-weight:600">' + esc(s.site.name) + '</td>';
+    var dims = ['temp_pct', 'temp_completion', 'dlc_pct', 'cleaning_pct'];
+    dims.forEach(function(k) {
+      var v = bk[k] || 0;
+      var c = v >= 80 ? 'var(--ok,#16a34a)' : v >= 60 ? '#f59e0b' : 'var(--err,#dc2626)';
+      h += '<td style="text-align:center;padding:8px 6px;font-weight:700;color:' + c + '">' + v + '</td>';
+    });
+    var pen = bk.incident_penalty || 0;
+    h += '<td style="text-align:center;padding:8px 6px;font-weight:700;color:' + (pen > 5 ? 'var(--err,#dc2626)' : pen > 0 ? '#f59e0b' : 'var(--ok,#16a34a)') + '">-' + pen + '</td>';
+    h += '<td style="text-align:center;padding:8px 6px;font-size:11px;color:var(--err,#dc2626);font-weight:600">' + (s.weakest || '--') + '</td>';
+    h += '</tr>';
+  });
+  h += '</tbody></table></div></div>';
+
+  // Trend sparklines per site
+  h += '<div class="card"><div class="card-header">Evolution 30 jours</div><div class="card-body">';
+  siteStats.forEach(function(s) {
+    var entries = (bySite[s.site.id] || []).sort(function(a, b) { return a.summary_date < b.summary_date ? -1 : 1; });
+    if (entries.length < 2) {
+      h += '<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:600;margin-bottom:4px">' + esc(s.site.name) + '</div><div style="font-size:11px;color:var(--muted)">Pas assez de donnees</div></div>';
+      return;
+    }
+    h += '<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:600;margin-bottom:4px">' + esc(s.site.name) + '</div>';
+    h += renderSparkline(entries, 260, 40);
+    h += '</div>';
+  });
+  h += '</div></div>';
+
+  container.innerHTML = h;
 }
 
 // =====================================================================

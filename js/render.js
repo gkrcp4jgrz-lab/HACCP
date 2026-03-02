@@ -24,6 +24,9 @@ function render() {
   if (S.page === 'temperatures') {
     setTimeout(function() { initSignature(); }, 50);
   }
+  if (S.page === 'profile' && typeof loadMFA2FASection === 'function') {
+    setTimeout(function() { loadMFA2FASection(); }, 100);
+  }
 }
 
 // ── AUTH ──

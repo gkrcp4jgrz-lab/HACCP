@@ -60,6 +60,16 @@ function renderReports() {
   h += '<button class="btn btn-primary btn-lg" style="width:100%;margin-top:8px" onclick="exportFullBackup()">💾 Exporter la sauvegarde complète</button>';
   h += '</div></div>';
 
+  // ── Dossier DDPP ──
+  if (isManager() || isSuperAdmin()) {
+    h += '<div class="card card-accent"><div class="card-header"><span class="v2-text-2xl">🏛️</span> Dossier DDPP <span class="badge badge-blue v2-ml-auto">Audit</span></div><div class="card-body">';
+    h += '<p class="v2-text-sm v2-text-muted v2-mb-14">Dossier complet pour controle DDPP (Direction Departementale de la Protection des Populations). Inclut temperatures, DLC, nettoyage, incidents, tracabilite, CONI Score et journal d\'audit sur 30 jours.</p>';
+    h += '<div class="form-row">';
+    h += '<div class="form-group"><label class="form-label">Periode</label><div class="v2-flex v2-items-center v2-gap-8"><input type="number" class="form-input" id="rptDDPPDays" value="30" min="7" max="365" style="max-width:100px;width:100%"><span class="v2-text-sm v2-text-muted">jours</span></div></div>';
+    h += '<div class="form-group v2-flex v2-items-end"><button class="btn btn-primary btn-lg" style="width:100%;margin-top:8px" onclick="generateDDPPPDF()">🏛️ Generer le dossier DDPP</button></div>';
+    h += '</div></div></div>';
+  }
+
   // ── Rappel réglementaire ──
   h += '<div class="card"><div class="card-body v2-flex v2-items-start v2-gap-14">';
   h += '<div style="width:44px;height:44px;background:var(--af-info-bg);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">📌</div>';

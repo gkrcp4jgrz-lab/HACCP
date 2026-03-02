@@ -659,6 +659,45 @@ async function loadAuditLogs(siteId, offset, limit) {
 }
 window.loadAuditLogs = loadAuditLogs;
 
+// ── Benchmark inter-sites (30 jours) ──
+
+async function loadBenchmarkData(siteIds, days) {
+  days = days || 30;
+  var d = new Date(); d.setDate(d.getDate() - days);
+  var since = d.toISOString().slice(0, 10);
+  var r = await sb.from('daily_site_summary')
+    .select('site_id,summary_date,coni_score,score_breakdown')
+    .in('site_id', siteIds)
+    .gte('summary_date', since)
+    .order('summary_date');
+  return r.data || [];
+}
+window.loadBenchmarkData = loadBenchmarkData;
+
+// ── DDPP data loader ──
+
+async function loadDDPPData(siteId, startDate, endDate) {
+  var results = await Promise.all([
+    sb.from('temperatures').select('*').eq('site_id', siteId).gte('recorded_at', startDate + 'T00:00:00').lte('recorded_at', endDate + 'T23:59:59').order('recorded_at', { ascending: false }),
+    sb.from('dlcs').select('*').eq('site_id', siteId).order('dlc_date'),
+    sb.from('lots').select('*').eq('site_id', siteId).gte('recorded_at', startDate + 'T00:00:00').lte('recorded_at', endDate + 'T23:59:59').order('recorded_at', { ascending: false }),
+    sb.from('cleaning_logs').select('*').eq('site_id', siteId).gte('performed_at', startDate + 'T00:00:00').lte('performed_at', endDate + 'T23:59:59').order('performed_at', { ascending: false }),
+    sb.from('incident_reports').select('*').eq('site_id', siteId).gte('created_at', startDate + 'T00:00:00').order('created_at', { ascending: false }),
+    sb.from('daily_site_summary').select('*').eq('site_id', siteId).gte('summary_date', startDate).lte('summary_date', endDate).order('summary_date'),
+    sb.from('audit_logs').select('*').eq('site_id', siteId).gte('created_at', startDate + 'T00:00:00').lte('created_at', endDate + 'T23:59:59').order('created_at', { ascending: false }).limit(100)
+  ]);
+  return {
+    temperatures: results[0].data || [],
+    dlcs: results[1].data || [],
+    lots: results[2].data || [],
+    cleaningLogs: results[3].data || [],
+    incidents: results[4].data || [],
+    summaries: results[5].data || [],
+    auditLogs: results[6].data || []
+  };
+}
+window.loadDDPPData = loadDDPPData;
+
 // sbExec: exécute une requête supabase et gère l'erreur proprement
 async function sbExec(promise, title) {
   var r;

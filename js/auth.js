@@ -68,7 +68,7 @@ async function doLoginById(loginId, pass) {
         renderChangePassword();
         return;
       }
-      await initApp();
+      await postLoginFlow();
       return;
     }
     // Also try as internal email format
@@ -83,7 +83,7 @@ async function doLoginById(loginId, pass) {
         renderChangePassword();
         return;
       }
-      await initApp();
+      await postLoginFlow();
       return;
     }
     recordLoginAttempt(false);
@@ -105,7 +105,7 @@ async function doLoginById(loginId, pass) {
     renderChangePassword();
     return;
   }
-  await initApp();
+  await postLoginFlow();
 }
 
 async function doLogout() {
@@ -123,6 +123,88 @@ async function doLogout() {
   S.claudeApiKey = '';
   render();
 }
+
+// ── MFA (2FA TOTP) for managers & super_admins ──
+
+async function postLoginFlow() {
+  // Check MFA requirement for admin/manager roles
+  if (S.profile && (S.profile.role === 'super_admin' || S.profile.role === 'manager')) {
+    try {
+      var factors = await sb.auth.mfa.listFactors();
+      var totpFactors = (factors.data && factors.data.totp) ? factors.data.totp : [];
+      var verified = totpFactors.filter(function(f) { return f.status === 'verified'; });
+
+      if (verified.length > 0) {
+        // User has MFA enrolled — show challenge screen
+        renderMFAChallenge(verified[0].id);
+        return;
+      }
+      // No MFA enrolled — proceed (enrollment available in profile)
+    } catch (e) {
+      console.warn('MFA check failed, proceeding without:', e);
+    }
+  }
+  await initApp();
+}
+
+function renderMFAChallenge(factorId) {
+  document.body.insertAdjacentHTML('beforeend',
+    '<div class="pwd-overlay" id="mfaOverlay"><div class="pwd-card">' +
+    '<h2>🔐 Verification 2FA</h2>' +
+    '<p>Entrez le code a 6 chiffres de votre application d\'authentification.</p>' +
+    '<form onsubmit="handleMFAVerify(event,\'' + factorId + '\')">' +
+    '<div class="form-group"><label class="form-label">Code TOTP</label>' +
+    '<input type="text" class="form-input" id="mfaCode" required maxlength="6" pattern="[0-9]{6}" placeholder="000000" autocomplete="one-time-code" inputmode="numeric" style="text-align:center;font-size:24px;letter-spacing:8px;font-weight:800"></div>' +
+    '<div id="mfaError" class="form-error"></div>' +
+    '<button type="submit" class="btn btn-primary btn-block btn-lg v2-mt-8" id="mfaBtn">Verifier</button>' +
+    '</form>' +
+    '<button class="btn btn-ghost v2-mt-8" onclick="doLogout()" style="width:100%">Se deconnecter</button>' +
+    '</div></div>'
+  );
+  setTimeout(function() { var el = $('mfaCode'); if (el) el.focus(); }, 100);
+}
+
+window.handleMFAVerify = async function(e, factorId) {
+  e.preventDefault();
+  var code = $('mfaCode').value.trim();
+  var err = $('mfaError');
+  var btn = $('mfaBtn');
+
+  if (!/^\d{6}$/.test(code)) {
+    err.textContent = 'Entrez un code a 6 chiffres';
+    err.classList.add('show');
+    return;
+  }
+
+  var origText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Verification...';
+  err.classList.remove('show');
+
+  try {
+    var challenge = await sb.auth.mfa.challenge({ factorId: factorId });
+    if (challenge.error) throw challenge.error;
+
+    var verify = await sb.auth.mfa.verify({
+      factorId: factorId,
+      challengeId: challenge.data.id,
+      code: code
+    });
+    if (verify.error) throw verify.error;
+
+    // MFA verified — remove overlay and proceed
+    var overlay = $('mfaOverlay');
+    if (overlay) overlay.remove();
+    await initApp();
+  } catch (ex) {
+    err.textContent = 'Code incorrect. Reessayez.';
+    err.classList.add('show');
+    btn.disabled = false;
+    btn.textContent = origText;
+    $('mfaCode').value = '';
+    $('mfaCode').focus();
+  }
+};
 
 async function changePassword(newPass) {
   var v = validatePassword(newPass);
