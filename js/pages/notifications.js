@@ -107,35 +107,45 @@ async function loadMultiSiteAlerts() {
   var totalCritical = 0, totalWarning = 0, totalInfo = 0;
   var siteAlerts = [];
 
-  var siteResults = await Promise.all(S.sites.map(async function(site) {
+  // Batch: 7 queries total (1 per table for ALL sites) instead of 7*N
+  var siteIds = S.sites.map(function(s) { return s.id; });
+  var batchResults;
+  try {
+    batchResults = await Promise.all([
+      sb.from('temperatures').select('*').in('site_id', siteIds).gte('recorded_at', localMidnightISO).order('recorded_at', {ascending:false}),
+      sb.from('dlcs').select('*').in('site_id', siteIds).order('dlc_date'),
+      sb.from('consignes').select('*').in('site_id', siteIds).order('created_at', {ascending:false}).limit(200),
+      sb.from('orders').select('*').in('site_id', siteIds).in('status', ['to_order','ordered']).order('ordered_at', {ascending:false}),
+      sb.from('incident_reports').select('*').in('site_id', siteIds).in('status', ['open','in_progress']).order('created_at', {ascending:false}),
+      sb.from('site_equipment').select('*').in('site_id', siteIds).eq('active', true),
+      sb.from('site_products').select('*').in('site_id', siteIds).eq('active', true)
+    ]);
+  } catch(e) {
+    console.error('Multi-site batch load error:', e);
+    container.innerHTML = '<p class="v2-text-danger v2-font-600" style="padding:18px">Erreur de chargement</p>';
+    return;
+  }
+
+  var allTemps = batchResults[0].data || [];
+  var allDlcs = batchResults[1].data || [];
+  var allConsignes = (batchResults[2].data || []).filter(function(c) { return dismissed.indexOf(c.id) === -1 && c.is_read !== true; });
+  var allOrders = batchResults[3].data || [];
+  var allIncidents = batchResults[4].data || [];
+  var allEquipment = batchResults[5].data || [];
+  var allProducts = batchResults[6].data || [];
+
+  // Group by site_id
+  function bySite(arr, sid) { return arr.filter(function(r) { return r.site_id === sid; }); }
+
+  var siteResults = S.sites.map(function(site) {
     var sid = site.id;
     var typeEmoji = { hotel:'🏨', restaurant:'🍽️', cuisine_centrale:'🏭', autre:'🏢' }[site.type] || '🏢';
-    try {
-      var results = await Promise.all([
-        sb.from('temperatures').select('*').eq('site_id', sid).gte('recorded_at', localMidnightISO).order('recorded_at', {ascending:false}),
-        sb.from('dlcs').select('*').eq('site_id', sid).order('dlc_date'),
-        sb.from('consignes').select('*').eq('site_id', sid).order('created_at', {ascending:false}).limit(50),
-        sb.from('orders').select('*').eq('site_id', sid).in('status', ['to_order','ordered']).order('ordered_at', {ascending:false}),
-        sb.from('incident_reports').select('*').eq('site_id', sid).in('status', ['open','in_progress']).order('created_at', {ascending:false}),
-        sb.from('site_equipment').select('*').eq('site_id', sid).eq('active', true),
-        sb.from('site_products').select('*').eq('site_id', sid).eq('active', true)
-      ]);
-
-      var temps = results[0].data || [];
-      var dlcs = results[1].data || [];
-      var consignes = (results[2].data || []).filter(function(c) { return dismissed.indexOf(c.id) === -1 && c.is_read !== true; });
-      var orders = results[3].data || [];
-      var incidents = results[4].data || [];
-      var equipment = results[5].data || [];
-      var products = results[6].data || [];
-
-      var alerts = buildAlertsForSite(temps, dlcs, consignes, orders, incidents, equipment, products);
-      return { site: site, emoji: typeEmoji, alerts: alerts };
-    } catch(e) {
-      console.error('Alerts error for', site.name, e);
-      return null;
-    }
-  }));
+    var alerts = buildAlertsForSite(
+      bySite(allTemps, sid), bySite(allDlcs, sid), bySite(allConsignes, sid),
+      bySite(allOrders, sid), bySite(allIncidents, sid), bySite(allEquipment, sid), bySite(allProducts, sid)
+    );
+    return { site: site, emoji: typeEmoji, alerts: alerts };
+  });
 
   siteResults.forEach(function(r) {
     if (!r || r.alerts.length === 0) return;

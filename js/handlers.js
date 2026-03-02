@@ -348,8 +348,7 @@ window.handleResetUserPassword = async function(userId, loginId) {
     var profile = await sb.from('profiles').select('email').eq('id', userId).single();
     if (!profile.data || !profile.data.email) throw new Error('Email utilisateur introuvable');
 
-    // 3. Sign in as the target user with a known temp password (old approach won't work)
-    // Instead: use Supabase admin RPC if available
+    // Use server-side RPC to reset password (SECURITY DEFINER)
     var rpcResult = await sb.rpc('admin_reset_password', { p_user_id: userId, p_new_password: newPass });
     if (rpcResult.error) {
       // Fallback: set must_change_password and warn admin
@@ -357,13 +356,9 @@ window.handleResetUserPassword = async function(userId, loginId) {
       showToast('Le mot de passe n\'a pas pu être changé automatiquement. L\'utilisateur devra le changer à la prochaine connexion.', 'warning', 6000);
       return;
     }
-
-    // 4. Mark must_change_password
-    await sb.from('profiles').update({ must_change_password: true }).eq('id', userId);
-
-    // 5. Restore admin session
-    if (savedToken) {
-      await sb.auth.setSession({ access_token: savedToken.access_token, refresh_token: savedToken.refresh_token });
+    if (rpcResult.data && rpcResult.data.error) {
+      showToast(rpcResult.data.error, 'error');
+      return;
     }
 
     showToast('Mot de passe réinitialisé', 'success');

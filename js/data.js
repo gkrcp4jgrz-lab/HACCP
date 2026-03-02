@@ -334,32 +334,21 @@ async function markPackageEmpty(dlcId) {
 }
 window.markPackageEmpty = markPackageEmpty;
 
-// Consommer une quantité depuis un colis déjà ouvert (ciblé par ID)
+// Consommer une quantité depuis un colis déjà ouvert (ciblé par ID) — via RPC atomique
 async function consumeFromPackage(dlcId, qty, notes) {
   var d = S.data.dlcs.find(function(x) { return x.id === dlcId; });
   if (!d) { showToast('Produit introuvable', 'error'); return; }
-  var available = d.quantity || 1;
-  if (qty > available) { showToast('Quantité insuffisante — reste : ' + available + ' ' + (d.unit || ''), 'warning'); return; }
-  var newQty = available - qty;
-  if (newQty <= 0) {
-    var r1 = await sbExec(sb.from('dlcs').update({ status: 'consumed' }).eq('id', dlcId), 'Clôture colis');
-    if (!r1) return;
-  } else {
-    var r2 = await sbExec(sb.from('dlcs').update({ quantity: newQty }).eq('id', dlcId), 'Mise à jour quantité');
-    if (!r2) return;
-  }
-  var rec = {
-    site_id: S.currentSiteId,
-    product_name: d.product_name,
-    quantity_consumed: qty,
-    unit: d.unit || 'unité',
-    consumed_by: S.user.id,
-    consumed_by_name: userName(),
-    consumed_at: new Date().toISOString(),
-    notes: notes || '',
-    dlc_entries: [{ dlc_id: d.id, lot_number: d.lot_number || '', dlc_date: d.dlc_date, qty_taken: qty }]
-  };
-  await sbExec(sb.from('consumption_logs').insert(rec), 'Enregistrement consommation');
+
+  var r = await sb.rpc('rpc_consume_from_package', {
+    p_dlc_id: dlcId,
+    p_qty: qty,
+    p_notes: notes || '',
+    p_user_id: S.user.id,
+    p_user_name: userName()
+  });
+  if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
+  if (r.data && r.data.error) { showToast(r.data.error, 'error'); return; }
+
   showToast('Consommation enregistrée ✓', 'success');
   await loadSiteData(); render();
 }
@@ -506,7 +495,15 @@ async function addCleaningLog(scheduleId, status, notes) {
     performed_at: new Date().toISOString()
   };
   var r = await sb.from('cleaning_logs').insert(rec).select();
-  if (r.error) { showToast('Erreur: ' + r.error.message, 'error'); return; }
+  if (r.error) {
+    // Handle UNIQUE constraint violation (already logged today)
+    if (r.error.code === '23505') {
+      showToast('Ce nettoyage a déjà été enregistré aujourd\'hui', 'warning');
+    } else {
+      showToast('Erreur: ' + r.error.message, 'error');
+    }
+    return;
+  }
   showToast(status === 'skipped' ? 'Tâche passée' : 'Nettoyage enregistré ✓', 'success');
   await loadSiteData(); render();
 }
